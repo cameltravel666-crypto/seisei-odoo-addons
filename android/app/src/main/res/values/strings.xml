@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Seisei BizNexus</string>
+    <string name="title_activity_main">Seisei BizNexus</string>
+    <string name="package_name">com.seisei.biznexus</string>
+    <string name="custom_url_scheme">com.seisei.biznexus</string>
+</resources>

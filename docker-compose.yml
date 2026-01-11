@@ -1,0 +1,41 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: seisei-erp-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-seisei}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-seisei123}
+      POSTGRES_DB: ${POSTGRES_DB:-seisei_erp}
+    # No external port - only accessible within docker network
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-seisei}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Next.js App
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: seisei-erp-app
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-seisei}:${POSTGRES_PASSWORD:-seisei123}@postgres:5432/${POSTGRES_DB:-seisei_erp}
+      - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-your-32-char-encryption-key-here}
+      - NODE_ENV=${NODE_ENV:-production}
+    ports:
+      - "${APP_PORT:-9527}:9527"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./prisma:/app/prisma
+
+volumes:
+  postgres_data:

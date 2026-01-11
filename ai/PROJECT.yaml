@@ -1,0 +1,72 @@
+# PROJECT.yaml - 项目元数据
+
+> 用途: 定义项目基本信息、环境、服务、关键路径
+> 编码: UTF-8
+
+---
+
+project_name: "Seisei BizNexus"
+owner: "Tao Zhang"
+version: "1.0.0"
+
+# 环境定义
+environments:
+  dev:
+    description: "开发环境"
+    base_url: "<dev-url>"
+  staging:
+    description: "预发布环境"
+    base_url: "<staging-url>"
+  prod:
+    description: "生产环境"
+    base_url: "<prod-url>"
+
+# 服务清单
+services:
+  - name: "<服务名>"
+    type: "<docker/systemd/k8s>"
+    port: <端口>
+    domain: "<域名>"
+    container_name: "<容器名>"
+    health_endpoint: "/health"
+    description: "<服务描述>"
+
+# 关键路径
+paths:
+  code_root: "<代码根目录>"
+  config_root: "<配置根目录>"
+  logs_root: "<日志根目录>"
+  data_root: "<数据根目录>"
+  addons_path: "<addons路径>"
+
+# Gate2 Owner
+gate2_owner: "<Gate2审批人>"
+
+# 快照源
+snapshot_sources:
+  - type: "git"
+    path: "<git路径>"
+  - type: "docker"
+    containers: ["<容器名>"]
+  - type: "systemd"
+    services: ["<服务名>"]
+
+# 数据库
+databases:
+  - name: "<数据库名>"
+    type: "postgresql/mysql/mongodb"
+    host: "<主机>"
+    port: <端口>
+    description: "<数据库描述>"
+
+# 外部依赖
+external_dependencies:
+  - name: "<依赖名>"
+    type: "api/database/service"
+    endpoint: "<端点>"
+    description: "<依赖描述>"
+
+---
+
+*End of PROJECT.yaml*
+
