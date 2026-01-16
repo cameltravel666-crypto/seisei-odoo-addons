@@ -15,13 +15,14 @@ export default function PosPage() {
       description: t('pos.productManagementDesc'),
       color: 'bg-indigo-50 text-indigo-600',
     },
-    {
-      href: '/pos/tables',
-      icon: Armchair,
-      title: t('pos.tables'),
-      description: t('pos.tablesDesc'),
-      color: 'bg-amber-50 text-amber-600',
-    },
+    // NOTE: Tables menu hidden for Apple App Store review
+    // {
+    //   href: '/pos/tables',
+    //   icon: Armchair,
+    //   title: t('pos.tables'),
+    //   description: t('pos.tablesDesc'),
+    //   color: 'bg-amber-50 text-amber-600',
+    // },
     {
       href: '/pos/orders',
       icon: Receipt,

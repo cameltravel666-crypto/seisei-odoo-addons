@@ -1,22 +1,78 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import {
-  Users, Coffee, CheckCircle, XCircle, RefreshCw,
-  LayoutGrid, DoorOpen, Receipt, MoreHorizontal,
+  Users, CheckCircle, XCircle, RefreshCw, ChevronLeft, QrCode, Table2, Settings2, LayoutGrid,
 } from 'lucide-react';
 import { useTables, useUpdateTable, type FloorInfo, type TableInfo } from '@/hooks/use-pos';
 import { Loading } from '@/components/ui/loading';
 import { EmptyState } from '@/components/ui/empty-state';
-import { BottomActionBar, type BottomAction } from '@/components/ui/bottom-action-bar';
+import { ModuleGate } from '@/components/module-gate';
+import { ALL_MODULES } from '@/lib/modules';
+
+// QR Ordering module features for upgrade page
+const qrOrderingFeatures = [
+  {
+    icon: QrCode,
+    titleZh: 'QR码点餐',
+    titleJa: 'QRコード注文',
+    titleEn: 'QR Code Ordering',
+    descZh: '顾客扫码自助点餐，减少服务员工作量',
+    descJa: 'お客様がQRコードをスキャンして注文、スタッフの負担を軽減',
+    descEn: 'Customers scan QR to order, reducing staff workload',
+  },
+  {
+    icon: Table2,
+    titleZh: '桌台管理',
+    titleJa: 'テーブル管理',
+    titleEn: 'Table Management',
+    descZh: '实时查看桌台状态，开台/结账一键操作',
+    descJa: 'テーブル状態をリアルタイムで確認、開台/会計をワンクリック',
+    descEn: 'Real-time table status, one-click open/close',
+  },
+  {
+    icon: Settings2,
+    titleZh: 'QR码启停控制',
+    titleJa: 'QRコードの有効/無効',
+    titleEn: 'QR Code Control',
+    descZh: '灵活控制各桌QR码的启用状态',
+    descJa: '各テーブルのQRコードを柔軟に有効/無効化',
+    descEn: 'Flexibly enable/disable QR code per table',
+  },
+  {
+    icon: LayoutGrid,
+    titleZh: '楼层分区',
+    titleJa: 'フロア分け',
+    titleEn: 'Floor Sections',
+    descZh: '支持多楼层/分区管理，大型餐厅适用',
+    descJa: '複数フロア/エリア管理対応、大型店舗に最適',
+    descEn: 'Multi-floor/zone management for large venues',
+  },
+];
 
 export default function TablesPage() {
   const t = useTranslations();
+  const router = useRouter();
   const [selectedFloor, setSelectedFloor] = useState<number | null>(null);
   const [updatingTable, setUpdatingTable] = useState<number | null>(null);
 
+  // Check if module is hidden - redirect to POS if so
+  const qrModule = ALL_MODULES.find(m => m.code === 'QR_ORDERING');
+  useEffect(() => {
+    if (qrModule?.isHidden) {
+      router.replace('/pos');
+    }
+  }, [qrModule?.isHidden, router]);
+
   const { data, isLoading, error, refetch, isFetching } = useTables();
+
+  // Don't render anything while redirecting
+  if (qrModule?.isHidden) {
+    return <Loading />;
+  }
   const updateMutation = useUpdateTable();
 
   const handleToggleTable = async (table: TableInfo) => {
@@ -55,61 +111,6 @@ export default function TablesPage() {
     ? floors.filter((f) => f.id === selectedFloor)
     : floors;
 
-  // Bottom action bar actions
-  const bottomActions: BottomAction[] = [
-    {
-      key: 'all',
-      icon: LayoutGrid,
-      label: t('common.all'),
-      onClick: () => setSelectedFloor(null),
-      active: selectedFloor === null,
-    },
-    {
-      key: 'open',
-      icon: DoorOpen,
-      label: t('pos.openTable'),
-      variant: 'primary',
-      onClick: () => {
-        // Scroll to first available table or show toast
-        const firstAvailable = displayFloors
-          .flatMap((f) => f.tables)
-          .find((t) => !t.isOccupied);
-        if (firstAvailable) {
-          document.getElementById(`table-${firstAvailable.id}`)?.scrollIntoView({
-            behavior: 'smooth',
-            block: 'center',
-          });
-        }
-      },
-    },
-    {
-      key: 'checkout',
-      icon: Receipt,
-      label: t('pos.checkout'),
-      variant: 'danger',
-      onClick: () => {
-        // Scroll to first occupied table
-        const firstOccupied = displayFloors
-          .flatMap((f) => f.tables)
-          .find((t) => t.isOccupied);
-        if (firstOccupied) {
-          document.getElementById(`table-${firstOccupied.id}`)?.scrollIntoView({
-            behavior: 'smooth',
-            block: 'center',
-          });
-        }
-      },
-    },
-    {
-      key: 'more',
-      icon: MoreHorizontal,
-      label: t('common.more'),
-      onClick: () => {
-        // Future: show more options
-      },
-    },
-  ];
-
   if (isLoading) {
     return (
       <div className="pb-20">
@@ -127,10 +128,24 @@ export default function TablesPage() {
   }
 
   return (
-    <div className="section-gap pb-[calc(var(--height-bottom-bar)+var(--safe-area-bottom)+var(--space-4))]">
+    <ModuleGate
+      moduleCode="QR_ORDERING"
+      moduleNameZh="桌台服务"
+      moduleNameJa="テーブルサービス"
+      descriptionZh="QR码点餐与桌台管理，让顾客自助点餐，提升服务效率"
+      descriptionJa="QRコード注文とテーブル管理で、お客様のセルフオーダーを実現し、サービス効率を向上"
+      priceMonthly={2980}
+      features={qrOrderingFeatures}
+      heroGradient="from-emerald-600 via-teal-600 to-emerald-700"
+      moduleIcon={QrCode}
+    >
+    <div className="section-gap pb-4">
       {/* Header */}
       <div className="flex-between">
-        <h1 className="page-title">{t('pos.tables')}</h1>
+        <Link href="/pos" className="page-title flex items-center gap-1 hover:text-[var(--color-primary)] transition-colors">
+          <ChevronLeft className="w-5 h-5" />
+          {t('pos.tables')}
+        </Link>
         <button
           onClick={() => refetch()}
           disabled={isFetching}
@@ -219,10 +234,8 @@ export default function TablesPage() {
           ))}
         </div>
       )}
-
-      {/* Bottom Action Bar */}
-      <BottomActionBar actions={bottomActions} />
     </div>
+    </ModuleGate>
   );
 }
 
@@ -275,12 +288,12 @@ function FloorSection({ floor, onToggleTable, onShowQRLink, updatingTable, t }: 
         </div>
       </div>
 
-      {/* Tables grid - Compact */}
+      {/* Tables grid - Compact (4 cols on mobile) */}
       <div className="p-3">
         {floor.tables.length === 0 ? (
           <p className="text-gray-500 text-center text-sm py-6">{t('pos.noTablesInFloor')}</p>
         ) : (
-          <div className="grid grid-cols-5 gap-2">
+          <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-2 sm:gap-3">
             {floor.tables.map((table) => (
               <TableCard
                 key={table.id}
@@ -325,7 +338,7 @@ function TableCard({ table, onToggle, onShowQRLink, isUpdating, t }: TableCardPr
           ? 'bg-[var(--color-success-bg)] border-[var(--color-success)]/20 hover:bg-[var(--color-success)]/10'
           : 'bg-[var(--color-bg-muted)] border-[var(--color-border-default)] hover:bg-[var(--color-bg-hover)]'
       }`}
-      style={{ minHeight: '100px' }}
+      style={{ minHeight: '90px' }}
     >
       {/* Table name */}
       <div className="text-body font-bold tabular-nums">{table.name}</div>
