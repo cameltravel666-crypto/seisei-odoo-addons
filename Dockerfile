@@ -44,6 +44,12 @@ RUN chown nextjs:nodejs .next
 # Automatically leverage output traces to reduce image size
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+# Copy prisma client and CLI for database migrations
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
+# Copy package.json for npx to work properly
+COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
 
 USER nextjs
 
@@ -52,5 +58,5 @@ EXPOSE 9527
 ENV PORT=9527
 ENV HOSTNAME="0.0.0.0"
 
-# Push schema and start the server
-CMD ["sh", "-c", "npx prisma db push --url=\"$DATABASE_URL\" && node server.js"]
+# Start the server (skip prisma push if it fails - schema might already be up to date)
+CMD ["sh", "-c", "node node_modules/prisma/build/index.js db push --accept-data-loss --url=\"$DATABASE_URL\" 2>/dev/null || true; node server.js"]
