@@ -1,38 +1,19 @@
 /**
- * Feature / Module Management
+ * Feature / Module Management (Server-side)
  * Handles subscription-based and user preference-based module visibility
+ *
+ * NOTE: For module definitions that can be used in client components,
+ * import from '@/lib/modules' instead.
  */
 
 import { prisma } from './db';
 import { ModuleCode } from '@prisma/client';
+import { ALL_MODULES, CORE_MODULES, PREMIUM_MODULES, getModuleInfo } from './modules';
+import type { ModuleInfo } from './modules';
 
-export interface ModuleInfo {
-  code: ModuleCode;
-  name: string;
-  nameZh: string;
-  nameJa: string;
-  icon: string;
-  path: string;
-  description?: string;
-}
-
-// All available modules
-export const ALL_MODULES: ModuleInfo[] = [
-  { code: 'DASHBOARD', name: 'Dashboard', nameZh: '数据看板', nameJa: 'ダッシュボード', icon: 'BarChart3', path: '/dashboard' },
-  { code: 'POS', name: 'POS', nameZh: 'POS', nameJa: 'POS', icon: 'ShoppingCart', path: '/pos' },
-  { code: 'INVENTORY', name: 'Inventory', nameZh: '库存', nameJa: '在庫', icon: 'Package', path: '/inventory' },
-  { code: 'PURCHASE', name: 'Purchase', nameZh: '采购', nameJa: '仕入', icon: 'ShoppingBag', path: '/purchase' },
-  { code: 'SALES', name: 'Sales', nameZh: '销售', nameJa: '販売', icon: 'TrendingUp', path: '/sales' },
-  { code: 'CRM', name: 'CRM', nameZh: 'CRM', nameJa: 'CRM', icon: 'Users', path: '/crm' },
-  { code: 'ACCOUNTING', name: 'Expenses', nameZh: '费用', nameJa: '経費', icon: 'Receipt', path: '/accounting' },
-  { code: 'FINANCE', name: 'Finance', nameZh: '财务', nameJa: '財務', icon: 'FileText', path: '/finance' },
-  { code: 'HR', name: 'Payroll', nameZh: '工资', nameJa: '給与', icon: 'UserCog', path: '/hr' },
-];
-
-// Get module info by code
-export function getModuleInfo(code: ModuleCode): ModuleInfo | undefined {
-  return ALL_MODULES.find(m => m.code === code);
-}
+// Re-export module definitions for backwards compatibility
+export { ALL_MODULES, CORE_MODULES, PREMIUM_MODULES, getModuleInfo };
+export type { ModuleInfo };
 
 // Get visible modules for a user
 export async function getVisibleModules(userId: string, tenantId: string): Promise<ModuleInfo[]> {

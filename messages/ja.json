@@ -29,7 +29,9 @@
     "copied": "コピーしました",
     "retry": "再試行",
     "reLogin": "再ログイン",
-    "more": "その他"
+    "more": "その他",
+    "saving": "保存中...",
+    "processing": "処理中..."
   },
   "auth": {
     "login": "ログイン",
@@ -46,12 +48,16 @@
   "nav": {
     "home": "ホーム",
     "dashboard": "ダッシュボード",
+    "analytics": "高度分析",
     "pos": "POS",
+    "tables": "テーブルサービス",
+    "qr_ordering": "テーブルサービス",
     "products": "商品管理",
     "inventory": "在庫",
     "purchase": "仕入",
     "sales": "販売",
     "crm": "CRM",
+    "contacts": "連絡先",
     "expenses": "経費",
     "accounting": "収支",
     "finance": "財務",
@@ -65,6 +71,8 @@
     "language": "言語"
   },
   "modules": {
+    "title": "モジュール管理",
+    "description": "テナントに表示するモジュールを管理",
     "notSubscribed": "未契約",
     "notSubscribedDesc": "このモジュールはご契約プランに含まれていません。管理者にお問い合わせください。",
     "disabledByAdmin": "モジュール無効",
@@ -73,7 +81,67 @@
     "enabledModules": "有効なモジュール",
     "disabledModules": "無効なモジュール",
     "showModule": "表示",
-    "hideModule": "非表示"
+    "hideModule": "非表示",
+    "allowedModules": "契約中のモジュール",
+    "allowedDescription": "これらのモジュールの表示/非表示を切り替えられます",
+    "lockedModules": "未契約のモジュール",
+    "lockedDescription": "プランをアップグレードしてモジュールを追加",
+    "upgradeRequired": "アップグレードが必要",
+    "noAllowedModules": "利用可能なモジュールがありません",
+    "infoTitle": "モジュール管理について",
+    "infoDescription": "モジュールを非表示にすると、全ユーザーに対して非表示になります。ユーザーは個人設定から不要なモジュールを非表示にできます。"
+  },
+  "team": {
+    "title": "チーム管理",
+    "description": "チームメンバーと招待を管理"
+  },
+  "subscription": {
+    "title": "プラン管理",
+    "description": "ご契約プランの確認と管理",
+    "currentPlan": "現在のプラン",
+    "currentSubscription": "現在のサブスクリプション",
+    "availablePlans": "利用可能なプラン",
+    "enabledModules": "有効な機能",
+    "hidden": "非表示",
+    "free": "無料",
+    "maxUsers": "最大 {count} ユーザー",
+    "current": "現在",
+    "upgrade": "アップグレード",
+    "startTrial": "無料トライアル開始",
+    "needHelp": "お困りですか？",
+    "contactUs": "アップグレードやご質問は、サポートチームまでお問い合わせください。",
+    "plan": "プラン",
+    "monthlyPrice": "月額",
+    "nextBilling": "次回請求日",
+    "billingCycle": "請求サイクル",
+    "trialPeriod": "トライアル期間",
+    "trialEnds": "トライアル期間は {date} まで",
+    "noActiveSubscription": "有効なサブスクリプションがありません",
+    "selectPlanBelow": "以下からプランを選択してください",
+    "invoiceHistory": "請求履歴",
+    "confirmUpgrade": "アップグレードの確認",
+    "confirmSubscription": "サブスクリプションの確認",
+    "upgradeDescription": "{plan} プランにアップグレードしますか？",
+    "trialDescription": "{plan} プランの {days} 日間無料トライアルを開始します。",
+    "error": "操作に失敗しました。もう一度お試しください",
+    "status": {
+      "active": "有効",
+      "trial": "トライアル中",
+      "pastDue": "期限超過",
+      "cancelled": "キャンセル済み",
+      "expired": "期限切れ"
+    },
+    "invoiceStatus": {
+      "paid": "支払済み",
+      "unpaid": "未払い",
+      "draft": "下書き",
+      "void": "無効"
+    },
+    "cycle": {
+      "monthly": "月払い",
+      "quarterly": "四半期払い",
+      "yearly": "年払い"
+    }
   },
   "pos": {
     "products": "商品",
@@ -628,6 +696,36 @@
     "noFilterResults": "条件に一致するリードがありません",
     "clearFilters": "フィルターをクリア",
     "clearFiltersHint": "フィルターをクリアして再検索"
+  },
+  "contacts": {
+    "noContacts": "連絡先がありません",
+    "noContactsDesc": "まだ連絡先が登録されていません",
+    "searchPlaceholder": "連絡先を検索...",
+    "addContact": "連絡先を追加",
+    "filterAll": "すべて",
+    "filterCompany": "会社",
+    "filterPerson": "個人",
+    "company": "会社",
+    "person": "個人",
+    "email": "メール",
+    "phone": "電話",
+    "mobile": "携帯",
+    "address": "住所",
+    "position": "役職",
+    "contactDetail": "連絡先詳細",
+    "editContact": "連絡先を編集",
+    "contactInfo": "連絡先情報",
+    "name": "名前",
+    "function": "役職",
+    "website": "ウェブサイト",
+    "street": "住所1",
+    "street2": "住所2",
+    "city": "市区町村",
+    "zip": "郵便番号",
+    "country": "国",
+    "notes": "メモ",
+    "archive": "アーカイブ",
+    "unarchive": "復元"
   },
   "accounting": {
     "noItems": "請求書がありません",

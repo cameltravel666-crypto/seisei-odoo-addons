@@ -26,6 +26,9 @@ export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
     case 'ses':
     case 'aws':
       return sendWithSES(options);
+    case 'brevo':
+    case 'sendinblue':
+      return sendWithBrevo(options);
     case 'resend':
       return sendWithResend(options);
     case 'smtp':
@@ -92,6 +95,54 @@ async function sendWithSES(options: EmailOptions): Promise<EmailResult> {
   } catch (error) {
     console.error('[Email] AWS SES error:', error);
     return { success: false, error: error instanceof Error ? error.message : 'SES error' };
+  }
+}
+
+/**
+ * Send via Brevo (Sendinblue) API
+ */
+async function sendWithBrevo(options: EmailOptions): Promise<EmailResult> {
+  const apiKey = process.env.BREVO_API_KEY;
+  const fromEmail = process.env.EMAIL_FROM || 'noreply@seisei.tokyo';
+  const fromName = process.env.EMAIL_FROM_NAME || 'Seisei BizNexus';
+
+  if (!apiKey) {
+    console.error('[Email] BREVO_API_KEY not configured');
+    return { success: false, error: 'BREVO_API_KEY not configured' };
+  }
+
+  try {
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'api-key': apiKey,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        sender: {
+          name: fromName,
+          email: fromEmail,
+        },
+        to: [{ email: options.to }],
+        subject: options.subject,
+        htmlContent: options.html,
+        ...(options.text && { textContent: options.text }),
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error('[Email] Brevo error:', data);
+      return { success: false, error: data.message || `HTTP ${response.status}` };
+    }
+
+    console.log('[Email] Sent via Brevo:', data.messageId);
+    return { success: true, messageId: data.messageId };
+  } catch (error) {
+    console.error('[Email] Brevo error:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Brevo API error' };
   }
 }
 
@@ -574,6 +625,9 @@ export function welcomeEmail(params: {
       company: '会社名',
       code: '企業コード',
       codeNote: '※ 従業員を招待する際に必要なコードです',
+      loginTitle: 'ログイン方法',
+      loginMethod1: 'Googleアカウントでログイン',
+      loginMethod2: 'または登録時のメールアドレスで認証コードを受け取ってログイン',
       start: '早速始めましょう',
       button: 'ダッシュボードへ',
     },
@@ -586,6 +640,9 @@ export function welcomeEmail(params: {
       company: '公司名称',
       code: '企业代码',
       codeNote: '※ 邀请员工时需要使用此代码',
+      loginTitle: '登录方式',
+      loginMethod1: '使用 Google 账号登录',
+      loginMethod2: '或使用注册邮箱接收验证码登录',
       start: '开始使用',
       button: '进入控制台',
     },
@@ -598,6 +655,9 @@ export function welcomeEmail(params: {
       company: 'Company Name',
       code: 'Enterprise Code',
       codeNote: '※ This code is needed when inviting employees',
+      loginTitle: 'How to Login',
+      loginMethod1: 'Login with your Google account',
+      loginMethod2: 'Or receive a verification code via your registered email',
       start: 'Get Started',
       button: 'Go to Dashboard',
     },
@@ -619,9 +679,17 @@ export function welcomeEmail(params: {
         <p style="font-size: 12px; color: #6b7280;">${t.codeNote}</p>
       </div>
 
+      <div style="background: #dbeafe; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2563eb;">
+        <h3 style="margin-top: 0; font-size: 16px; color: #1e40af;">${t.loginTitle}</h3>
+        <ul style="margin: 0; padding-left: 20px; color: #1e40af;">
+          <li style="margin-bottom: 8px;">${t.loginMethod1}</li>
+          <li>${t.loginMethod2}</li>
+        </ul>
+      </div>
+
       <p>${t.start}</p>
 
-      <a href="${process.env.NEXT_PUBLIC_APP_URL}/home" class="button">
+      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://erp.seisei.tokyo'}/home" class="button">
         ${t.button}
       </a>
     `),

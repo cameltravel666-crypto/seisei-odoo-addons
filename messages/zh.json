@@ -29,7 +29,9 @@
     "copied": "已复制",
     "retry": "重试",
     "reLogin": "重新登录",
-    "more": "更多"
+    "more": "更多",
+    "saving": "保存中...",
+    "processing": "处理中..."
   },
   "auth": {
     "login": "登录",
@@ -46,12 +48,16 @@
   "nav": {
     "home": "首页",
     "dashboard": "数据看板",
+    "analytics": "高级数据分析",
     "pos": "POS",
+    "tables": "桌台服务",
+    "qr_ordering": "桌台服务",
     "products": "商品管理",
     "inventory": "库存",
     "purchase": "采购",
     "sales": "销售",
     "crm": "CRM",
+    "contacts": "联系人",
     "expenses": "费用",
     "accounting": "收支",
     "finance": "财务",
@@ -65,6 +71,8 @@
     "language": "语言"
   },
   "modules": {
+    "title": "模块管理",
+    "description": "管理租户可见的功能模块",
     "notSubscribed": "未订阅",
     "notSubscribedDesc": "该模块不在您的订阅计划中，请联系管理员。",
     "disabledByAdmin": "模块已禁用",
@@ -73,7 +81,67 @@
     "enabledModules": "已启用模块",
     "disabledModules": "已禁用模块",
     "showModule": "显示",
-    "hideModule": "隐藏"
+    "hideModule": "隐藏",
+    "allowedModules": "已订阅模块",
+    "allowedDescription": "可以开启或关闭显示这些模块",
+    "lockedModules": "未订阅模块",
+    "lockedDescription": "升级订阅计划以解锁更多模块",
+    "upgradeRequired": "需要升级",
+    "noAllowedModules": "暂无可用模块",
+    "infoTitle": "关于模块管理",
+    "infoDescription": "关闭模块后，该模块将对所有用户隐藏。用户仍然可以通过个人设置隐藏他们不需要的模块。"
+  },
+  "team": {
+    "title": "团队管理",
+    "description": "管理团队成员和邀请"
+  },
+  "subscription": {
+    "title": "订阅管理",
+    "description": "查看和管理您的订阅计划",
+    "currentPlan": "当前套餐",
+    "currentSubscription": "当前订阅",
+    "availablePlans": "可用套餐",
+    "enabledModules": "已启用功能",
+    "hidden": "已隐藏",
+    "free": "免费",
+    "maxUsers": "最多 {count} 用户",
+    "current": "当前",
+    "upgrade": "升级",
+    "startTrial": "开始试用",
+    "needHelp": "需要帮助？",
+    "contactUs": "如需升级或有任何问题，请联系我们的客服团队。",
+    "plan": "套餐",
+    "monthlyPrice": "月费",
+    "nextBilling": "下次扣费日",
+    "billingCycle": "计费周期",
+    "trialPeriod": "试用期",
+    "trialEnds": "试用期将于 {date} 结束",
+    "noActiveSubscription": "暂无有效订阅",
+    "selectPlanBelow": "请选择下方套餐开始订阅",
+    "invoiceHistory": "账单历史",
+    "confirmUpgrade": "确认升级",
+    "confirmSubscription": "确认订阅",
+    "upgradeDescription": "您确定要升级到 {plan} 套餐吗？",
+    "trialDescription": "您将开始 {plan} 套餐的 {days} 天免费试用。",
+    "error": "操作失败，请重试",
+    "status": {
+      "active": "有效",
+      "trial": "试用中",
+      "pastDue": "逾期",
+      "cancelled": "已取消",
+      "expired": "已过期"
+    },
+    "invoiceStatus": {
+      "paid": "已支付",
+      "unpaid": "待支付",
+      "draft": "草稿",
+      "void": "已作废"
+    },
+    "cycle": {
+      "monthly": "月付",
+      "quarterly": "季付",
+      "yearly": "年付"
+    }
   },
   "pos": {
     "products": "商品",
@@ -628,6 +696,36 @@
     "overdue": "已逾期",
     "createdAt": "创建于",
     "newOpportunity": "新建商机"
+  },
+  "contacts": {
+    "noContacts": "暂无联系人",
+    "noContactsDesc": "还没有添加任何联系人",
+    "searchPlaceholder": "搜索联系人...",
+    "addContact": "添加联系人",
+    "filterAll": "全部",
+    "filterCompany": "公司",
+    "filterPerson": "个人",
+    "company": "公司",
+    "person": "个人",
+    "email": "邮箱",
+    "phone": "电话",
+    "mobile": "手机",
+    "address": "地址",
+    "position": "职位",
+    "contactDetail": "联系人详情",
+    "editContact": "编辑联系人",
+    "contactInfo": "联系方式",
+    "name": "姓名",
+    "function": "职位",
+    "website": "网站",
+    "street": "街道地址",
+    "street2": "街道地址2",
+    "city": "城市",
+    "zip": "邮编",
+    "country": "国家",
+    "notes": "备注",
+    "archive": "存档",
+    "unarchive": "恢复"
   },
   "accounting": {
     "noItems": "暂无发票",

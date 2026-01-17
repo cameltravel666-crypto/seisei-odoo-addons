@@ -29,7 +29,9 @@
     "copied": "Copied",
     "retry": "Retry",
     "reLogin": "Re-login",
-    "more": "More"
+    "more": "More",
+    "saving": "Saving...",
+    "processing": "Processing..."
   },
   "auth": {
     "login": "Login",
@@ -46,12 +48,16 @@
   "nav": {
     "home": "Home",
     "dashboard": "Dashboard",
+    "analytics": "Advanced Analytics",
     "pos": "POS",
+    "tables": "Table Service",
+    "qr_ordering": "Table Service",
     "products": "Products",
     "inventory": "Inventory",
     "purchase": "Purchase",
     "sales": "Sales",
     "crm": "CRM",
+    "contacts": "Contacts",
     "expenses": "Expenses",
     "accounting": "Cash & Transactions",
     "finance": "Finance",
@@ -65,6 +71,8 @@
     "language": "Language"
   },
   "modules": {
+    "title": "Module Management",
+    "description": "Manage visible modules for your tenant",
     "notSubscribed": "Not Subscribed",
     "notSubscribedDesc": "This module is not included in your subscription plan. Contact your administrator.",
     "disabledByAdmin": "Module Disabled",
@@ -73,7 +81,67 @@
     "enabledModules": "Enabled Modules",
     "disabledModules": "Disabled Modules",
     "showModule": "Show",
-    "hideModule": "Hide"
+    "hideModule": "Hide",
+    "allowedModules": "Subscribed Modules",
+    "allowedDescription": "Toggle visibility of these modules for all users",
+    "lockedModules": "Locked Modules",
+    "lockedDescription": "Upgrade your subscription plan to unlock more modules",
+    "upgradeRequired": "Upgrade Required",
+    "noAllowedModules": "No available modules",
+    "infoTitle": "About Module Management",
+    "infoDescription": "When you hide a module, it will be hidden for all users. Users can still hide modules they don't need from their personal settings."
+  },
+  "team": {
+    "title": "Team Management",
+    "description": "Manage team members and invitations"
+  },
+  "subscription": {
+    "title": "Subscription",
+    "description": "View and manage your subscription plan",
+    "currentPlan": "Current Plan",
+    "currentSubscription": "Current Subscription",
+    "availablePlans": "Available Plans",
+    "enabledModules": "Enabled Modules",
+    "hidden": "Hidden",
+    "free": "Free",
+    "maxUsers": "Up to {count} users",
+    "current": "Current",
+    "upgrade": "Upgrade",
+    "startTrial": "Start Free Trial",
+    "needHelp": "Need Help?",
+    "contactUs": "For upgrades or questions, please contact our support team.",
+    "plan": "Plan",
+    "monthlyPrice": "Monthly Price",
+    "nextBilling": "Next Billing Date",
+    "billingCycle": "Billing Cycle",
+    "trialPeriod": "Trial Period",
+    "trialEnds": "Trial ends on {date}",
+    "noActiveSubscription": "No Active Subscription",
+    "selectPlanBelow": "Please select a plan below to get started",
+    "invoiceHistory": "Invoice History",
+    "confirmUpgrade": "Confirm Upgrade",
+    "confirmSubscription": "Confirm Subscription",
+    "upgradeDescription": "Are you sure you want to upgrade to {plan}?",
+    "trialDescription": "You will start a {days}-day free trial of {plan}.",
+    "error": "Operation failed. Please try again",
+    "status": {
+      "active": "Active",
+      "trial": "Trial",
+      "pastDue": "Past Due",
+      "cancelled": "Cancelled",
+      "expired": "Expired"
+    },
+    "invoiceStatus": {
+      "paid": "Paid",
+      "unpaid": "Unpaid",
+      "draft": "Draft",
+      "void": "Void"
+    },
+    "cycle": {
+      "monthly": "Monthly",
+      "quarterly": "Quarterly",
+      "yearly": "Yearly"
+    }
   },
   "pos": {
     "products": "Products",
@@ -628,6 +696,36 @@
     "overdue": "Overdue",
     "createdAt": "Created",
     "newOpportunity": "New Opportunity"
+  },
+  "contacts": {
+    "noContacts": "No Contacts",
+    "noContactsDesc": "No contacts have been added yet",
+    "searchPlaceholder": "Search contacts...",
+    "addContact": "Add Contact",
+    "filterAll": "All",
+    "filterCompany": "Companies",
+    "filterPerson": "People",
+    "company": "Company",
+    "person": "Person",
+    "email": "Email",
+    "phone": "Phone",
+    "mobile": "Mobile",
+    "address": "Address",
+    "position": "Position",
+    "contactDetail": "Contact Details",
+    "editContact": "Edit Contact",
+    "contactInfo": "Contact Information",
+    "name": "Name",
+    "function": "Job Title",
+    "website": "Website",
+    "street": "Street Address",
+    "street2": "Street Address 2",
+    "city": "City",
+    "zip": "ZIP Code",
+    "country": "Country",
+    "notes": "Notes",
+    "archive": "Archive",
+    "unarchive": "Unarchive"
   },
   "accounting": {
     "noItems": "No Invoices",

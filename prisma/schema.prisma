@@ -1,5 +1,6 @@
 // Prisma Schema for Seisei BizNexus
 // Multi-tenant architecture with Odoo 18 CE integration
+// RBAC + Entitlements Model (v2.0)
 
 generator client {
   provider = "prisma-client-js"
@@ -7,6 +8,96 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  // Note: URL is configured in prisma.config.ts for Prisma 7+
+}
+
+// ============================================
+// RBAC Enums
+// ============================================
+
+enum Role {
+  BILLING_ADMIN // 计费管理员 - 最高权限，可管理订阅和所有用户
+  ORG_ADMIN // 组织管理员 - 可管理用户和门店
+  MANAGER // 门店经理 - 管理指定门店
+  OPERATOR // 操作员 - 基本操作权限
+}
+
+enum MembershipStatus {
+  ACTIVE // 活跃
+  INACTIVE // 未激活 (邀请中)
+  SUSPENDED // 暂停
+}
+
+enum EntitlementStatus {
+  ACTIVE // 活跃
+  TRIAL // 试用中
+  PAST_DUE // 逾期
+  SUSPENDED // 暂停
+  EXPIRED // 已过期
+}
+
+enum AuditAction {
+  // 用户管理
+  USER_INVITED
+  USER_ROLE_CHANGED
+  USER_STORE_SCOPE_CHANGED
+  USER_SUSPENDED
+  USER_ACTIVATED
+  USER_REMOVED
+  USER_PASSWORD_SET // User set password via invitation link
+  USER_PASSWORD_RESET // Password reset requested/completed
+
+  // 邀请管理
+  INVITATION_SENT
+  INVITATION_ACCEPTED
+  INVITATION_REVOKED
+  INVITATION_EXPIRED
+  INVITATION_RESENT
+
+  // 订阅管理
+  SUBSCRIPTION_CREATED
+  SUBSCRIPTION_UPDATED
+  SUBSCRIPTION_CANCELLED
+  SUBSCRIPTION_RENEWED
+  SUBSCRIPTION_PAYMENT_FAILED
+
+  // 权益变更
+  ENTITLEMENTS_UPDATED
+  MODULE_ENABLED
+  MODULE_DISABLED
+  LIMITS_CHANGED
+
+  // 认证
+  LOGIN_SUCCESS
+  LOGIN_FAILED
+  LOGOUT
+  PASSWORD_CHANGED
+
+  // 文件管理
+  FILE_UPLOAD_STARTED
+  FILE_UPLOAD_COMPLETED
+  FILE_DOWNLOAD
+  FILE_DELETED
+
+  // 门店管理
+  STORE_CREATED
+  STORE_UPDATED
+  STORE_DELETED
+  STORE_DEACTIVATED
+
+  // 运维操作 (Internal Ops)
+  OPS_OPEN_ODOO_ADMIN
+  OPS_RETRY_PROVISIONING
+  OPS_RESET_OPS_PASSWORD
+  OPS_TENANT_HEALTH_CHECK
+
+  // 系统
+  TENANT_CREATED
+  TENANT_UPDATED
+  SETTINGS_CHANGED
+  PROVISIONING_STARTED
+  PROVISIONING_COMPLETED
+  PROVISIONING_FAILED
 }
 
 // ============================================
@@ -14,22 +105,61 @@ datasource db {
 // ============================================
 
 model Tenant {
-  id            String   @id @default(cuid())
-  tenantCode    String   @unique @map("tenant_code") // TEN-xxxxxx
-  name          String
-  odooBaseUrl   String   @map("odoo_base_url")
-  odooDb        String   @map("odoo_db")
-  companyId     Int?     @map("company_id")
-  warehouseId   Int?     @map("warehouse_id")
-  planCode      String   @default("basic") @map("plan_code") // basic, standard, premium
-  isActive      Boolean  @default(true) @map("is_active")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id          String   @id @default(cuid())
+  tenantCode  String   @unique @map("tenant_code") // TEN-xxxxxx
+  name        String
+  odooBaseUrl String   @map("odoo_base_url")
+  odooDb      String   @map("odoo_db")
+  companyId   Int?     @map("company_id")
+  warehouseId Int?     @map("warehouse_id")
+  planCode    String   @default("basic") @map("plan_code") // basic, standard, premium
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Owner info (for self-registration)
+  ownerEmail    String? @map("owner_email")
+  ownerName     String? @map("owner_name")
+  ownerPhone    String? @map("owner_phone")
+  oauthProvider String? @map("oauth_provider") // google, microsoft, email
+  oauthId       String? @map("oauth_id") // Provider user ID
+
+  // Odoo 19 integration
+  odoo19PartnerId Int? @map("odoo19_partner_id") // Partner ID in Odoo 19 for billing
+
+  // Bridge / Database provisioning
+  bridgeTenantId  String? @map("bridge_tenant_id")
+  provisionStatus String? @default("pending") @map("provision_status") // pending, provisioning, active, failed
+
+  // Failure tracking
+  failureStep   String? @map("failure_step") // Step where provisioning failed
+  failureReason String? @map("failure_reason") @db.Text // Error message
+
+  // Odoo 19 user tracking
+  odoo19UserId Int? @map("odoo19_user_id")
+
+  // Stripe integration
+  stripeCustomerId String? @unique @map("stripe_customer_id") // Stripe Customer ID (cus_xxx)
+  billingEmail     String? @map("billing_email") // Email for billing notifications
+
+  // Internal Ops credentials (for Odoo18 admin access)
+  // opsSecretRef: reference to secret in vault/KMS (e.g., "vault:tenants/{tenantCode}/ops_password")
+  // opsPasswordEncrypted: AES-256 encrypted password (only if no vault available)
+  opsSecretRef         String?   @map("ops_secret_ref")
+  opsPasswordEncrypted String?   @map("ops_password_encrypted") @db.Text
+  opsPasswordUpdatedAt DateTime? @map("ops_password_updated_at")
 
   // Relations
   features      TenantFeature[]
   users         User[]
   sessions      Session[]
+  subscriptions Subscription[]
+  memberships   Membership[]
+  entitlements  Entitlements?
+  auditLogs     AuditLog[]
+  stores        Store[]
+  invitations   Invitation[]
+  files         File[]
 
   @@map("tenants")
 }
@@ -39,21 +169,31 @@ model Tenant {
 // ============================================
 
 model User {
-  id            String   @id @default(cuid())
-  tenantId      String   @map("tenant_id")
-  odooUserId    Int      @map("odoo_user_id")
-  odooLogin     String   @map("odoo_login")
-  displayName   String   @map("display_name")
-  email         String?
-  isAdmin       Boolean  @default(false) @map("is_admin")
-  lastLoginAt   DateTime? @map("last_login_at")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id          String    @id @default(cuid())
+  tenantId    String    @map("tenant_id")
+  odooUserId  Int       @map("odoo_user_id")
+  odooLogin   String    @map("odoo_login")
+  displayName String    @map("display_name")
+  email       String?
+  isAdmin     Boolean   @default(false) @map("is_admin")
+  lastLoginAt DateTime? @map("last_login_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  // Password management
+  mustChangePassword Boolean   @default(false) @map("must_change_password") // Force password change on next login
+  lastPasswordSetAt  DateTime? @map("last_password_set_at") // When password was last set
+  passwordSetMethod  String?   @map("password_set_method") // "invitation" | "reset" | "oauth" | "admin"
 
   // Relations
-  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  sessions      Session[]
-  modulePrefs   UserModulePref[]
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sessions        Session[]
+  modulePrefs     UserModulePref[]
+  memberships     Membership[]
+  auditLogs       AuditLog[]       @relation("AuditActor")
+  auditTargets    AuditLog[]       @relation("AuditTarget")
+  sentInvitations Invitation[]     @relation("InvitationSender")
+  uploadedFiles   File[]
 
   @@unique([tenantId, odooUserId])
   @@map("users")
@@ -64,18 +204,304 @@ model User {
 // ============================================
 
 model Session {
-  id              String   @id @default(cuid())
-  userId          String   @map("user_id")
-  tenantId        String   @map("tenant_id")
-  odooSessionId   String   @map("odoo_session_id") // Encrypted Odoo session
-  expiresAt       DateTime @map("expires_at")
-  createdAt       DateTime @default(now()) @map("created_at")
+  id            String   @id @default(cuid())
+  userId        String   @map("user_id")
+  tenantId      String   @map("tenant_id")
+  odooSessionId String   @map("odoo_session_id") // Encrypted Odoo session
+  expiresAt     DateTime @map("expires_at")
+  createdAt     DateTime @default(now()) @map("created_at")
 
   // Relations
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("sessions")
+}
+
+// ============================================
+// RBAC - Membership (User <-> Tenant with Role)
+// ============================================
+
+model Membership {
+  id          String           @id @default(cuid())
+  userId      String           @map("user_id")
+  tenantId    String           @map("tenant_id")
+  role        Role             @default(OPERATOR)
+  storeScope  String[]         @default([]) @map("store_scope") // Odoo store IDs, empty = all stores
+  status      MembershipStatus @default(ACTIVE)
+  invitedBy   String?          @map("invited_by") // User ID who invited
+  invitedAt   DateTime?        @map("invited_at")
+  activatedAt DateTime?        @map("activated_at")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tenantId])
+  @@index([tenantId, role])
+  @@map("memberships")
+}
+
+// ============================================
+// Store Management (Multi-store support)
+// ============================================
+
+model Store {
+  id       String @id @default(cuid())
+  tenantId String @map("tenant_id")
+
+  // Odoo integration
+  odooStoreId Int? @map("odoo_store_id") // Stock.Warehouse or POS.Config ID in Odoo
+
+  // Store info
+  code   String // Store code (e.g., "STORE-001")
+  name   String
+  nameJa String? @map("name_ja")
+  nameZh String? @map("name_zh")
+
+  // Location
+  address    String?
+  city       String?
+  postalCode String?  @map("postal_code")
+  country    String   @default("JP")
+  latitude   Decimal? @db.Decimal(10, 8)
+  longitude  Decimal? @db.Decimal(11, 8)
+  timezone   String   @default("Asia/Tokyo")
+
+  // Contact
+  phone String?
+  email String?
+
+  // Business hours (JSON: { mon: { open: "09:00", close: "21:00" }, ... })
+  businessHours Json? @map("business_hours")
+
+  // Status
+  isActive  Boolean @default(true) @map("is_active")
+  isDefault Boolean @default(false) @map("is_default") // Default store for tenant
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  files  File[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId, isActive])
+  @@map("stores")
+}
+
+// ============================================
+// Invitation System (One-time set-password links)
+// ============================================
+
+enum InvitationStatus {
+  PENDING // Waiting for user to accept
+  ACCEPTED // User has set password and logged in
+  EXPIRED // Token expired without being used
+  REVOKED // Admin cancelled the invitation
+}
+
+enum InvitationType {
+  NEW_USER // Invite new employee (create user + set password)
+  PASSWORD_RESET // Existing user password reset
+}
+
+model Invitation {
+  id       String @id @default(cuid())
+  tenantId String @map("tenant_id")
+
+  // Token (hashed for security, original sent to user)
+  tokenHash String @unique @map("token_hash") // SHA-256 hash of the token
+
+  // Invitation details
+  type       InvitationType @default(NEW_USER)
+  email      String // Email to send invitation to
+  role       Role           @default(OPERATOR) // Role to assign when accepted
+  storeScope String[]       @default([]) @map("store_scope") // Store access
+
+  // Status tracking
+  status InvitationStatus @default(PENDING)
+
+  // Expiry (short-lived: 24-48 hours)
+  expiresAt DateTime @map("expires_at")
+
+  // Usage tracking
+  usedAt    DateTime? @map("used_at") // When token was used
+  revokedAt DateTime? @map("revoked_at") // When invitation was cancelled
+  revokedBy String?   @map("revoked_by") // Admin who revoked
+
+  // Sender
+  invitedBy String @map("invited_by") // User ID who sent invitation
+
+  // Result (if accepted)
+  resultUserId String? @map("result_user_id") // Created/updated user ID
+
+  // Resend tracking
+  resentCount  Int       @default(0) @map("resent_count")
+  lastResentAt DateTime? @map("last_resent_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sender User   @relation("InvitationSender", fields: [invitedBy], references: [id])
+
+  @@index([tenantId, status])
+  @@index([email, status])
+  @@index([expiresAt])
+  @@map("invitations")
+}
+
+// ============================================
+// File Storage (S3 metadata)
+// ============================================
+
+enum FileVisibility {
+  TENANT // All users in tenant can access
+  STORE // Only users with store_scope can access
+  PRIVATE // Only uploader can access
+}
+
+enum FileCategory {
+  RECEIPT // Receipt images
+  INVOICE // Invoice documents
+  PRODUCT_IMAGE // Product photos
+  DOCUMENT // General documents
+  ATTACHMENT // Other attachments
+  AVATAR // User/store avatars
+  EXPORT // Exported reports/data
+}
+
+model File {
+  id         String  @id @default(cuid())
+  tenantId   String  @map("tenant_id")
+  uploaderId String  @map("uploader_id") // User who uploaded
+  storeId    String? @map("store_id") // Associated store (if any)
+
+  // S3 location
+  bucket String // S3 bucket name
+  key    String // S3 object key (path)
+  region String @default("ap-northeast-1") // AWS region
+
+  // File metadata
+  originalFilename String  @map("original_filename")
+  mimeType         String  @map("mime_type")
+  size             BigInt // File size in bytes
+  checksum         String? // SHA-256 or MD5 hash for integrity
+
+  // Categorization
+  category   FileCategory   @default(ATTACHMENT)
+  visibility FileVisibility @default(TENANT)
+
+  // Optional associations
+  resourceType String? @map("resource_type") // e.g., "purchase_order", "expense"
+  resourceId   String? @map("resource_id") // Associated record ID
+
+  // Processing status
+  isProcessed     Boolean   @default(false) @map("is_processed") // OCR, thumbnail, etc.
+  processedAt     DateTime? @map("processed_at")
+  processingError String?   @map("processing_error")
+
+  // Thumbnail (for images)
+  thumbnailKey String? @map("thumbnail_key") // S3 key for thumbnail
+
+  // Soft delete
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  uploader User   @relation(fields: [uploaderId], references: [id])
+  store    Store? @relation(fields: [storeId], references: [id])
+
+  @@index([tenantId, category])
+  @@index([tenantId, storeId])
+  @@index([tenantId, uploaderId])
+  @@index([bucket, key])
+  @@index([resourceType, resourceId])
+  @@map("files")
+}
+
+// ============================================
+// Entitlements (Tenant-level subscription rights)
+// ============================================
+
+model Entitlements {
+  id       String @id @default(cuid())
+  tenantId String @unique @map("tenant_id")
+
+  // Module access
+  modules String[] @default([]) // Enabled ModuleCode list
+
+  // Limits
+  maxUsers     Int @default(5) @map("max_users")
+  maxStores    Int @default(1) @map("max_stores")
+  maxTerminals Int @default(2) @map("max_terminals")
+
+  // Status
+  status      EntitlementStatus @default(ACTIVE)
+  periodStart DateTime?         @map("period_start")
+  periodEnd   DateTime?         @map("period_end")
+
+  // Source tracking
+  source        String  @default("manual") // stripe | manual | odoo19
+  stripeSubId   String? @map("stripe_sub_id") // Stripe subscription ID
+  odoo19OrderId Int?    @map("odoo19_order_id")
+
+  // Sync tracking
+  lastSyncAt DateTime @default(now()) @map("last_sync_at")
+  syncError  String?  @map("sync_error")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("entitlements")
+}
+
+// ============================================
+// Audit Log (Authorization & System Changes)
+// ============================================
+
+model AuditLog {
+  id           String  @id @default(cuid())
+  tenantId     String  @map("tenant_id")
+  userId       String? @map("user_id") // Actor (null for system actions)
+  targetUserId String? @map("target_user_id") // Target user (for user management actions)
+
+  action     AuditAction
+  resource   String // Resource type: user, membership, entitlements, subscription
+  resourceId String?     @map("resource_id") // Resource ID
+
+  // Change details
+  changes  Json? // { old: {...}, new: {...} }
+  metadata Json? // Additional context
+
+  // Request info
+  ipAddress String? @map("ip_address")
+  userAgent String? @map("user_agent")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  tenant     Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user       User?  @relation("AuditActor", fields: [userId], references: [id], onDelete: SetNull)
+  targetUser User?  @relation("AuditTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, action])
+  @@index([userId])
+  @@index([targetUserId])
+  @@map("audit_logs")
 }
 
 // ============================================
@@ -98,20 +524,23 @@ enum ModuleCode {
   DOCUMENTS
   DASHBOARD
   PRODUCTS
+  CONTACTS
+  ANALYTICS
+  QR_ORDERING
 }
 
 // Tenant-level feature flags (subscription-based)
 model TenantFeature {
-  id          String     @id @default(cuid())
-  tenantId    String     @map("tenant_id")
-  moduleCode  ModuleCode @map("module_code")
-  isAllowed   Boolean    @default(true) @map("is_allowed")
-  isVisible   Boolean    @default(true) @map("is_visible") // Tenant admin can hide
-  createdAt   DateTime   @default(now()) @map("created_at")
-  updatedAt   DateTime   @updatedAt @map("updated_at")
+  id         String     @id @default(cuid())
+  tenantId   String     @map("tenant_id")
+  moduleCode ModuleCode @map("module_code")
+  isAllowed  Boolean    @default(true) @map("is_allowed")
+  isVisible  Boolean    @default(true) @map("is_visible") // Tenant admin can hide
+  createdAt  DateTime   @default(now()) @map("created_at")
+  updatedAt  DateTime   @updatedAt @map("updated_at")
 
   // Relations
-  tenant      Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, moduleCode])
   @@map("tenant_features")
@@ -119,16 +548,16 @@ model TenantFeature {
 
 // User-level module preferences
 model UserModulePref {
-  id          String     @id @default(cuid())
-  userId      String     @map("user_id")
-  moduleCode  ModuleCode @map("module_code")
-  isVisible   Boolean    @default(true) @map("is_visible")
-  sortOrder   Int        @default(0) @map("sort_order")
-  createdAt   DateTime   @default(now()) @map("created_at")
-  updatedAt   DateTime   @updatedAt @map("updated_at")
+  id         String     @id @default(cuid())
+  userId     String     @map("user_id")
+  moduleCode ModuleCode @map("module_code")
+  isVisible  Boolean    @default(true) @map("is_visible")
+  sortOrder  Int        @default(0) @map("sort_order")
+  createdAt  DateTime   @default(now()) @map("created_at")
+  updatedAt  DateTime   @updatedAt @map("updated_at")
 
   // Relations
-  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, moduleCode])
   @@map("user_module_prefs")
@@ -139,24 +568,24 @@ model UserModulePref {
 // ============================================
 
 model OcrCache {
-  id          String   @id @default(cuid())
-  hash        String   @unique  // SHA256 of image
-  result      Json     // OCR result
-  expiresAt   DateTime @map("expires_at")
-  createdAt   DateTime @default(now()) @map("created_at")
+  id        String   @id @default(cuid())
+  hash      String   @unique // SHA256 of image
+  result    Json // OCR result
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@map("ocr_cache")
 }
 
 model OcrRateLimit {
-  id          String   @id @default(cuid())
-  tenantId    String   @map("tenant_id")
-  userId      String   @map("user_id")
-  date        String   // YYYY-MM-DD
-  requestCount Int     @default(0) @map("request_count")
-  lastRequest DateTime @default(now()) @map("last_request")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id           String   @id @default(cuid())
+  tenantId     String   @map("tenant_id")
+  userId       String   @map("user_id")
+  date         String // YYYY-MM-DD
+  requestCount Int      @default(0) @map("request_count")
+  lastRequest  DateTime @default(now()) @map("last_request")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   @@unique([tenantId, userId, date])
   @@map("ocr_rate_limits")
@@ -164,15 +593,15 @@ model OcrRateLimit {
 
 // Monthly OCR usage for billing (per tenant)
 model OcrMonthlyUsage {
-  id                  String   @id @default(cuid())
-  tenantId            String   @map("tenant_id")
-  monthKey            String   @map("month_key") // YYYY-MM (JST)
-  usedCount           Int      @default(0) @map("used_count")
-  freeQuota           Int      @default(30) @map("free_quota")
-  unitPriceJpy        Int      @default(10) @map("unit_price_jpy")
-  firstOverageAt      DateTime? @map("first_overage_at")
-  createdAt           DateTime @default(now()) @map("created_at")
-  updatedAt           DateTime @updatedAt @map("updated_at")
+  id             String    @id @default(cuid())
+  tenantId       String    @map("tenant_id")
+  monthKey       String    @map("month_key") // YYYY-MM (JST)
+  usedCount      Int       @default(0) @map("used_count")
+  freeQuota      Int       @default(30) @map("free_quota")
+  unitPriceJpy   Int       @default(10) @map("unit_price_jpy")
+  firstOverageAt DateTime? @map("first_overage_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
 
   @@unique([tenantId, monthKey])
   @@map("ocr_monthly_usage")
@@ -183,17 +612,17 @@ model OcrMonthlyUsage {
 // ============================================
 
 model CashLedgerSettings {
-  id                  String   @id @default(cuid())
-  tenantId            String   @unique @map("tenant_id")
-  cashJournalId       Int      @map("cash_journal_id")
-  cashAccountId       Int      @map("cash_account_id")
-  bankJournalIdToza   Int?     @map("bank_journal_id_toza")
-  bankAccountIdToza   Int?     @map("bank_account_id_toza")
-  bankJournalIdFutsu  Int?     @map("bank_journal_id_futsu")
-  bankAccountIdFutsu  Int?     @map("bank_account_id_futsu")
-  accountMappings     Json     @default("{}") @map("account_mappings") // categoryCode -> accountId
-  createdAt           DateTime @default(now()) @map("created_at")
-  updatedAt           DateTime @updatedAt @map("updated_at")
+  id                 String   @id @default(cuid())
+  tenantId           String   @unique @map("tenant_id")
+  cashJournalId      Int      @map("cash_journal_id")
+  cashAccountId      Int      @map("cash_account_id")
+  bankJournalIdToza  Int?     @map("bank_journal_id_toza")
+  bankAccountIdToza  Int?     @map("bank_account_id_toza")
+  bankJournalIdFutsu Int?     @map("bank_journal_id_futsu")
+  bankAccountIdFutsu Int?     @map("bank_account_id_futsu")
+  accountMappings    Json     @default("{}") @map("account_mappings") // categoryCode -> accountId
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
 
   @@map("cash_ledger_settings")
 }
@@ -203,33 +632,390 @@ model CashLedgerSettings {
 // ============================================
 
 model ExpenseType {
-  id          String   @id @default(cuid())
-  code        String   @unique
-  nameEn      String   @map("name_en")
-  nameZh      String   @map("name_zh")
-  nameJa      String   @map("name_ja")
-  sortOrder   Int      @default(0) @map("sort_order")
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id        String   @id @default(cuid())
+  code      String   @unique
+  nameEn    String   @map("name_en")
+  nameZh    String   @map("name_zh")
+  nameJa    String   @map("name_ja")
+  sortOrder Int      @default(0) @map("sort_order")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("expense_types")
 }
 
 // ============================================
-// Subscription Plans (for reference)
+// Subscription Products (synced with Odoo 19)
+// 模块化订阅：基础套餐 + 可选模块
 // ============================================
 
+enum ProductType {
+  BASE_PLAN // 基础套餐 (Starter, Ops Basic, Ops Auto)
+  MODULE // 功能模块 (会计、会员管理等)
+  SERVICE // 服务 (导入、运维等)
+  HARDWARE // 硬件租赁
+  ADDON // 附加项 (额外终端、额外员工等)
+}
+
+enum ProductCategory {
+  PLAN // 软件/套餐
+  MODULE // 软件/模块
+  TERMINAL // 软件/终端许可
+  MAINTENANCE // 软件/运维保守
+  ONBOARDING // 服务/导入服务
+  RENTAL // 硬件/租赁
+}
+
+model SubscriptionProduct {
+  id            String  @id @default(cuid())
+  productCode   String  @unique @map("product_code") // e.g., SW-PLAN-START
+  name          String
+  nameZh        String? @map("name_zh")
+  nameJa        String? @map("name_ja")
+  description   String? // English description (default)
+  descriptionZh String? @map("description_zh")
+  descriptionJa String? @map("description_ja")
+
+  // Product classification
+  productType ProductType     @map("product_type")
+  category    ProductCategory
+
+  // Pricing
+  priceMonthly Decimal  @default(0) @map("price_monthly")
+  priceYearly  Decimal? @map("price_yearly")
+
+  // Features (for BASE_PLAN type)
+  includedModules String[] @map("included_modules") // ModuleCode array
+  maxUsers        Int?     @map("max_users")
+  maxTerminals    Int?     @map("max_terminals")
+
+  // For MODULE type - which app module it enables
+  enablesModule String? @map("enables_module") // ModuleCode
+
+  // Trial
+  trialDays Int @default(0) @map("trial_days")
+
+  // Odoo 19 integration
+  odoo19ProductId Int? @unique @map("odoo19_product_id")
+
+  // Stripe integration
+  stripeProductId    String? @unique @map("stripe_product_id") // Stripe Product ID (prod_xxx)
+  stripePriceMonthly String? @map("stripe_price_monthly") // Stripe Price ID for monthly (price_xxx)
+  stripePriceYearly  String? @map("stripe_price_yearly") // Stripe Price ID for yearly (price_xxx)
+
+  // Status
+  isActive  Boolean @default(true) @map("is_active")
+  sortOrder Int     @default(0) @map("sort_order")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  subscriptionItems SubscriptionItem[]
+
+  @@map("subscription_products")
+}
+
+// Legacy model for backward compatibility
 model SubscriptionPlan {
   id              String   @id @default(cuid())
   planCode        String   @unique @map("plan_code")
   name            String
-  allowedModules  String[] @map("allowed_modules") // Array of ModuleCode
+  allowedModules  String[] @map("allowed_modules")
   maxUsers        Int      @default(5) @map("max_users")
   priceMonthly    Decimal  @default(0) @map("price_monthly")
+  priceYearly     Decimal  @default(0) @map("price_yearly")
+  trialDays       Int      @default(14) @map("trial_days")
+  odoo19ProductId Int?     @map("odoo19_product_id")
   isActive        Boolean  @default(true) @map("is_active")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
   @@map("subscription_plans")
+}
+
+// ============================================
+// Subscription Management (synced with Odoo 19)
+// ============================================
+
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  EXPIRED
+}
+
+enum BillingCycle {
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+model Subscription {
+  id       String @id @default(cuid())
+  tenantId String @unique @map("tenant_id") // One active subscription per tenant
+
+  // Odoo 19 integration
+  odoo19OrderId   Int? @map("odoo19_order_id")
+  odoo19PartnerId Int? @map("odoo19_partner_id")
+
+  // Stripe integration
+  stripeSubscriptionId   String?   @unique @map("stripe_subscription_id") // Stripe Subscription ID (sub_xxx)
+  stripeCurrentPeriodEnd DateTime? @map("stripe_current_period_end") // Current billing period end
+
+  // Subscription status
+  status          SubscriptionStatus @default(ACTIVE)
+  startDate       DateTime           @map("start_date")
+  nextBillingDate DateTime           @map("next_billing_date")
+  endDate         DateTime?          @map("end_date")
+
+  // Billing info (total of all items)
+  billingCycle BillingCycle @default(MONTHLY)
+  totalAmount  Decimal      @default(0) @map("total_amount")
+  currency     String       @default("JPY")
+  autoRenew    Boolean      @default(true) @map("auto_renew")
+
+  // Trial period
+  trialEndDate DateTime? @map("trial_end_date")
+  isInTrial    Boolean   @default(false) @map("is_in_trial")
+
+  // Sync tracking
+  lastSyncAt DateTime @default(now()) @map("last_sync_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tenant   Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  items    SubscriptionItem[]
+  invoices Invoice[]
+
+  @@map("subscriptions")
+}
+
+// Subscription Items - 订阅明细（租户订阅的每个产品）
+model SubscriptionItem {
+  id             String @id @default(cuid())
+  subscriptionId String @map("subscription_id")
+  productId      String @map("product_id")
+
+  // Quantity (for ADDON type, e.g., additional terminals)
+  quantity Int @default(1)
+
+  // Price at time of subscription (may differ from current product price)
+  unitPrice Decimal @map("unit_price")
+
+  // Item status (can be cancelled independently)
+  status    SubscriptionStatus @default(ACTIVE)
+  startDate DateTime           @map("start_date")
+  endDate   DateTime?          @map("end_date")
+
+  // Odoo 19 integration
+  odoo19LineId Int? @map("odoo19_line_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  subscription Subscription        @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  product      SubscriptionProduct @relation(fields: [productId], references: [id])
+
+  @@unique([subscriptionId, productId])
+  @@map("subscription_items")
+}
+
+// ============================================
+// OAuth & Registration
+// ============================================
+
+enum OAuthProvider {
+  GOOGLE
+  MICROSOFT
+}
+
+// Pending registration - stores OAuth user info before company setup is complete
+model PendingRegistration {
+  id           String        @id @default(cuid())
+  email        String        @unique
+  name         String?
+  avatarUrl    String?       @map("avatar_url")
+  provider     OAuthProvider
+  providerId   String        @map("provider_id") // Google/Microsoft user ID
+  accessToken  String?       @map("access_token")
+  refreshToken String?       @map("refresh_token")
+  expiresAt    DateTime      @map("expires_at")
+  createdAt    DateTime      @default(now()) @map("created_at")
+
+  @@map("pending_registrations")
+}
+
+// Verification codes for email login
+model VerificationCode {
+  id        String   @id @default(cuid())
+  email     String
+  code      String // 6-digit code
+  expiresAt DateTime @map("expires_at")
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([email, code])
+  @@map("verification_codes")
+}
+
+// ============================================
+// Provisioning Jobs (for tenant database setup)
+// ============================================
+
+enum ProvisioningStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+enum ProvisioningStep {
+  STEP_0_INIT
+  STEP_1_COPY_DB
+  STEP_2_ODOO18_AUTH
+  STEP_3_ODOO18_UPDATE_ADMIN
+  STEP_4_ODOO19_UPSERT_TENANT
+  STEP_5_ODOO19_UPSERT_USER
+  STEP_6_BRIDGE_METADATA
+  STEP_7_FINALIZE
+}
+
+model ProvisioningJob {
+  id         String  @id @default(cuid())
+  tenantId   String  @map("tenant_id")
+  tenantCode String  @map("tenant_code")
+  userId     String? @map("user_id")
+
+  // Status tracking
+  status      ProvisioningStatus @default(PENDING)
+  currentStep ProvisioningStep   @default(STEP_0_INIT) @map("current_step")
+
+  // Retry management
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(5) @map("max_attempts")
+  nextRunAt   DateTime? @map("next_run_at")
+
+  // Error tracking
+  lastError  String?           @map("last_error") @db.Text
+  failedStep ProvisioningStep? @map("failed_step")
+
+  // Progress data (JSON for intermediate state)
+  progressData Json? @map("progress_data")
+  // e.g., { odoo18DbCreated: true, odoo18AdminUpdated: false, odoo19TenantId: 123 }
+
+  // Lock for concurrency control
+  lockedAt DateTime? @map("locked_at")
+  lockedBy String?   @map("locked_by")
+
+  // Timing
+  startedAt   DateTime? @map("started_at")
+  completedAt DateTime? @map("completed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@unique([tenantCode])
+  @@index([status, nextRunAt])
+  @@index([tenantId])
+  @@map("provisioning_jobs")
+}
+
+// ============================================
+// Invoice Management
+// ============================================
+
+enum InvoiceStatus {
+  DRAFT
+  OPEN
+  PAID
+  VOID
+  UNCOLLECTIBLE
+}
+
+model Invoice {
+  id             String @id @default(cuid())
+  subscriptionId String @map("subscription_id")
+  tenantId       String @map("tenant_id")
+
+  // Odoo 19 invoice ID
+  odoo19InvoiceId Int? @map("odoo19_invoice_id")
+
+  invoiceNumber String        @unique @map("invoice_number")
+  amount        Decimal
+  currency      String        @default("JPY")
+  status        InvoiceStatus @default(DRAFT)
+
+  issueDate DateTime  @map("issue_date")
+  dueDate   DateTime  @map("due_date")
+  paidDate  DateTime? @map("paid_date")
+
+  periodStart DateTime @map("period_start")
+  periodEnd   DateTime @map("period_end")
+
+  // Sync tracking
+  lastSyncAt DateTime @default(now()) @map("last_sync_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  subscription Subscription @relation(fields: [subscriptionId], references: [id])
+  payments     Payment[]
+
+  @@map("invoices")
+}
+
+// ============================================
+// Payment Management
+// ============================================
+
+enum PaymentMethod {
+  CREDIT_CARD
+  BANK_TRANSFER
+  KONBINI
+  PAYPAY
+  OTHER
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+model Payment {
+  id        String @id @default(cuid())
+  invoiceId String @map("invoice_id")
+  tenantId  String @map("tenant_id")
+
+  // Odoo 19 payment ID
+  odoo19PaymentId Int? @map("odoo19_payment_id")
+
+  amount        Decimal
+  currency      String        @default("JPY")
+  paymentMethod PaymentMethod @map("payment_method")
+  status        PaymentStatus @default(PENDING)
+
+  gatewayProvider      String? @map("gateway_provider")
+  gatewayTransactionId String? @map("gateway_transaction_id")
+
+  paymentDate DateTime? @map("payment_date")
+
+  // Sync tracking
+  lastSyncAt DateTime @default(now()) @map("last_sync_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  invoice Invoice @relation(fields: [invoiceId], references: [id])
+
+  @@map("payments")
 }
