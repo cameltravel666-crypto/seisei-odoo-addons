@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations, useLocale } from 'next-intl';
-import { ChevronDown, ChevronUp, Building2, Mail, Loader2 } from 'lucide-react';
+import { Building2, Mail, Loader2, Eye, EyeOff, Globe, HelpCircle } from 'lucide-react';
 
 const STORAGE_KEY = 'biznexus_login_info';
 const TENANT_PREFIX = 'TEN-';
@@ -20,21 +20,26 @@ function GoogleIcon({ className }: { className?: string }) {
   );
 }
 
+type TabType = 'login' | 'register';
+
 export default function LoginPage() {
   const t = useTranslations('auth');
   const locale = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  const [activeTab, setActiveTab] = useState<TabType>('login');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [currentLocale, setCurrentLocale] = useState(locale);
-  const [showEnterpriseLogin, setShowEnterpriseLogin] = useState(false);
-  const [showEmailRegistration, setShowEmailRegistration] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showLanguageMenu, setShowLanguageMenu] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
 
-  // Form data - tenantSuffix is the part after "TEN-"
+  // Form data
   const [formData, setFormData] = useState({
-    tenantSuffix: '',
+    tenantCode: '',
     username: '',
     password: '',
   });
@@ -49,59 +54,127 @@ export default function LoginPage() {
     cooldown: 0,
   });
 
+  const getText = useCallback((zh: string, ja: string, en: string) => {
+    return locale === 'zh' ? zh : locale === 'ja' ? ja : en;
+  }, [locale]);
+
   // Check for OAuth errors or tenant info from URL
   useEffect(() => {
     const errorParam = searchParams.get('error');
     if (errorParam) {
       const errorMessages: Record<string, string> = {
-        oauth_denied: locale === 'zh' ? '授权被拒绝' : locale === 'ja' ? '認証が拒否されました' : 'Authorization denied',
-        invalid_state: locale === 'zh' ? '无效的请求状态' : locale === 'ja' ? '無効なリクエスト状態' : 'Invalid request state',
-        token_exchange_failed: locale === 'zh' ? '认证失败' : locale === 'ja' ? '認証に失敗しました' : 'Authentication failed',
-        oauth_error: locale === 'zh' ? '登录出错' : locale === 'ja' ? 'ログインエラー' : 'Login error',
+        oauth_denied: getText('授权被拒绝', '認証が拒否されました', 'Authorization denied'),
+        invalid_state: getText('无效的请求状态', '無効なリクエスト状態', 'Invalid request state'),
+        token_exchange_failed: getText('认证失败', '認証に失敗しました', 'Authentication failed'),
+        oauth_error: getText('登录出错', 'ログインエラー', 'Login error'),
       };
       setError(errorMessages[errorParam] || errorParam);
     }
 
-    // Pre-fill tenant code if provided (for existing OAuth users)
+    // Pre-fill tenant code if provided (remove TEN- prefix for display)
     const tenantParam = searchParams.get('tenant');
     if (tenantParam) {
-      const suffix = tenantParam.replace('TEN-', '');
-      setFormData(prev => ({ ...prev, tenantSuffix: suffix }));
-      setShowEnterpriseLogin(true);
+      const codeWithoutPrefix = tenantParam.replace(/^TEN-/i, '');
+      setFormData(prev => ({ ...prev, tenantCode: codeWithoutPrefix }));
     }
-  }, [searchParams, locale]);
+
+    // Check for registration redirect
+    const tab = searchParams.get('tab');
+    if (tab === 'register') {
+      setActiveTab('register');
+    }
+  }, [searchParams, getText]);
 
   // Load saved login info on mount
   useEffect(() => {
     setCurrentLocale(locale);
 
-    // Load saved credentials from localStorage
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
+        // Remove TEN- prefix from saved tenant code for display
+        const savedCode = (parsed.tenantCode || '').replace(/^TEN-/i, '');
         setFormData({
-          tenantSuffix: parsed.tenantSuffix || '',
+          tenantCode: savedCode,
           username: parsed.username || '',
           password: '',
         });
-        // If there's saved tenant info, show enterprise login
-        if (parsed.tenantSuffix) {
-          setShowEnterpriseLogin(true);
-        }
+        setRememberMe(parsed.rememberMe ?? true);
       }
     } catch {
       // Ignore parse errors
     }
   }, [locale]);
 
+  // Cooldown timer
+  useEffect(() => {
+    if (emailRegState.cooldown > 0) {
+      const timer = setTimeout(() => {
+        setEmailRegState(prev => ({ ...prev, cooldown: prev.cooldown - 1 }));
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [emailRegState.cooldown]);
+
   const changeLanguage = (newLocale: string) => {
     document.cookie = `locale=${newLocale}; path=/; max-age=31536000`;
+    localStorage.setItem('preferred_locale', newLocale);
+    setShowLanguageMenu(false);
     window.location.reload();
   };
 
   const handleGoogleLogin = () => {
     window.location.href = '/api/auth/google';
+  };
+
+  // Normalize tenant code input - always add TEN- prefix
+  const normalizeTenantCode = (input: string): string => {
+    // Remove any existing prefix and clean up
+    let normalized = input.trim().toUpperCase().replace(/^TEN-/i, '');
+    // Remove any non-alphanumeric characters
+    normalized = normalized.replace(/[^A-Z0-9]/g, '');
+    // Add prefix
+    return normalized ? TENANT_PREFIX + normalized : '';
+  };
+
+  // Validate form
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {};
+
+    const codeWithoutPrefix = formData.tenantCode.replace(/^TEN-/i, '').trim();
+    if (!codeWithoutPrefix) {
+      errors.tenantCode = getText(
+        '请输入租户代码',
+        'テナントコードを入力してください',
+        'Please enter tenant code'
+      );
+    } else if (!/^[A-Z0-9]+$/.test(codeWithoutPrefix.toUpperCase())) {
+      errors.tenantCode = getText(
+        '租户代码只能包含字母和数字',
+        'テナントコードは英数字のみ使用できます',
+        'Tenant code can only contain letters and numbers'
+      );
+    }
+
+    if (!formData.username.trim()) {
+      errors.username = getText(
+        '请输入用户名或邮箱',
+        'ユーザー名またはメールアドレスを入力してください',
+        'Please enter username or email'
+      );
+    }
+
+    if (!formData.password) {
+      errors.password = getText(
+        '请输入密码',
+        'パスワードを入力してください',
+        'Please enter password'
+      );
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   // Email registration handlers
@@ -127,7 +200,6 @@ export default function LoginPage() {
         throw new Error(data.error?.message || 'Failed to send code');
       }
 
-      // Move to verify step and start cooldown
       setEmailRegState(prev => ({ ...prev, step: 'verify', cooldown: 60 }));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send code');
@@ -158,7 +230,6 @@ export default function LoginPage() {
         throw new Error(data.error?.message || 'Invalid code');
       }
 
-      // Redirect to registration page with token
       router.push(`/register?email=${encodeURIComponent(data.email)}&token=${encodeURIComponent(data.token)}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Verification failed');
@@ -167,23 +238,18 @@ export default function LoginPage() {
     }
   };
 
-  // Cooldown timer
-  useEffect(() => {
-    if (emailRegState.cooldown > 0) {
-      const timer = setTimeout(() => {
-        setEmailRegState(prev => ({ ...prev, cooldown: prev.cooldown - 1 }));
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [emailRegState.cooldown]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!validateForm()) {
+      return;
+    }
+
     setIsLoading(true);
     setError('');
 
-    const fullTenantCode = TENANT_PREFIX + formData.tenantSuffix.toUpperCase();
-    const normalizedUsername = formData.username.toLowerCase();
+    const fullTenantCode = normalizeTenantCode(formData.tenantCode);
+    const normalizedUsername = formData.username.toLowerCase().trim();
 
     try {
       const res = await fetch('/api/auth/login', {
@@ -199,16 +265,27 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error?.message || t('loginError'));
+        // Generic error message to prevent account enumeration
+        throw new Error(getText(
+          '账号或密码不正确',
+          'アカウントまたはパスワードが正しくありません',
+          'Invalid account or password'
+        ));
       }
 
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({
-          tenantSuffix: formData.tenantSuffix,
-          username: formData.username,
-        }));
-      } catch {
-        // Ignore storage errors
+      // Save login info if remember me is checked
+      if (rememberMe) {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify({
+            tenantCode: fullTenantCode,
+            username: formData.username,
+            rememberMe: true,
+          }));
+        } catch {
+          // Ignore storage errors
+        }
+      } else {
+        localStorage.removeItem(STORAGE_KEY);
       }
 
       router.push('/home');
@@ -220,264 +297,424 @@ export default function LoginPage() {
     }
   };
 
-  const getText = (zh: string, ja: string, en: string) => {
-    return locale === 'zh' ? zh : locale === 'ja' ? ja : en;
+  const handleForgotPassword = () => {
+    // For now, show a helpful message. Can be expanded to full flow later.
+    alert(getText(
+      '请联系管理员重置密码，或使用 Google 账号登录',
+      '管理者に連絡してパスワードをリセットするか、Googleアカウントでログインしてください',
+      'Please contact your administrator to reset password, or login with Google'
+    ));
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-100 p-4">
       <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl shadow-xl p-8">
+        {/* Language Selector - Top Right */}
+        <div className="flex justify-end mb-4 relative">
+          <button
+            onClick={() => setShowLanguageMenu(!showLanguageMenu)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 bg-white/80 backdrop-blur rounded-full shadow-sm border border-gray-200 transition"
+          >
+            <Globe className="w-4 h-4" />
+            {currentLocale === 'ja' ? '日本語' : currentLocale === 'zh' ? '中文' : 'EN'}
+          </button>
+
+          {showLanguageMenu && (
+            <div className="absolute top-full right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10 min-w-[120px]">
+              <button
+                onClick={() => changeLanguage('ja')}
+                className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 ${currentLocale === 'ja' ? 'text-blue-600 font-medium' : 'text-gray-700'}`}
+              >
+                日本語
+              </button>
+              <button
+                onClick={() => changeLanguage('zh')}
+                className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 ${currentLocale === 'zh' ? 'text-blue-600 font-medium' : 'text-gray-700'}`}
+              >
+                中文
+              </button>
+              <button
+                onClick={() => changeLanguage('en')}
+                className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 ${currentLocale === 'en' ? 'text-blue-600 font-medium' : 'text-gray-700'}`}
+              >
+                English
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
           {/* Logo */}
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">Seisei BizNexus</h1>
-            <p className="text-gray-500 mt-2">
+          <div className="text-center pt-8 pb-4 px-8">
+            <h1 className="text-2xl font-bold text-gray-900">Seisei BizNexus</h1>
+            <p className="text-gray-500 mt-1 text-sm">
               {getText('智能业务管理平台', 'スマートビジネス管理', 'Smart Business Management')}
             </p>
           </div>
 
-          {/* Error Message */}
-          {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
-              {error}
-            </div>
-          )}
-
-          {/* Free Start Section */}
-          <div className="space-y-4 mb-6">
-            {/* Google Login Button */}
+          {/* Tabs */}
+          <div className="flex border-b border-gray-200 px-8">
             <button
-              onClick={handleGoogleLogin}
-              className="w-full py-3 px-4 bg-white border-2 border-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-50 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition flex items-center justify-center gap-3"
+              onClick={() => { setActiveTab('login'); setError(''); setFieldErrors({}); }}
+              className={`flex-1 py-3 text-sm font-medium border-b-2 transition ${
+                activeTab === 'login'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
             >
-              <GoogleIcon className="w-5 h-5" />
-              {getText('使用 Google 账号登录', 'Google でログイン', 'Continue with Google')}
+              {getText('登录', 'ログイン', 'Login')}
             </button>
-
-            {/* Divider */}
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-200"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-white text-gray-500">
-                  {getText('或', 'または', 'or')}
-                </span>
-              </div>
-            </div>
+            <button
+              onClick={() => { setActiveTab('register'); setError(''); setFieldErrors({}); }}
+              className={`flex-1 py-3 text-sm font-medium border-b-2 transition ${
+                activeTab === 'register'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              {getText('注册', '新規登録', 'Register')}
+            </button>
           </div>
 
-          {/* Email Registration Toggle */}
-          <button
-            onClick={() => {
-              setShowEmailRegistration(!showEmailRegistration);
-              if (!showEmailRegistration) setShowEnterpriseLogin(false);
-            }}
-            className="w-full py-3 px-4 text-gray-600 font-medium rounded-lg hover:bg-gray-50 transition flex items-center justify-center gap-2 border border-gray-200"
-          >
-            <Mail className="w-5 h-5" />
-            {getText('邮箱注册', 'メールで登録', 'Register with Email')}
-            {showEmailRegistration ? (
-              <ChevronUp className="w-4 h-4" />
-            ) : (
-              <ChevronDown className="w-4 h-4" />
+          <div className="p-8">
+            {/* Global Error Message */}
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+                {error}
+              </div>
             )}
-          </button>
 
-          {/* Email Registration Form */}
-          {showEmailRegistration && (
-            <div className="space-y-4 mt-4 pt-4 border-t border-gray-100">
-              {emailRegState.step === 'email' ? (
-                <>
-                  <div>
-                    <label htmlFor="regEmail" className="block text-sm font-medium text-gray-700 mb-1">
-                      {getText('邮箱地址', 'メールアドレス', 'Email Address')}
-                    </label>
-                    <input
-                      type="email"
-                      id="regEmail"
-                      value={emailRegState.email}
-                      onChange={(e) => setEmailRegState(prev => ({ ...prev, email: e.target.value }))}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                      placeholder="your@email.com"
-                      autoComplete="email"
-                    />
+            {activeTab === 'login' ? (
+              <>
+                {/* Google Login */}
+                <button
+                  onClick={handleGoogleLogin}
+                  className="w-full h-12 px-4 bg-white border-2 border-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-50 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition flex items-center justify-center gap-3"
+                >
+                  <GoogleIcon className="w-5 h-5" />
+                  {getText('使用 Google 登录', 'Google でログイン', 'Continue with Google')}
+                </button>
+
+                {/* Divider */}
+                <div className="relative my-6">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-200"></div>
                   </div>
-                  <button
-                    onClick={handleSendCode}
-                    disabled={emailRegState.isSending}
-                    className="w-full py-3 px-4 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  >
-                    {emailRegState.isSending ? (
-                      <>
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        {getText('发送中...', '送信中...', 'Sending...')}
-                      </>
-                    ) : (
-                      getText('发送验证码', '認証コードを送信', 'Send Verification Code')
-                    )}
-                  </button>
-                </>
-              ) : (
-                <>
-                  <p className="text-sm text-gray-600">
-                    {getText(
-                      `验证码已发送至 ${emailRegState.email}`,
-                      `${emailRegState.email} に認証コードを送信しました`,
-                      `Verification code sent to ${emailRegState.email}`
-                    )}
-                  </p>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-4 bg-white text-gray-500">
+                      {getText('或使用企业账号', 'または企業アカウント', 'or with enterprise account')}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Login Form */}
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  {/* Tenant Code */}
                   <div>
-                    <label htmlFor="verifyCode" className="block text-sm font-medium text-gray-700 mb-1">
-                      {getText('验证码', '認証コード', 'Verification Code')}
+                    <label htmlFor="tenantCode" className="flex items-center gap-1 text-sm font-medium text-gray-700 mb-1">
+                      {getText('租户代码', 'テナントコード', 'Tenant Code')}
+                      <button
+                        type="button"
+                        className="text-gray-400 hover:text-gray-600"
+                        title={getText(
+                          '租户代码由管理员提供，例如: DEMO01',
+                          'テナントコードは管理者から提供されます。例: DEMO01',
+                          'Tenant code is provided by your administrator, e.g., DEMO01'
+                        )}
+                      >
+                        <HelpCircle className="w-3.5 h-3.5" />
+                      </button>
+                    </label>
+                    <div className="flex">
+                      <span className="inline-flex items-center px-4 h-12 text-gray-500 bg-gray-100 border border-r-0 border-gray-300 rounded-l-lg font-medium">
+                        TEN-
+                      </span>
+                      <input
+                        type="text"
+                        id="tenantCode"
+                        value={formData.tenantCode.replace(/^TEN-/i, '')}
+                        onChange={(e) => {
+                          // Only store the code part without prefix, allow alphanumeric
+                          const value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                          setFormData({ ...formData, tenantCode: value });
+                          setFieldErrors({ ...fieldErrors, tenantCode: '' });
+                        }}
+                        className={`flex-1 h-12 px-4 border rounded-r-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition uppercase ${
+                          fieldErrors.tenantCode ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                        }`}
+                        placeholder="DEMO01"
+                        autoCapitalize="characters"
+                        autoComplete="organization"
+                      />
+                    </div>
+                    {fieldErrors.tenantCode && (
+                      <p className="mt-1 text-xs text-red-600">{fieldErrors.tenantCode}</p>
+                    )}
+                    <p className="mt-1 text-xs text-gray-500">
+                      {getText(
+                        '示例: DEMO01 (只需输入代码部分)',
+                        '例: DEMO01 (コード部分のみ入力)',
+                        'Example: DEMO01 (enter code part only)'
+                      )}
+                    </p>
+                  </div>
+
+                  {/* Username */}
+                  <div>
+                    <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
+                      {getText('用户名 / 邮箱', 'ユーザー名 / メール', 'Username / Email')}
                     </label>
                     <input
                       type="text"
-                      id="verifyCode"
-                      value={emailRegState.code}
-                      onChange={(e) => setEmailRegState(prev => ({ ...prev, code: e.target.value.replace(/\D/g, '').slice(0, 6) }))}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-center text-2xl tracking-widest font-mono"
-                      placeholder="000000"
-                      maxLength={6}
-                      autoComplete="one-time-code"
+                      id="username"
+                      value={formData.username}
+                      onChange={(e) => {
+                        setFormData({ ...formData, username: e.target.value });
+                        setFieldErrors({ ...fieldErrors, username: '' });
+                      }}
+                      className={`w-full h-12 px-4 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${
+                        fieldErrors.username ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                      }`}
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      autoComplete="username"
                     />
+                    {fieldErrors.username && (
+                      <p className="mt-1 text-xs text-red-600">{fieldErrors.username}</p>
+                    )}
                   </div>
+
+                  {/* Password */}
+                  <div>
+                    <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                      {getText('密码', 'パスワード', 'Password')}
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        id="password"
+                        value={formData.password}
+                        onChange={(e) => {
+                          setFormData({ ...formData, password: e.target.value });
+                          setFieldErrors({ ...fieldErrors, password: '' });
+                        }}
+                        className={`w-full h-12 px-4 pr-12 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${
+                          fieldErrors.password ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                        }`}
+                        autoComplete="current-password"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
+                      >
+                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </button>
+                    </div>
+                    {fieldErrors.password && (
+                      <p className="mt-1 text-xs text-red-600">{fieldErrors.password}</p>
+                    )}
+                  </div>
+
+                  {/* Remember Me & Forgot Password */}
+                  <div className="flex items-center justify-between">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={rememberMe}
+                        onChange={(e) => setRememberMe(e.target.checked)}
+                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-600">
+                        {getText('记住我', 'ログイン状態を保持', 'Remember me')}
+                      </span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleForgotPassword}
+                      className="text-sm text-blue-600 hover:text-blue-700"
+                    >
+                      {getText('忘记密码?', 'パスワードを忘れた?', 'Forgot password?')}
+                    </button>
+                  </div>
+
+                  {/* Submit Button */}
                   <button
-                    onClick={handleVerifyCode}
-                    disabled={emailRegState.isVerifying}
-                    className="w-full py-3 px-4 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full h-12 px-4 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
-                    {emailRegState.isVerifying ? (
+                    {isLoading ? (
                       <>
                         <Loader2 className="w-5 h-5 animate-spin" />
-                        {getText('验证中...', '確認中...', 'Verifying...')}
+                        {getText('登录中...', 'ログイン中...', 'Logging in...')}
                       </>
                     ) : (
-                      getText('验证并注册', '確認して登録', 'Verify & Register')
+                      getText('登录', 'ログイン', 'Login')
                     )}
                   </button>
+                </form>
+
+                {/* Enterprise SSO Section */}
+                <div className="mt-6 pt-6 border-t border-gray-100">
+                  <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
+                    <Building2 className="w-4 h-4" />
+                    {getText('企业 SSO 登录', '企業SSOログイン', 'Enterprise SSO Login')}
+                  </div>
+                  <p className="text-xs text-gray-400 mb-3">
+                    {getText(
+                      '仅适用于已开通 SSO 的企业 (Google Workspace/Azure AD)',
+                      'SSO対応企業のみ (Google Workspace/Azure AD)',
+                      'For SSO-enabled organizations only (Google Workspace/Azure AD)'
+                    )}
+                  </p>
                   <button
-                    onClick={handleSendCode}
-                    disabled={emailRegState.cooldown > 0 || emailRegState.isSending}
-                    className="w-full py-2 px-4 text-blue-600 font-medium rounded-lg hover:bg-blue-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={handleGoogleLogin}
+                    className="w-full h-10 px-4 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition flex items-center justify-center gap-2"
                   >
-                    {emailRegState.cooldown > 0
-                      ? getText(`${emailRegState.cooldown}秒后可重发`, `${emailRegState.cooldown}秒後に再送信`, `Resend in ${emailRegState.cooldown}s`)
-                      : getText('重新发送验证码', '認証コードを再送信', 'Resend Code')}
+                    <GoogleIcon className="w-4 h-4" />
+                    {getText('使用企业 Google 账号', 'Google Workspaceでログイン', 'Sign in with Google Workspace')}
                   </button>
-                </>
-              )}
-            </div>
-          )}
-
-          {/* Enterprise Login Toggle */}
-          <button
-            onClick={() => {
-              setShowEnterpriseLogin(!showEnterpriseLogin);
-              if (!showEnterpriseLogin) setShowEmailRegistration(false);
-            }}
-            className="w-full py-3 px-4 text-gray-600 font-medium rounded-lg hover:bg-gray-50 transition flex items-center justify-center gap-2 border border-gray-200"
-          >
-            <Building2 className="w-5 h-5" />
-            {getText('企业账号登录', '企業アカウントでログイン', 'Enterprise Login')}
-            {showEnterpriseLogin ? (
-              <ChevronUp className="w-4 h-4" />
-            ) : (
-              <ChevronDown className="w-4 h-4" />
-            )}
-          </button>
-
-          {/* Enterprise Login Form (Collapsible) */}
-          {showEnterpriseLogin && (
-            <form onSubmit={handleSubmit} className="space-y-4 mt-4 pt-4 border-t border-gray-100">
-              <div>
-                <label htmlFor="tenantCode" className="block text-sm font-medium text-gray-700 mb-1">
-                  {t('tenantCode')}
-                </label>
-                <div className="flex">
-                  <span className="inline-flex items-center px-4 py-3 bg-gray-100 border border-r-0 border-gray-300 rounded-l-lg text-gray-600 font-medium text-sm">
-                    {TENANT_PREFIX}
-                  </span>
-                  <input
-                    type="text"
-                    id="tenantCode"
-                    value={formData.tenantSuffix}
-                    onChange={(e) => setFormData({ ...formData, tenantSuffix: e.target.value.toUpperCase() })}
-                    className="flex-1 px-4 py-3 border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition uppercase"
-                    placeholder="DEMO01"
-                    required
-                    autoCapitalize="characters"
-                  />
                 </div>
-              </div>
+              </>
+            ) : (
+              <>
+                {/* Register Tab */}
 
-              <div>
-                <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
-                  {t('username')}
-                </label>
-                <input
-                  type="text"
-                  id="username"
-                  value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                  required
-                  autoCapitalize="none"
-                  autoCorrect="off"
-                />
-              </div>
+                {/* Google Register */}
+                <button
+                  onClick={handleGoogleLogin}
+                  className="w-full h-12 px-4 bg-white border-2 border-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-50 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition flex items-center justify-center gap-3"
+                >
+                  <GoogleIcon className="w-5 h-5" />
+                  {getText('使用 Google 注册', 'Google で登録', 'Register with Google')}
+                </button>
 
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                  {t('password')}
-                </label>
-                <input
-                  type="password"
-                  id="password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                  required
-                />
-              </div>
+                {/* Divider */}
+                <div className="relative my-6">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-200"></div>
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-4 bg-white text-gray-500">
+                      {getText('或使用邮箱', 'またはメールで', 'or with email')}
+                    </span>
+                  </div>
+                </div>
 
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full py-3 px-4 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isLoading ? t('loggingIn') : t('loginButton')}
-              </button>
-            </form>
-          )}
+                {/* Email Registration Form */}
+                <div className="space-y-4">
+                  {emailRegState.step === 'email' ? (
+                    <>
+                      <div>
+                        <label htmlFor="regEmail" className="block text-sm font-medium text-gray-700 mb-1">
+                          {getText('邮箱地址', 'メールアドレス', 'Email Address')}
+                        </label>
+                        <input
+                          type="email"
+                          id="regEmail"
+                          value={emailRegState.email}
+                          onChange={(e) => setEmailRegState(prev => ({ ...prev, email: e.target.value }))}
+                          className="w-full h-12 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                          placeholder="your@email.com"
+                          autoComplete="email"
+                        />
+                      </div>
+                      <button
+                        onClick={handleSendCode}
+                        disabled={emailRegState.isSending}
+                        className="w-full h-12 px-4 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                        {emailRegState.isSending ? (
+                          <>
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                            {getText('发送中...', '送信中...', 'Sending...')}
+                          </>
+                        ) : (
+                          <>
+                            <Mail className="w-5 h-5" />
+                            {getText('发送验证码', '認証コードを送信', 'Send Verification Code')}
+                          </>
+                        )}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm text-gray-600">
+                        {getText(
+                          `验证码已发送至 ${emailRegState.email}`,
+                          `${emailRegState.email} に認証コードを送信しました`,
+                          `Verification code sent to ${emailRegState.email}`
+                        )}
+                      </p>
+                      <div>
+                        <label htmlFor="verifyCode" className="block text-sm font-medium text-gray-700 mb-1">
+                          {getText('验证码', '認証コード', 'Verification Code')}
+                        </label>
+                        <input
+                          type="text"
+                          id="verifyCode"
+                          value={emailRegState.code}
+                          onChange={(e) => setEmailRegState(prev => ({ ...prev, code: e.target.value.replace(/\D/g, '').slice(0, 6) }))}
+                          className="w-full h-12 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-center text-2xl tracking-widest font-mono"
+                          placeholder="000000"
+                          maxLength={6}
+                          autoComplete="one-time-code"
+                        />
+                      </div>
+                      <button
+                        onClick={handleVerifyCode}
+                        disabled={emailRegState.isVerifying}
+                        className="w-full h-12 px-4 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                        {emailRegState.isVerifying ? (
+                          <>
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                            {getText('验证中...', '確認中...', 'Verifying...')}
+                          </>
+                        ) : (
+                          getText('验证并继续', '確認して続行', 'Verify & Continue')
+                        )}
+                      </button>
+                      <button
+                        onClick={handleSendCode}
+                        disabled={emailRegState.cooldown > 0 || emailRegState.isSending}
+                        className="w-full h-10 px-4 text-blue-600 font-medium rounded-lg hover:bg-blue-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {emailRegState.cooldown > 0
+                          ? getText(`${emailRegState.cooldown}秒后可重发`, `${emailRegState.cooldown}秒後に再送信`, `Resend in ${emailRegState.cooldown}s`)
+                          : getText('重新发送验证码', '認証コードを再送信', 'Resend Code')}
+                      </button>
+                      <button
+                        onClick={() => setEmailRegState(prev => ({ ...prev, step: 'email', code: '' }))}
+                        className="w-full text-sm text-gray-500 hover:text-gray-700"
+                      >
+                        {getText('使用其他邮箱', '別のメールを使用', 'Use different email')}
+                      </button>
+                    </>
+                  )}
+                </div>
 
-          {/* New User Hint */}
-          <p className="mt-6 text-center text-sm text-gray-500">
-            {getText('新用户？使用 Google 或邮箱注册', '新規登録は Google またはメールで', 'New user? Register with Google or Email')}
-          </p>
+                {/* Already have account */}
+                <p className="mt-6 text-center text-sm text-gray-500">
+                  {getText('已有账号?', 'アカウントをお持ちですか?', 'Already have an account?')}
+                  {' '}
+                  <button
+                    onClick={() => setActiveTab('login')}
+                    className="text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    {getText('立即登录', 'ログイン', 'Login now')}
+                  </button>
+                </p>
+              </>
+            )}
+          </div>
         </div>
 
-        {/* Language Selector */}
-        <div className="mt-6 flex justify-center gap-2 text-sm">
-          <button
-            onClick={() => changeLanguage('ja')}
-            className={`px-3 py-1 rounded-full transition ${currentLocale === 'ja' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}
-          >
-            日本語
-          </button>
-          <button
-            onClick={() => changeLanguage('zh')}
-            className={`px-3 py-1 rounded-full transition ${currentLocale === 'zh' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}
-          >
-            中文
-          </button>
-          <button
-            onClick={() => changeLanguage('en')}
-            className={`px-3 py-1 rounded-full transition ${currentLocale === 'en' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}
-          >
-            English
-          </button>
-        </div>
+        {/* Footer */}
+        <p className="mt-6 text-center text-xs text-gray-400">
+          © 2026 Seisei Inc. All rights reserved.
+        </p>
       </div>
     </div>
   );
