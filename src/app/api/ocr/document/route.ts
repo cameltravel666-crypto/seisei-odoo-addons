@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
     if (config.model === 'purchase.order') {
       // Find any existing vendor for draft PO (required by Odoo)
       // The OCR process will update the vendor after extraction
-      const existingVendors = await odoo.searchRead<{ id: number }>('res.partner',
+      let existingVendors = await odoo.searchRead<{ id: number }>('res.partner',
         [['supplier_rank', '>', 0]],
         { fields: ['id'], limit: 1 }
       );
@@ -145,9 +145,19 @@ export async function POST(request: NextRequest) {
         );
 
         if (anyPartners.length === 0) {
-          throw new Error('No vendors found in system. Please create at least one vendor first.');
+          // Auto-create a default vendor (consistent with Odoo 18 behavior)
+          console.log('[OCR] No vendors found, creating default vendor');
+          const newVendorId = await odoo.create('res.partner', {
+            name: 'OCR临时供应商',
+            is_company: true,
+            supplier_rank: 1,
+            comment: '由OCR系统自动创建的临时供应商，请在识别后更新为正确的供应商信息',
+          });
+          existingVendors = [{ id: newVendorId }];
+          console.log(`[OCR] Created default vendor ${newVendorId}`);
+        } else {
+          existingVendors = anyPartners;
         }
-        existingVendors.push(anyPartners[0]);
       }
 
       const placeholderVendorId = existingVendors[0].id;
