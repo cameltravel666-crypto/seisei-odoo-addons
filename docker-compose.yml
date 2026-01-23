@@ -47,6 +47,20 @@ services:
         condition: service_healthy
     volumes:
       - ./prisma:/app/prisma
+    # Production: Connect to traefik edge network
+    networks:
+      - default
+      - edge
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.biznexus.rule=Host(`biznexus.seisei.tokyo`)"
+      - "traefik.http.routers.biznexus.entrypoints=websecure"
+      - "traefik.http.routers.biznexus.tls.certresolver=cloudflare"
+      - "traefik.http.services.biznexus.loadbalancer.server.port=9527"
 
 volumes:
   postgres_data:
+
+networks:
+  edge:
+    external: true

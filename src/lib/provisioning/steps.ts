@@ -816,7 +816,13 @@ export async function step4bSeiseiBillingTenant(ctx: ProvisioningContext): Promi
       },
     };
   } catch (error) {
+    const errorMsg = sanitizeError(error);
+    // Handle model not found errors gracefully - seisei.tenant module may not be installed in Odoo 19
+    if (errorMsg.includes('seisei.tenant') || errorMsg.includes('does not exist') || errorMsg.includes('Model not found') || errorMsg.includes('KeyError') || errorMsg.includes('404')) {
+      logger.success('Skipping Seisei Billing tenant (seisei.tenant model not installed in Odoo 19)');
+      return { success: true };
+    }
     logger.error(error as Error);
-    return { success: false, error: sanitizeError(error) };
+    return { success: false, error: errorMsg };
   }
 }
