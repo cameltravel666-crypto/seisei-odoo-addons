@@ -1090,8 +1090,27 @@
   },
   "billing": {
     "customerInvoices": "顧客請求書",
+    "customerInvoicesDesc": "顧客請求書の表示と管理",
     "vendorBills": "仕入請求書",
+    "vendorBillsDesc": "仕入請求書の表示と管理",
     "bank": "銀行",
-    "expenses": "経費"
+    "expenses": "経費",
+    "expensesDesc": "経費精算の管理",
+    "documentScan": "文書スキャン",
+    "documentScanDesc": "請求書と領収書をスキャン",
+    "newDocument": "新規伝票",
+    "unpaidInvoices": "未払請求書",
+    "overdueInvoices": "期限切れ請求書",
+    "receivable": "売掛金",
+    "payable": "買掛金",
+    "recentInvoices": "最近の請求書",
+    "noRecentInvoices": "請求書がありません",
+    "scanFirst": "最初の請求書をスキャン",
+    "overdueAlert": "期限切れの請求書があります",
+    "overdueAlertDesc": "追加料金を避けるために早急に対応してください",
+    "financeModule": "財務管理",
+    "financeModuleDesc": "完全な財務機能",
+    "cashLedger": "現金出納帳",
+    "cashLedgerDesc": "日々の入出金記録"
   }
 }

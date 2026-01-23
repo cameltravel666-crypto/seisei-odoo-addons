@@ -1112,8 +1112,27 @@
   },
   "billing": {
     "customerInvoices": "客户发票",
+    "customerInvoicesDesc": "查看和管理客户发票",
     "vendorBills": "供应商账单",
+    "vendorBillsDesc": "查看和管理供应商账单",
     "bank": "银行",
-    "expenses": "费用"
+    "expenses": "费用",
+    "expensesDesc": "管理费用报销",
+    "documentScan": "文档扫描",
+    "documentScanDesc": "扫描发票和收据",
+    "newDocument": "新建单据",
+    "unpaidInvoices": "待付发票",
+    "overdueInvoices": "逾期发票",
+    "receivable": "应收账款",
+    "payable": "应付账款",
+    "recentInvoices": "最近发票",
+    "noRecentInvoices": "暂无发票",
+    "scanFirst": "扫描第一张发票",
+    "overdueAlert": "您有逾期发票需要处理",
+    "overdueAlertDesc": "请尽快处理以避免额外费用",
+    "financeModule": "财务管理",
+    "financeModuleDesc": "完整财务功能",
+    "cashLedger": "现金出纳",
+    "cashLedgerDesc": "日常收支记录"
   }
 }

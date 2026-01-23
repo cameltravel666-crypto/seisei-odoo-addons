@@ -1090,8 +1090,27 @@
   },
   "billing": {
     "customerInvoices": "Customer Invoices",
+    "customerInvoicesDesc": "View and manage customer invoices",
     "vendorBills": "Vendor Bills",
+    "vendorBillsDesc": "View and manage vendor bills",
     "bank": "Bank",
-    "expenses": "Expenses"
+    "expenses": "Expenses",
+    "expensesDesc": "Manage expense reimbursements",
+    "documentScan": "Document Scan",
+    "documentScanDesc": "Scan invoices and receipts",
+    "newDocument": "New Document",
+    "unpaidInvoices": "Unpaid Invoices",
+    "overdueInvoices": "Overdue Invoices",
+    "receivable": "Accounts Receivable",
+    "payable": "Accounts Payable",
+    "recentInvoices": "Recent Invoices",
+    "noRecentInvoices": "No invoices yet",
+    "scanFirst": "Scan your first invoice",
+    "overdueAlert": "You have overdue invoices",
+    "overdueAlertDesc": "Please process them promptly to avoid additional fees",
+    "financeModule": "Finance",
+    "financeModuleDesc": "Full finance features",
+    "cashLedger": "Cash Ledger",
+    "cashLedgerDesc": "Daily income and expense records"
   }
 }
