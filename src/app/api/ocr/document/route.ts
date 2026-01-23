@@ -5,14 +5,15 @@ import { entitlementsService } from '@/lib/entitlements-service';
 import { randomUUID } from 'crypto';
 
 /**
- * OCR Document API - Direct Odoo Integration
+ * OCR Document API - Central OCR Service Integration
  *
- * POST /api/ocr/document - Upload document to Odoo and process with OCR
+ * POST /api/ocr/document - Upload document and process with Central OCR Service
  *
- * Supports:
- * - Purchase Orders (purchase.order) -> creates draft PO
- * - Vendor Bills (account.move) -> creates draft vendor bill
- * - Customer Invoices (account.move) -> creates draft customer invoice
+ * Flow:
+ * 1. Receive file upload
+ * 2. Call Central OCR Service (Gemini-based)
+ * 3. Create document in Odoo 18 with extracted data
+ * 4. Record usage for billing
  *
  * Metered Usage:
  * - Free quota: 30 pages/month
@@ -21,40 +22,72 @@ import { randomUUID } from 'crypto';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
+// Central OCR Service URL (internal network)
+const OCR_SERVICE_URL = process.env.OCR_SERVICE_URL || 'http://ocr-service:8080';
+
 // Document type configuration
 const DOC_TYPE_CONFIG: Record<string, {
   model: string;
   moveType?: string;
-  ocrMethod: string;
-  idField: string;
+  templateFields: string[];
 }> = {
   purchase_order: {
     model: 'purchase.order',
-    ocrMethod: 'action_ocr_scan',
-    idField: 'order_id',
+    templateFields: ['vendor_name', 'invoice_number', 'date', 'line_items', 'subtotal', 'tax', 'total'],
   },
   vendor_bill: {
     model: 'account.move',
     moveType: 'in_invoice',
-    ocrMethod: 'action_send_to_ocr',
-    idField: 'invoice_id',
+    templateFields: ['vendor_name', 'invoice_number', 'date', 'line_items', 'subtotal', 'tax', 'total'],
   },
   customer_invoice: {
     model: 'account.move',
     moveType: 'out_invoice',
-    ocrMethod: 'action_send_to_ocr',
-    idField: 'invoice_id',
+    templateFields: ['customer_name', 'invoice_number', 'date', 'line_items', 'subtotal', 'tax', 'total'],
   },
   expense: {
     model: 'account.move',
     moveType: 'in_invoice',
-    ocrMethod: 'action_send_to_ocr',
-    idField: 'invoice_id',
+    templateFields: ['vendor_name', 'receipt_number', 'date', 'description', 'amount', 'tax'],
   },
 };
 
+interface OCRExtracted {
+  vendor_name?: string;
+  customer_name?: string;
+  invoice_number?: string;
+  receipt_number?: string;
+  date?: string;
+  description?: string;
+  line_items?: Array<{
+    product_name?: string;
+    name?: string;
+    quantity?: number;
+    unit?: string;
+    unit_price?: number;
+    price?: number;
+    amount?: number;
+    total?: number;
+  }>;
+  subtotal?: number;
+  tax?: number;
+  total?: number;
+  amount?: number;
+}
+
+interface OCRServiceResponse {
+  success: boolean;
+  extracted?: OCRExtracted;
+  raw_response?: string;
+  error_code?: string;
+  usage?: {
+    pages?: number;
+    tokens?: number;
+  };
+}
+
 /**
- * POST /api/ocr/document - Upload and process document with Odoo OCR
+ * POST /api/ocr/document - Upload and process document with Central OCR Service
  */
 export async function POST(request: NextRequest) {
   try {
@@ -70,7 +103,7 @@ export async function POST(request: NextRequest) {
     // 2. Parse multipart form data
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
-    const documentType = (formData.get('documentType') as string) || 'vendor_bill';
+    const documentType = (formData.get('documentType') as string) || 'purchase_order';
 
     if (!file) {
       return NextResponse.json(
@@ -117,106 +150,76 @@ export async function POST(request: NextRequest) {
     const idempotencyKey = `ocr_${session.tenantId}_${randomUUID()}`;
 
     // 6. Get document type configuration
-    const config = DOC_TYPE_CONFIG[documentType] || DOC_TYPE_CONFIG.vendor_bill;
-
-    // 7. Get Odoo client
-    const odoo = await getOdooClientForSession(session);
+    const config = DOC_TYPE_CONFIG[documentType] || DOC_TYPE_CONFIG.purchase_order;
 
     // 7. Convert file to base64
     const arrayBuffer = await file.arrayBuffer();
     const base64Data = Buffer.from(arrayBuffer).toString('base64');
 
-    // 8. Create document based on type
-    let docId: number;
+    // 8. Call Central OCR Service
+    console.log(`[OCR] Calling Central OCR Service for ${documentType}`);
 
-    if (config.model === 'purchase.order') {
-      // Find any existing vendor for draft PO (required by Odoo)
-      // The OCR process will update the vendor after extraction
-      let existingVendors = await odoo.searchRead<{ id: number }>('res.partner',
-        [['supplier_rank', '>', 0]],
-        { fields: ['id'], limit: 1 }
-      );
-
-      if (existingVendors.length === 0) {
-        // Try to find any partner if no suppliers exist
-        const anyPartners = await odoo.searchRead<{ id: number }>('res.partner',
-          [['is_company', '=', true]],
-          { fields: ['id'], limit: 1 }
-        );
-
-        if (anyPartners.length === 0) {
-          // Auto-create a default vendor (consistent with Odoo 18 behavior)
-          console.log('[OCR] No vendors found, creating default vendor');
-          const newVendorId = await odoo.create('res.partner', {
-            name: 'OCR临时供应商',
-            is_company: true,
-            supplier_rank: 1,
-            comment: '由OCR系统自动创建的临时供应商，请在识别后更新为正确的供应商信息',
-          });
-          existingVendors = [{ id: newVendorId }];
-          console.log(`[OCR] Created default vendor ${newVendorId}`);
-        } else {
-          existingVendors = anyPartners;
-        }
-      }
-
-      const placeholderVendorId = existingVendors[0].id;
-      console.log(`[OCR] Using vendor ${placeholderVendorId} as placeholder`);
-
-      // Create draft purchase order with placeholder vendor
-      docId = await odoo.create('purchase.order', {
-        partner_id: placeholderVendorId,
-      });
-      console.log(`[OCR] Created draft purchase order ${docId} for OCR processing`);
-    } else {
-      // Create draft invoice/bill
-      docId = await odoo.create('account.move', {
-        move_type: config.moveType,
-      });
-      console.log(`[OCR] Created draft invoice ${docId} for OCR processing`);
-    }
-
-    // 9. Create attachment and link to document
-    const attachmentId = await odoo.create('ir.attachment', {
-      name: file.name,
-      type: 'binary',
-      datas: base64Data,
-      res_model: config.model,
-      res_id: docId,
-      mimetype: file.type,
+    const ocrResponse = await fetch(`${OCR_SERVICE_URL}/api/v1/ocr/process`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-service-key': process.env.OCR_SERVICE_KEY || '',
+      },
+      body: JSON.stringify({
+        image_data: base64Data,
+        mime_type: file.type,
+        template_fields: config.templateFields,
+        tenant_id: session.tenantId,
+      }),
     });
 
-    console.log(`[OCR] Created attachment ${attachmentId}`);
-
-    // 10. Set attachment as main attachment (for account.move only, purchase.order finds attachments by res_model/res_id)
-    if (config.model === 'account.move') {
-      try {
-        await odoo.write(config.model, [docId], {
-          message_main_attachment_id: attachmentId,
-        });
-      } catch (e) {
-        console.log(`[OCR] Could not set main attachment, continuing: ${e}`);
-      }
+    if (!ocrResponse.ok) {
+      const errorText = await ocrResponse.text();
+      console.error('[OCR] Service error:', errorText);
+      throw new Error(`OCR service error: ${ocrResponse.status}`);
     }
 
-    // 11. Call Odoo's OCR processing
-    console.log(`[OCR] Calling ${config.ocrMethod} for ${config.model} ${docId}`);
-    await odoo.callKw(config.model, config.ocrMethod, [[docId]], {});
+    const ocrResult: OCRServiceResponse = await ocrResponse.json();
 
-    // 12. Read back document with OCR results
+    if (!ocrResult.success || !ocrResult.extracted) {
+      console.error('[OCR] Extraction failed:', ocrResult.error_code);
+      throw new Error(ocrResult.error_code || 'OCR extraction failed');
+    }
+
+    console.log('[OCR] Extraction successful:', JSON.stringify(ocrResult.extracted).substring(0, 200));
+
+    // 9. Get Odoo client and create document
+    const odoo = await getOdooClientForSession(session);
+    let docId: number;
     let result: Record<string, unknown>;
 
     if (config.model === 'purchase.order') {
-      result = await readPurchaseOrderResult(odoo, docId, documentType);
+      // Create purchase order with extracted data
+      docId = await createPurchaseOrder(odoo, ocrResult.extracted);
+      result = {
+        order_id: docId,
+        document_type: documentType,
+        ...formatExtractedData(ocrResult.extracted),
+        ocr_status: 'completed',
+        ocr_pages: ocrResult.usage?.pages || 1,
+      };
     } else {
-      result = await readInvoiceResult(odoo, docId, documentType);
+      // Create invoice/bill with extracted data
+      docId = await createInvoice(odoo, config.moveType || 'in_invoice', ocrResult.extracted);
+      result = {
+        invoice_id: docId,
+        document_type: documentType,
+        move_type: config.moveType,
+        ...formatExtractedData(ocrResult.extracted),
+        ocr_status: 'completed',
+        ocr_pages: ocrResult.usage?.pages || 1,
+      };
     }
 
-    console.log(`[OCR] ${config.model} ${docId}: ${result.ocr_pages || 1} pages, ${(result.line_items as unknown[])?.length || 0} items`);
+    console.log(`[OCR] Created ${config.model} ${docId}`);
 
-    // 13. Record successful OCR usage
-    const ocrPages = (result.ocr_pages as number) || 1;
-    // Record one usage event per page for accurate metering
+    // 10. Record successful OCR usage
+    const ocrPages = ocrResult.usage?.pages || 1;
     for (let i = 0; i < ocrPages; i++) {
       await entitlementsService.recordUsage({
         tenantId: session.tenantId,
@@ -250,204 +253,160 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Read purchase order OCR result
+ * Format extracted data for response
  */
-async function readPurchaseOrderResult(
-  odoo: Awaited<ReturnType<typeof getOdooClientForSession>>,
-  orderId: number,
-  documentType: string
-) {
-  const [order] = await odoo.read<{
-    id: number;
-    name: string;
-    partner_id: [number, string] | false;
-    date_order: string | false;
-    partner_ref: string | false;
-    state: string;
-    ocr_status: string;
-    ocr_line_items: string | false;
-    ocr_cost: number;
-    ocr_pages: number;
-    ocr_error_message: string | false;
-    ocr_matched_count: number;
-    amount_total: number;
-    amount_untaxed: number;
-    amount_tax: number;
-    order_line: number[];
-  }>('purchase.order', [orderId], [
-    'name', 'partner_id', 'date_order', 'partner_ref', 'state',
-    'ocr_status', 'ocr_line_items', 'ocr_cost', 'ocr_pages',
-    'ocr_error_message', 'ocr_matched_count',
-    'amount_total', 'amount_untaxed', 'amount_tax', 'order_line'
-  ]);
-
-  // Read order lines
-  let lineItems: Array<{
-    product_name: string;
-    quantity: number;
-    unit: string;
-    unit_price: number;
-    amount: number;
-  }> = [];
-
-  if (order.order_line && order.order_line.length > 0) {
-    const lines = await odoo.read<{
-      id: number;
-      name: string;
-      product_qty: number;
-      price_unit: number;
-      price_subtotal: number;
-      product_uom: [number, string] | false;
-    }>('purchase.order.line', order.order_line, [
-      'name', 'product_qty', 'price_unit', 'price_subtotal', 'product_uom'
-    ]);
-
-    lineItems = lines.map(line => ({
-      product_name: line.name || '',
-      quantity: line.product_qty || 1,
-      unit: line.product_uom ? line.product_uom[1] : 'pcs',
-      unit_price: line.price_unit || 0,
-      amount: line.price_subtotal || 0,
-    }));
-  }
-
-  // Fallback to ocr_line_items
-  if (lineItems.length === 0 && order.ocr_line_items) {
-    try {
-      const rawItems = JSON.parse(order.ocr_line_items);
-      lineItems = rawItems.map((item: Record<string, unknown>) => ({
-        product_name: item.product_name || item.product || item.name || '',
-        quantity: Number(item.quantity) || 1,
-        unit: String(item.unit || 'pcs'),
-        unit_price: Number(item.unit_price || item.price) || 0,
-        amount: Number(item.amount || item.total) || 0,
-      }));
-    } catch (e) {
-      console.error('[OCR] Failed to parse line items:', e);
-    }
-  }
+function formatExtractedData(extracted: OCRExtracted) {
+  const lineItems = (extracted.line_items || []).map(item => ({
+    product_name: item.product_name || item.name || '',
+    quantity: item.quantity || 1,
+    unit: item.unit || 'pcs',
+    unit_price: item.unit_price || item.price || 0,
+    amount: item.amount || item.total || 0,
+  }));
 
   return {
-    order_id: orderId,
-    invoice_id: orderId, // For compatibility
-    name: order.name,
-    state: order.state,
-    document_type: documentType,
-    vendor_name: order.partner_id ? order.partner_id[1] : undefined,
-    date: order.date_order || undefined,
-    invoice_number: order.partner_ref || undefined,
+    vendor_name: extracted.vendor_name,
+    customer_name: extracted.customer_name,
+    invoice_number: extracted.invoice_number || extracted.receipt_number,
+    date: extracted.date,
     line_items: lineItems,
-    subtotal: order.amount_untaxed || 0,
-    tax: order.amount_tax || 0,
-    total: order.amount_total || 0,
-    ocr_status: order.ocr_status,
-    ocr_confidence: order.ocr_cost || 0,
-    ocr_pages: order.ocr_pages || 1,
-    ocr_matched_count: order.ocr_matched_count || 0,
+    subtotal: extracted.subtotal || 0,
+    tax: extracted.tax || 0,
+    total: extracted.total || extracted.amount || 0,
   };
 }
 
 /**
- * Read invoice/bill OCR result
+ * Create purchase order from extracted data
  */
-async function readInvoiceResult(
+async function createPurchaseOrder(
   odoo: Awaited<ReturnType<typeof getOdooClientForSession>>,
-  invoiceId: number,
-  documentType: string
-) {
-  const [invoice] = await odoo.read<{
-    id: number;
-    partner_id: [number, string] | false;
-    ref: string | false;
-    invoice_date: string | false;
-    narration: string | false;
-    state: string;
-    move_type: string;
-    ocr_status: string;
-    ocr_line_items: string | false;
-    ocr_confidence: number;
-    ocr_pages: number;
-    ocr_error_message: string | false;
-    ocr_matched_count: number;
-    amount_total: number;
-    amount_untaxed: number;
-    amount_tax: number;
-    invoice_line_ids: number[];
-  }>('account.move', [invoiceId], [
-    'partner_id', 'ref', 'invoice_date', 'narration', 'state', 'move_type',
-    'ocr_status', 'ocr_line_items', 'ocr_confidence', 'ocr_pages',
-    'ocr_error_message', 'ocr_matched_count',
-    'amount_total', 'amount_untaxed', 'amount_tax', 'invoice_line_ids'
-  ]);
+  extracted: OCRExtracted
+): Promise<number> {
+  // Find or create vendor
+  let partnerId: number;
 
-  // Check if OCR failed
-  if (invoice.ocr_status === 'failed') {
-    await odoo.callKw('account.move', 'unlink', [[invoiceId]], {});
-    throw new Error(invoice.ocr_error_message || 'OCR processing failed');
-  }
+  if (extracted.vendor_name) {
+    // Search for existing vendor
+    const vendors = await odoo.searchRead<{ id: number }>('res.partner',
+      [['name', 'ilike', extracted.vendor_name], ['supplier_rank', '>', 0]],
+      { fields: ['id'], limit: 1 }
+    );
 
-  // Read invoice lines
-  let lineItems: Array<{
-    product_name: string;
-    quantity: number;
-    unit: string;
-    unit_price: number;
-    amount: number;
-  }> = [];
+    if (vendors.length > 0) {
+      partnerId = vendors[0].id;
+    } else {
+      // Create new vendor
+      partnerId = await odoo.create('res.partner', {
+        name: extracted.vendor_name,
+        is_company: true,
+        supplier_rank: 1,
+      });
+      console.log(`[OCR] Created vendor: ${extracted.vendor_name} (${partnerId})`);
+    }
+  } else {
+    // Use or create default vendor
+    const defaultVendors = await odoo.searchRead<{ id: number }>('res.partner',
+      [['supplier_rank', '>', 0]],
+      { fields: ['id'], limit: 1 }
+    );
 
-  if (invoice.invoice_line_ids && invoice.invoice_line_ids.length > 0) {
-    const lines = await odoo.read<{
-      id: number;
-      name: string;
-      quantity: number;
-      price_unit: number;
-      price_subtotal: number;
-      product_uom_id: [number, string] | false;
-    }>('account.move.line', invoice.invoice_line_ids, [
-      'name', 'quantity', 'price_unit', 'price_subtotal', 'product_uom_id'
-    ]);
-
-    lineItems = lines.map(line => ({
-      product_name: line.name || '',
-      quantity: line.quantity || 1,
-      unit: line.product_uom_id ? line.product_uom_id[1] : 'pcs',
-      unit_price: line.price_unit || 0,
-      amount: line.price_subtotal || 0,
-    }));
-  }
-
-  // Fallback to ocr_line_items
-  if (lineItems.length === 0 && invoice.ocr_line_items) {
-    try {
-      const rawItems = JSON.parse(invoice.ocr_line_items);
-      lineItems = rawItems.map((item: Record<string, unknown>) => ({
-        product_name: item.product_name || item.product || item.name || '',
-        quantity: Number(item.quantity) || 1,
-        unit: String(item.unit || 'pcs'),
-        unit_price: Number(item.unit_price || item.price) || 0,
-        amount: Number(item.amount || item.total) || 0,
-      }));
-    } catch (e) {
-      console.error('[OCR] Failed to parse line items:', e);
+    if (defaultVendors.length > 0) {
+      partnerId = defaultVendors[0].id;
+    } else {
+      partnerId = await odoo.create('res.partner', {
+        name: 'OCR临时供应商',
+        is_company: true,
+        supplier_rank: 1,
+        comment: '由OCR系统自动创建',
+      });
     }
   }
 
-  return {
-    invoice_id: invoiceId,
-    state: invoice.state,
-    move_type: invoice.move_type,
-    document_type: documentType,
-    vendor_name: invoice.partner_id ? invoice.partner_id[1] : undefined,
-    customer_name: documentType === 'customer_invoice' && invoice.partner_id ? invoice.partner_id[1] : undefined,
-    date: invoice.invoice_date || undefined,
-    invoice_number: invoice.ref || undefined,
-    line_items: lineItems,
-    subtotal: invoice.amount_untaxed || 0,
-    tax: invoice.amount_tax || 0,
-    total: invoice.amount_total || 0,
-    ocr_status: invoice.ocr_status,
-    ocr_confidence: invoice.ocr_confidence || 0,
-    ocr_pages: invoice.ocr_pages || 1,
-    ocr_matched_count: invoice.ocr_matched_count || 0,
+  // Create purchase order
+  const orderData: Record<string, unknown> = {
+    partner_id: partnerId,
+    partner_ref: extracted.invoice_number,
   };
+
+  if (extracted.date) {
+    orderData.date_order = extracted.date;
+  }
+
+  const orderId = await odoo.create('purchase.order', orderData);
+
+  // Add order lines
+  if (extracted.line_items && extracted.line_items.length > 0) {
+    for (const item of extracted.line_items) {
+      await odoo.create('purchase.order.line', {
+        order_id: orderId,
+        name: item.product_name || item.name || 'OCR识别商品',
+        product_qty: item.quantity || 1,
+        price_unit: item.unit_price || item.price || 0,
+      });
+    }
+  }
+
+  return orderId;
+}
+
+/**
+ * Create invoice from extracted data
+ */
+async function createInvoice(
+  odoo: Awaited<ReturnType<typeof getOdooClientForSession>>,
+  moveType: string,
+  extracted: OCRExtracted
+): Promise<number> {
+  // Find or create partner
+  let partnerId: number | undefined;
+  const partnerName = extracted.vendor_name || extracted.customer_name;
+
+  if (partnerName) {
+    const partners = await odoo.searchRead<{ id: number }>('res.partner',
+      [['name', 'ilike', partnerName]],
+      { fields: ['id'], limit: 1 }
+    );
+
+    if (partners.length > 0) {
+      partnerId = partners[0].id;
+    } else {
+      partnerId = await odoo.create('res.partner', {
+        name: partnerName,
+        is_company: true,
+        supplier_rank: moveType === 'in_invoice' ? 1 : 0,
+        customer_rank: moveType === 'out_invoice' ? 1 : 0,
+      });
+    }
+  }
+
+  // Create invoice
+  const invoiceData: Record<string, unknown> = {
+    move_type: moveType,
+    ref: extracted.invoice_number || extracted.receipt_number,
+  };
+
+  if (partnerId) {
+    invoiceData.partner_id = partnerId;
+  }
+
+  if (extracted.date) {
+    invoiceData.invoice_date = extracted.date;
+  }
+
+  const invoiceId = await odoo.create('account.move', invoiceData);
+
+  // Add invoice lines
+  if (extracted.line_items && extracted.line_items.length > 0) {
+    for (const item of extracted.line_items) {
+      await odoo.create('account.move.line', {
+        move_id: invoiceId,
+        name: item.product_name || item.name || 'OCR识别项目',
+        quantity: item.quantity || 1,
+        price_unit: item.unit_price || item.price || 0,
+      });
+    }
+  }
+
+  return invoiceId;
 }
