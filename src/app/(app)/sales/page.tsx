@@ -355,7 +355,7 @@ export default function SalesPage() {
       */}
       <div className="page-header-sticky">
         {/* Title */}
-        <div className="page-header-title">
+        <div className="page-header-title flex items-center">
           <h1 className="page-title">{t('nav.sales')}</h1>
           <Link
             href="/products"
