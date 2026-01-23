@@ -1,17 +1,17 @@
 /**
  * OCR Utilities for Receipt Processing
- * Integrates with PaddleOCR service
+ * Uses Gemini API for text recognition
  */
 
-import crypto from 'crypto';
+import * as crypto from 'crypto';
 
 // Configuration
 export const OCR_CONFIG = {
-  BASE_URL: process.env.OCR_BASE_URL || 'http://127.0.0.1:8868',
-  ENDPOINT: process.env.OCR_ENDPOINT || '/ocr/receipt',
-  MAX_FILE_SIZE: 100 * 1024, // 100KB
-  TIMEOUT_MS: 5000,
-  RETRY_COUNT: 1,
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY || '',
+  GEMINI_MODEL: 'gemini-2.0-flash-exp',
+  MAX_FILE_SIZE: 5 * 1024 * 1024, // 5MB for Gemini
+  TIMEOUT_MS: 30000,
+  RETRY_COUNT: 2,
   CACHE_TTL_HOURS: 24,
   RATE_LIMIT_PER_DAY: 100,
   RATE_LIMIT_PER_SECOND: 2,
@@ -68,249 +68,251 @@ export function calculateImageHash(imageBuffer: Buffer): string {
 }
 
 /**
- * Extract amount from OCR text lines
- * Priority: Keywords near amount > Maximum amount
+ * Build OCR prompt for receipt processing
  */
-export function extractAmount(lines: OcrTextLine[]): { amount: number | null; confidence: number } {
-  const amountKeywords = [
-    '合計', '合计', '総計', 'TOTAL', 'お会計', '請求額', '小計', '小计',
-    'お支払', '支払', '税込', '計', 'Amount', 'Total',
-  ];
+function buildReceiptOcrPrompt(): string {
+  return `あなたはレシート・領収書のOCR専門家です。
+この画像から以下の情報を抽出してJSON形式で返してください：
 
-  // Find amounts in text
-  const amountPattern = /[¥￥]?\s*[\d,]+(?:\.\d{1,2})?/g;
-  const candidates: { amount: number; confidence: number; hasKeyword: boolean; lineIndex: number }[] = [];
+{
+  "merchant": "店舗名・会社名",
+  "date": "日付 (YYYY-MM-DD形式)",
+  "amount_total": 合計金額 (数字のみ、通貨記号なし),
+  "confidence": 信頼度 (0.0-1.0)
+}
 
-  lines.forEach((line, index) => {
-    const text = line.text;
-    const matches = text.match(amountPattern);
-
-    if (matches) {
-      const hasKeyword = amountKeywords.some(kw =>
-        text.toUpperCase().includes(kw.toUpperCase())
-      );
-
-      matches.forEach(match => {
-        // Normalize: remove currency symbols, commas, spaces
-        const normalized = match.replace(/[¥￥,\s]/g, '');
-        const amount = parseFloat(normalized);
-
-        if (!isNaN(amount) && amount > 0 && amount < 10000000) {
-          candidates.push({
-            amount: Math.round(amount), // JPY integer
-            confidence: line.confidence,
-            hasKeyword,
-            lineIndex: index,
-          });
-        }
-      });
-    }
-  });
-
-  if (candidates.length === 0) {
-    return { amount: null, confidence: 0 };
-  }
-
-  // Priority: keyword matches first, then largest amount
-  const keywordMatches = candidates.filter(c => c.hasKeyword);
-  if (keywordMatches.length > 0) {
-    // Get the largest amount near keywords
-    const best = keywordMatches.reduce((a, b) => a.amount > b.amount ? a : b);
-    return { amount: best.amount, confidence: best.confidence };
-  }
-
-  // Fallback: largest amount
-  const best = candidates.reduce((a, b) => a.amount > b.amount ? a : b);
-  return { amount: best.amount, confidence: best.confidence * 0.7 }; // Lower confidence without keyword
+重要：
+- 金額は数字のみ（円記号やカンマは除去）
+- 日付はYYYY-MM-DD形式に変換
+- 読み取れない項目はnullにする
+- JSONのみを返す（説明文不要）
+- 複数の金額がある場合は「合計」「計」「Total」に近いものを選択`;
 }
 
 /**
- * Extract date from OCR text lines
- * Supports: YYYY/MM/DD, YYYY-MM-DD, YY/MM/DD, YYYY年M月D日
+ * Extract JSON from Gemini response text
  */
-export function extractDate(lines: OcrTextLine[]): string | null {
-  const datePatterns = [
-    // YYYY/MM/DD or YYYY-MM-DD
-    /(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/,
-    // YY/MM/DD
-    /(\d{2})[\/\-](\d{1,2})[\/\-](\d{1,2})/,
-    // YYYY年M月D日
-    /(\d{4})年(\d{1,2})月(\d{1,2})日/,
-    // 令和X年
-    /令和(\d{1,2})年(\d{1,2})月(\d{1,2})日/,
-  ];
+function extractJsonFromResponse(text: string): OcrResult {
+  // Try to extract JSON from markdown code block
+  const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (jsonMatch) {
+    try {
+      return parseOcrJson(JSON.parse(jsonMatch[1]));
+    } catch {
+      // Continue to next method
+    }
+  }
 
-  for (const line of lines) {
-    const text = line.text;
+  // Try to find raw JSON object
+  try {
+    const start = text.indexOf('{');
+    const end = text.lastIndexOf('}') + 1;
+    if (start !== -1 && end > start) {
+      return parseOcrJson(JSON.parse(text.slice(start, end)));
+    }
+  } catch {
+    // Continue to fallback
+  }
 
-    for (let i = 0; i < datePatterns.length; i++) {
-      const match = text.match(datePatterns[i]);
-      if (match) {
-        let year = parseInt(match[1]);
-        const month = parseInt(match[2]);
-        const day = parseInt(match[3]);
+  // Fallback: return empty result
+  return {
+    amount_total: null,
+    date: null,
+    merchant: null,
+    confidence: null,
+    raw: { raw_text: text },
+  };
+}
 
-        // Handle 2-digit year
-        if (year < 100) {
-          year += year > 50 ? 1900 : 2000;
-        }
+/**
+ * Parse and validate OCR JSON response
+ */
+function parseOcrJson(data: Record<string, unknown>): OcrResult {
+  let amount: number | null = null;
+  let date: string | null = null;
+  let merchant: string | null = null;
+  let confidence: number | null = null;
 
-        // Handle 令和 (Reiwa era, started 2019)
-        if (i === 3) {
-          year = 2018 + year;
-        }
+  // Parse amount
+  const rawAmount = data.amount_total ?? data.total ?? data.amount ?? data['合計'];
+  if (rawAmount !== null && rawAmount !== undefined) {
+    const amountStr = String(rawAmount).replace(/[¥￥,\s円]/g, '');
+    const parsed = parseFloat(amountStr);
+    if (!isNaN(parsed) && parsed > 0) {
+      amount = Math.round(parsed);
+    }
+  }
 
-        // Validate
-        if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-          const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-          return dateStr;
-        }
+  // Parse date
+  const rawDate = data.date ?? data['日付'];
+  if (rawDate) {
+    const dateStr = String(rawDate)
+      .replace(/年/g, '-')
+      .replace(/月/g, '-')
+      .replace(/日/g, '');
+    // Validate YYYY-MM-DD format
+    if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(dateStr)) {
+      const [y, m, d] = dateStr.split('-').map(Number);
+      if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+        date = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
       }
     }
   }
 
-  return null;
-}
-
-/**
- * Extract merchant name from OCR text lines
- * Priority: Top 1-3 lines that are not numbers/dates
- */
-export function extractMerchant(lines: OcrTextLine[]): string | null {
-  const skipPatterns = [
-    /^\d+$/, // Pure numbers
-    /^\d{4}[\/\-]/, // Dates
-    /^[¥￥]/, // Currency
-    /^tel|fax|電話/i,
-    /^〒\d/, // Postal code
-    /^\d{2,4}:\d{2}/, // Time
-  ];
-
-  const merchantLines: string[] = [];
-
-  for (let i = 0; i < Math.min(5, lines.length); i++) {
-    const text = lines[i].text.trim();
-
-    // Skip if matches skip patterns
-    if (skipPatterns.some(p => p.test(text))) continue;
-
-    // Skip very short or very long lines
-    if (text.length < 2 || text.length > 50) continue;
-
-    // Skip lines with too many numbers
-    const numCount = (text.match(/\d/g) || []).length;
-    if (numCount / text.length > 0.5) continue;
-
-    merchantLines.push(text);
-
-    if (merchantLines.length >= 2) break;
+  // Parse merchant
+  const rawMerchant = data.merchant ?? data.store ?? data['店舗名'] ?? data['会社名'];
+  if (rawMerchant && typeof rawMerchant === 'string') {
+    merchant = rawMerchant.trim();
   }
 
-  return merchantLines.length > 0 ? merchantLines.join(' ') : null;
-}
-
-/**
- * Parse PaddleOCR response and extract fields
- */
-export function parseOcrResponse(ocrResponse: unknown): OcrResult {
-  // Handle different PaddleOCR response formats
-  let lines: OcrTextLine[] = [];
-
-  if (Array.isArray(ocrResponse)) {
-    // Format: [[text, confidence], ...]
-    lines = ocrResponse.map((item: unknown) => {
-      if (Array.isArray(item) && item.length >= 2) {
-        return {
-          text: String(item[0]),
-          confidence: Number(item[1]) || 0.5,
-        };
-      }
-      if (typeof item === 'object' && item !== null) {
-        const obj = item as Record<string, unknown>;
-        return {
-          text: String(obj.text || obj.words || ''),
-          confidence: Number(obj.confidence || obj.score || 0.5),
-        };
-      }
-      return { text: String(item), confidence: 0.5 };
-    });
-  } else if (typeof ocrResponse === 'object' && ocrResponse !== null) {
-    const obj = ocrResponse as Record<string, unknown>;
-    // Format: { results: [...], texts: [...], data: [...] }
-    const results = obj.results || obj.texts || obj.data || obj.ocr_results;
-    if (Array.isArray(results)) {
-      return parseOcrResponse(results);
+  // Parse confidence
+  const rawConfidence = data.confidence ?? data.score;
+  if (rawConfidence !== null && rawConfidence !== undefined) {
+    const conf = parseFloat(String(rawConfidence));
+    if (!isNaN(conf) && conf >= 0 && conf <= 1) {
+      confidence = conf;
     }
   }
-
-  if (lines.length === 0) {
-    return {
-      amount_total: null,
-      date: null,
-      merchant: null,
-      confidence: null,
-      raw: ocrResponse,
-    };
-  }
-
-  const { amount, confidence } = extractAmount(lines);
-  const date = extractDate(lines);
-  const merchant = extractMerchant(lines);
 
   return {
     amount_total: amount,
     date,
     merchant,
-    confidence,
-    raw: process.env.OCR_DEBUG === 'true' ? ocrResponse : undefined,
+    confidence: confidence ?? (amount !== null ? 0.8 : 0.3),
   };
 }
 
 /**
- * Call PaddleOCR service with retry
+ * Call Gemini API for OCR processing
  */
 export async function callOcrService(imageBuffer: Buffer): Promise<OcrResult> {
-  const { BASE_URL, ENDPOINT, TIMEOUT_MS, RETRY_COUNT } = OCR_CONFIG;
+  const { GEMINI_API_KEY, GEMINI_MODEL, TIMEOUT_MS, RETRY_COUNT } = OCR_CONFIG;
 
-  // Health check first
-  try {
-    const healthRes = await fetch(`${BASE_URL}/health`, {
-      signal: AbortSignal.timeout(2000),
-    });
-    if (!healthRes.ok) {
-      throw new Error('OCR service unhealthy');
-    }
-  } catch (e) {
-    throw new Error('OCR service unavailable');
+  if (!GEMINI_API_KEY) {
+    throw new Error('GEMINI_API_KEY not configured');
   }
 
-  // Prepare form data
-  const formData = new FormData();
-  formData.append('image', new Blob([new Uint8Array(imageBuffer)]), 'receipt.jpg');
+  // Convert image to base64
+  const b64Data = imageBuffer.toString('base64');
+
+  // Detect mime type from buffer
+  let mimeType = 'image/jpeg';
+  if (imageBuffer[0] === 0x89 && imageBuffer[1] === 0x50) {
+    mimeType = 'image/png';
+  } else if (imageBuffer[0] === 0x47 && imageBuffer[1] === 0x49) {
+    mimeType = 'image/gif';
+  } else if (imageBuffer[0] === 0x52 && imageBuffer[1] === 0x49) {
+    mimeType = 'image/webp';
+  }
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+
+  const prompt = buildReceiptOcrPrompt();
+
+  const payload = {
+    contents: [{
+      parts: [
+        { inline_data: { mime_type: mimeType, data: b64Data } },
+        { text: prompt }
+      ]
+    }],
+    generationConfig: {
+      temperature: 0.1,
+      maxOutputTokens: 1024,
+    }
+  };
 
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt <= RETRY_COUNT; attempt++) {
     try {
-      const response = await fetch(`${BASE_URL}${ENDPOINT}`, {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+      const response = await fetch(url, {
         method: 'POST',
-        body: formData,
-        signal: AbortSignal.timeout(TIMEOUT_MS),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
       });
 
-      if (!response.ok) {
-        throw new Error(`OCR service error: ${response.status}`);
+      clearTimeout(timeoutId);
+
+      if (response.status === 429) {
+        // Rate limited - wait and retry
+        const waitTime = (attempt + 1) * 5000;
+        console.warn(`[OCR] Rate limited (429), waiting ${waitTime}ms before retry ${attempt + 1}/${RETRY_COUNT}`);
+        await new Promise(r => setTimeout(r, waitTime));
+        lastError = new Error('Rate limit exceeded');
+        continue;
       }
 
-      const data = await response.json();
-      return parseOcrResponse(data);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json();
+      const candidates = result.candidates || [];
+
+      if (!candidates.length) {
+        throw new Error('No response from Gemini');
+      }
+
+      const content = candidates[0].content || {};
+      const parts = content.parts || [];
+
+      if (!parts.length) {
+        throw new Error('Empty response from Gemini');
+      }
+
+      const rawText = parts[0].text || '';
+      return extractJsonFromResponse(rawText);
+
     } catch (e) {
       lastError = e instanceof Error ? e : new Error(String(e));
+
+      if (lastError.name === 'AbortError') {
+        lastError = new Error('Request timeout');
+      }
+
       if (attempt < RETRY_COUNT) {
-        await new Promise(r => setTimeout(r, 500)); // Wait before retry
+        await new Promise(r => setTimeout(r, 2000));
       }
     }
   }
 
   throw lastError || new Error('OCR failed');
+}
+
+/**
+ * @deprecated Use callOcrService directly
+ */
+export function parseOcrResponse(ocrResponse: unknown): OcrResult {
+  if (typeof ocrResponse === 'object' && ocrResponse !== null) {
+    return parseOcrJson(ocrResponse as Record<string, unknown>);
+  }
+  return {
+    amount_total: null,
+    date: null,
+    merchant: null,
+    confidence: null,
+    raw: ocrResponse,
+  };
+}
+
+// Legacy extraction functions (kept for compatibility but not used with Gemini)
+export function extractAmount(lines: OcrTextLine[]): { amount: number | null; confidence: number } {
+  // Not used with Gemini - kept for API compatibility
+  return { amount: null, confidence: 0 };
+}
+
+export function extractDate(lines: OcrTextLine[]): string | null {
+  // Not used with Gemini - kept for API compatibility
+  return null;
+}
+
+export function extractMerchant(lines: OcrTextLine[]): string | null {
+  // Not used with Gemini - kept for API compatibility
+  return null;
 }

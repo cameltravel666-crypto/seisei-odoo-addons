@@ -4,45 +4,54 @@
  *
  * NOTE: For module definitions that can be used in client components,
  * import from '@/lib/modules' instead.
+ *
+ * This module now uses the unified entitlements system (entitlements-service.ts)
+ * for determining module access based on trial/subscription status.
  */
 
 import { prisma } from './db';
 import { ModuleCode } from '@prisma/client';
 import { ALL_MODULES, CORE_MODULES, PREMIUM_MODULES, getModuleInfo } from './modules';
 import type { ModuleInfo } from './modules';
+import { entitlementsService } from './entitlements-service';
 
 // Re-export module definitions for backwards compatibility
 export { ALL_MODULES, CORE_MODULES, PREMIUM_MODULES, getModuleInfo };
 export type { ModuleInfo };
 
-// Get visible modules for a user
+/**
+ * Get visible modules for a user based on entitlements
+ *
+ * Uses the unified entitlement system which handles:
+ * - Trial period (all modules enabled)
+ * - Subscription-based access
+ * - Admin overrides
+ * - User preferences
+ */
 export async function getVisibleModules(userId: string, tenantId: string): Promise<ModuleInfo[]> {
-  // Get tenant features (subscription-based)
-  const tenantFeatures = await prisma.tenantFeature.findMany({
-    where: {
-      tenantId,
-      isAllowed: true,
-      isVisible: true,
-    },
-  });
+  // Get effective entitlements (handles trial/subscription logic)
+  const effective = await entitlementsService.computeEffective(tenantId);
 
-  const allowedModuleCodes = tenantFeatures.map(f => f.moduleCode);
+  // Get enabled module codes from entitlements
+  const enabledModuleCodes = effective.modules
+    .filter(m => m.enabled)
+    .map(m => m.key);
 
-  // Get user preferences
+  // Get user preferences (for ordering and hiding)
   const userPrefs = await prisma.userModulePref.findMany({
     where: {
       userId,
-      moduleCode: { in: allowedModuleCodes },
+      moduleCode: { in: enabledModuleCodes as ModuleCode[] },
     },
   });
 
-  // Build visible modules list
   const userPrefMap = new Map(userPrefs.map(p => [p.moduleCode, p]));
 
+  // Build visible modules list
   const visibleModules = ALL_MODULES
     .filter(module => {
-      // Must be allowed by subscription
-      if (!allowedModuleCodes.includes(module.code)) return false;
+      // Must be enabled by entitlements
+      if (!enabledModuleCodes.includes(module.code)) return false;
 
       // Check user preference (default to visible if no preference)
       const pref = userPrefMap.get(module.code);
@@ -57,36 +66,46 @@ export async function getVisibleModules(userId: string, tenantId: string): Promi
   return visibleModules;
 }
 
-// Check if a module is accessible
+/**
+ * Check if a module is accessible for a user
+ *
+ * Uses the unified entitlement system which handles:
+ * - Trial period (all modules enabled)
+ * - Subscription-based access
+ * - Admin overrides
+ */
 export async function isModuleAccessible(
-  moduleCode: ModuleCode,
+  moduleCode: ModuleCode | string,
   userId: string,
   tenantId: string
 ): Promise<{ allowed: boolean; reason?: string }> {
-  // Check tenant subscription
-  const tenantFeature = await prisma.tenantFeature.findUnique({
-    where: {
-      tenantId_moduleCode: {
-        tenantId,
-        moduleCode,
-      },
-    },
-  });
+  // Get effective entitlements
+  const effective = await entitlementsService.computeEffective(tenantId);
 
-  if (!tenantFeature || !tenantFeature.isAllowed) {
-    return { allowed: false, reason: 'not_subscribed' };
+  // Find the module in entitlements
+  const moduleEnt = effective.modules.find(m => m.key === moduleCode);
+
+  if (!moduleEnt) {
+    return { allowed: false, reason: 'module_not_found' };
   }
 
-  if (!tenantFeature.isVisible) {
-    return { allowed: false, reason: 'disabled_by_admin' };
+  if (!moduleEnt.enabled) {
+    // Map reason to user-friendly message
+    const reasonMap: Record<string, string> = {
+      trial: 'not_subscribed',
+      subscribed: 'not_subscribed',
+      expired: 'subscription_expired',
+      admin_override: 'disabled_by_admin',
+    };
+    return { allowed: false, reason: reasonMap[moduleEnt.reason] || 'not_subscribed' };
   }
 
-  // Check user preference
+  // Check user preference (user can hide modules they have access to)
   const userPref = await prisma.userModulePref.findUnique({
     where: {
       userId_moduleCode: {
         userId,
-        moduleCode,
+        moduleCode: moduleCode as ModuleCode,
       },
     },
   });
@@ -142,23 +161,15 @@ export async function updateTenantModuleVisibility(
   });
 }
 
-// Initialize default features for a new tenant based on plan
-export async function initializeTenantFeatures(tenantId: string, planCode: string) {
-  const plan = await prisma.subscriptionPlan.findUnique({
-    where: { planCode },
-  });
-
-  const allowedModules = plan?.allowedModules || ['DASHBOARD', 'POS'];
-
-  const features = ALL_MODULES.map(module => ({
-    tenantId,
-    moduleCode: module.code,
-    isAllowed: allowedModules.includes(module.code),
-    isVisible: allowedModules.includes(module.code),
-  }));
-
-  await prisma.tenantFeature.createMany({
-    data: features,
-    skipDuplicates: true,
-  });
+/**
+ * Initialize features for a new tenant
+ *
+ * Now uses the unified entitlements system which automatically
+ * sets up a 30-day trial with all modules enabled.
+ *
+ * @deprecated Use entitlementsService.initializeWithTrial() directly
+ */
+export async function initializeTenantFeatures(tenantId: string, _planCode: string = 'starter') {
+  // Use the new entitlements system to initialize with 30-day trial
+  await entitlementsService.initializeWithTrial(tenantId);
 }

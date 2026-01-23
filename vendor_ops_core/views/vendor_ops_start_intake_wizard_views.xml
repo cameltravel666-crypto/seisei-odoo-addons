@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Start Intake Wizard Form View -->
+    <record id="view_vendor_ops_start_intake_wizard_form" model="ir.ui.view">
+        <field name="name">vendor.ops.start.intake.wizard.form</field>
+        <field name="model">vendor.ops.start.intake.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Start Intake">
+                <sheet>
+                    <group>
+                        <group string="Intake Details">
+                            <field name="tenant_id" options="{'no_create': True, 'no_create_edit': True}"/>
+                            <field name="tenant_code" readonly="1"/>
+                            <field name="store_code" required="1" placeholder="e.g., S001"/>
+                            <field name="effective_month" required="1" placeholder="YYYY-MM (e.g., 2026-01)"/>
+                            <field name="note" placeholder="Optional note"/>
+                        </group>
+                        <group string="Output (read-only after creation)">
+                            <field name="bridge_batch_id" readonly="1"/>
+                            <field name="notion_batch_page_id" readonly="1"/>
+                            <field name="client_record_url" readonly="1" widget="url"/>
+                            <field name="notion_pack_url" readonly="1" widget="url"/>
+                        </group>
+                    </group>
+                </sheet>
+                <footer>
+                    <button name="action_start_intake"
+                            string="Start Intake"
+                            type="object"
+                            class="btn-primary"
+                            icon="fa-play"/>
+                    <button name="action_open_client_url"
+                            string="Open Client URL"
+                            type="object"
+                            icon="fa-external-link"
+                            invisible="not client_record_url"/>
+                    <button name="action_open_pack_url"
+                            string="Open Pack URL"
+                            type="object"
+                            icon="fa-folder-open"
+                            invisible="not notion_pack_url"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Start Intake Wizard Action (called from menu, no tenant pre-selected) -->
+    <record id="action_vendor_ops_start_intake_wizard" model="ir.actions.act_window">
+        <field name="name">Start Intake</field>
+        <field name="res_model">vendor.ops.start.intake.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="context">{}</field>
+    </record>
+</odoo>
+

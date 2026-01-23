@@ -1,0 +1,211 @@
+/* OCR Upload Zone in Chatter */
+.ocr-upload-zone-container {
+    margin: 0 12px 12px 12px;
+}
+
+.ocr-section-header {
+    padding: 8px 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid #e5e7eb;
+    margin-bottom: 8px;
+}
+
+.ocr-section-header i {
+    margin-right: 6px;
+    color: #7c3aed;
+}
+
+.ocr-upload-zone {
+    padding: 16px;
+    border: 2px dashed #dee2e6;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #fff 100%);
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.ocr-upload-zone:hover {
+    border-color: #7c3aed;
+    background: linear-gradient(135deg, #f5f3ff 0%, #fff 100%);
+    box-shadow: 0 2px 8px rgba(124, 58, 237, 0.15);
+}
+
+.ocr-upload-zone.dragging {
+    border-color: #7c3aed;
+    background: linear-gradient(135deg, #ede9fe 0%, #f5f3ff 100%);
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25);
+    transform: scale(1.02);
+}
+
+.ocr-upload-zone.uploading {
+    pointer-events: none;
+    opacity: 0.9;
+    border-color: #7c3aed;
+}
+
+.ocr-upload-icon {
+    font-size: 28px;
+    color: #7c3aed;
+    margin-bottom: 8px;
+}
+
+.ocr-upload-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 4px;
+}
+
+.ocr-upload-subtitle {
+    font-size: 11px;
+    color: #6b7280;
+    line-height: 1.4;
+}
+
+.ocr-upload-progress {
+    padding: 8px 0;
+}
+
+.ocr-progress-bar {
+    height: 4px;
+    background: #e5e7eb;
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.ocr-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #7c3aed, #a78bfa);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+}
+
+.ocr-progress-text {
+    font-size: 11px;
+    color: #7c3aed;
+    font-weight: 500;
+}
+
+/* Keyboard shortcut hint */
+.ocr-shortcut-hint {
+    margin-top: 8px;
+    padding: 4px 8px;
+    background: #f3f4f6;
+    border-radius: 4px;
+    display: inline-block;
+    font-size: 10px;
+    color: #6b7280;
+}
+
+.ocr-shortcut-hint kbd {
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 3px;
+    padding: 1px 4px;
+    font-size: 10px;
+    font-family: monospace;
+    box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+    margin: 0 2px;
+}
+
+/* Dark mode support */
+.o_dark .ocr-upload-zone {
+    background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+    border-color: #374151;
+}
+
+.o_dark .ocr-upload-zone:hover {
+    border-color: #8b5cf6;
+    background: linear-gradient(135deg, #2d1f4f 0%, #1f2937 100%);
+}
+
+.o_dark .ocr-upload-title {
+    color: #e5e7eb;
+}
+
+.o_dark .ocr-upload-subtitle {
+    color: #9ca3af;
+}
+
+.o_dark .ocr-shortcut-hint {
+    background: #374151;
+}
+
+.o_dark .ocr-shortcut-hint kbd {
+    background: #1f2937;
+    border-color: #4b5563;
+}
+
+.o_dark .ocr-section-header {
+    color: #9ca3af;
+    border-color: #374151;
+}
+
+/* Toast Notifications */
+.ocr-toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 12px 20px;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    animation: slideIn 0.3s ease;
+}
+
+.ocr-toast-success {
+    background: #ecfdf5;
+    color: #065f46;
+    border-left: 4px solid #10b981;
+}
+
+.ocr-toast-success i {
+    color: #10b981;
+}
+
+.ocr-toast-danger {
+    background: #fef2f2;
+    color: #991b1b;
+    border-left: 4px solid #ef4444;
+}
+
+.ocr-toast-danger i {
+    color: #ef4444;
+}
+
+.ocr-toast.fade-out {
+    animation: slideOut 0.3s ease forwards;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}

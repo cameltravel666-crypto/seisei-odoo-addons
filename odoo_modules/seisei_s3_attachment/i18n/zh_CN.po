@@ -1,0 +1,188 @@
+# Chinese (Simplified) translation for seisei_s3_attachment
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo 18.0\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. module: seisei_s3_attachment
+msgid "Seisei S3 Attachment Storage"
+msgstr "Seisei S3附件存储"
+
+#. module: seisei_s3_attachment
+msgid "S3 Object Key"
+msgstr "S3对象键"
+
+#. module: seisei_s3_attachment
+msgid "S3 Status"
+msgstr "S3状态"
+
+#. module: seisei_s3_attachment
+msgid "Configuration Source"
+msgstr "配置来源"
+
+#. module: seisei_s3_attachment
+msgid "Enabled"
+msgstr "已启用"
+
+#. module: seisei_s3_attachment
+msgid "Configured but disabled"
+msgstr "已配置（未启用）"
+
+#. module: seisei_s3_attachment
+msgid "Not configured"
+msgstr "未配置"
+
+#. module: seisei_s3_attachment
+msgid "(not set)"
+msgstr "（未设置）"
+
+#. module: seisei_s3_attachment
+msgid "Environment Variables (system-wide)"
+msgstr "环境变量（系统级）"
+
+#. module: seisei_s3_attachment
+msgid "System Parameters"
+msgstr "系统参数"
+
+#. module: seisei_s3_attachment
+msgid "Bucket"
+msgstr "存储桶"
+
+#. module: seisei_s3_attachment
+msgid "Region"
+msgstr "区域"
+
+#. module: seisei_s3_attachment
+msgid "Prefix"
+msgstr "前缀"
+
+#. module: seisei_s3_attachment
+msgid "Test Connection"
+msgstr "测试连接"
+
+#. module: seisei_s3_attachment
+msgid "Migrate Existing Attachments"
+msgstr "迁移现有附件"
+
+#. module: seisei_s3_attachment
+msgid "Migrate Attachments to S3"
+msgstr "迁移附件到S3"
+
+#. module: seisei_s3_attachment
+msgid "Connection Successful"
+msgstr "连接成功"
+
+#. module: seisei_s3_attachment
+msgid "Connection Failed"
+msgstr "连接失败"
+
+#. module: seisei_s3_attachment
+msgid "S3 Migration"
+msgstr "S3迁移"
+
+#. module: seisei_s3_attachment
+msgid "S3 Attachment Migration Wizard"
+msgstr "S3附件迁移向导"
+
+#. module: seisei_s3_attachment
+msgid "Preview"
+msgstr "预览"
+
+#. module: seisei_s3_attachment
+msgid "Migrating"
+msgstr "迁移中"
+
+#. module: seisei_s3_attachment
+msgid "Done"
+msgstr "完成"
+
+#. module: seisei_s3_attachment
+msgid "Filestore Attachments"
+msgstr "文件存储附件"
+
+#. module: seisei_s3_attachment
+msgid "Filestore Size (MB)"
+msgstr "文件存储大小 (MB)"
+
+#. module: seisei_s3_attachment
+msgid "S3 Attachments"
+msgstr "S3附件"
+
+#. module: seisei_s3_attachment
+msgid "URL Attachments"
+msgstr "URL附件"
+
+#. module: seisei_s3_attachment
+msgid "Batch Size"
+msgstr "批次大小"
+
+#. module: seisei_s3_attachment
+msgid "From Date"
+msgstr "开始日期"
+
+#. module: seisei_s3_attachment
+msgid "Migrated"
+msgstr "已迁移"
+
+#. module: seisei_s3_attachment
+msgid "Failed"
+msgstr "失败"
+
+#. module: seisei_s3_attachment
+msgid "Progress"
+msgstr "进度"
+
+#. module: seisei_s3_attachment
+msgid "Start Migration"
+msgstr "开始迁移"
+
+#. module: seisei_s3_attachment
+msgid "Continue"
+msgstr "继续"
+
+#. module: seisei_s3_attachment
+msgid "Refresh"
+msgstr "刷新"
+
+#. module: seisei_s3_attachment
+msgid "Rollback Info"
+msgstr "回滚信息"
+
+#. module: seisei_s3_attachment
+msgid "Close"
+msgstr "关闭"
+
+#. module: seisei_s3_attachment
+msgid "Current Attachment Statistics"
+msgstr "当前附件统计"
+
+#. module: seisei_s3_attachment
+msgid "Migration Options"
+msgstr "迁移选项"
+
+#. module: seisei_s3_attachment
+msgid "Migration Progress"
+msgstr "迁移进度"
+
+#. module: seisei_s3_attachment
+msgid "S3 Storage"
+msgstr "S3存储"
+
+#. module: seisei_s3_attachment
+msgid "S3 Attachment Storage"
+msgstr "S3附件存储"
+
+#. module: seisei_s3_attachment
+msgid "Storage Status"
+msgstr "存储状态"
+
+#. module: seisei_s3_attachment
+msgid "Current Configuration"
+msgstr "当前配置"
+
+#. module: seisei_s3_attachment
+msgid "Actions"
+msgstr "操作"

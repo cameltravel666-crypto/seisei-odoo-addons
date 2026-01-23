@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
+import { Package } from 'lucide-react';
 import { EmptyState, Pagination, DateRangeFilter, type PeriodType, FAB, ListSkeleton } from '@/components/ui';
 import { SalesSummaryBar } from '@/components/sales/summary-bar';
 import { SalesListItem } from '@/components/sales/sales-list-item';
@@ -347,10 +349,22 @@ export default function SalesPage() {
 
   return (
     <div className="space-y-3 pb-24">
-      {/* Sticky Header */}
-      <div className="sticky top-0 bg-white z-10 -mx-4 px-4 pt-2 pb-3 border-b border-gray-100">
+      {/*
+        Sticky Header - 使用统一的 page-header-sticky 类
+        在移动端：main 滚动区 top:0 即可吸顶
+      */}
+      <div className="page-header-sticky">
         {/* Title */}
-        <h1 className="page-title mb-3">{t('nav.sales')}</h1>
+        <div className="page-header-title">
+          <h1 className="page-title">{t('nav.sales')}</h1>
+          <Link
+            href="/products"
+            className="ml-2 p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+            title={t('nav.products')}
+          >
+            <Package className="w-4 h-4" />
+          </Link>
+        </div>
 
         {/* Date Range Filter */}
         <DateRangeFilter

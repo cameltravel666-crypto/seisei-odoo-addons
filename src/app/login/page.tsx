@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations, useLocale } from 'next-intl';
-import { Building2, Mail, Loader2, Eye, EyeOff, Globe, HelpCircle } from 'lucide-react';
+import { Mail, Loader2, Eye, EyeOff, Globe, HelpCircle, ChevronDown } from 'lucide-react';
 
 const STORAGE_KEY = 'biznexus_login_info';
 const TENANT_PREFIX = 'TEN-';
@@ -22,19 +22,198 @@ function GoogleIcon({ className }: { className?: string }) {
 
 type TabType = 'login' | 'register';
 
+// Tab component with sliding indicator
+function AuthTabs({
+  activeTab,
+  onTabChange,
+  labels
+}: {
+  activeTab: TabType;
+  onTabChange: (tab: TabType) => void;
+  labels: { login: string; register: string };
+}) {
+  return (
+    <div
+      className="relative flex mx-6 mt-6 bg-gray-100 rounded-xl p-1"
+      role="tablist"
+      aria-label="Authentication tabs"
+    >
+      {/* Sliding indicator */}
+      <div
+        className="absolute top-1 bottom-1 w-[calc(50%-4px)] bg-white rounded-lg shadow-sm transition-transform duration-200 ease-out"
+        style={{
+          transform: activeTab === 'login' ? 'translateX(0)' : 'translateX(100%)',
+        }}
+        aria-hidden="true"
+      />
+
+      <button
+        role="tab"
+        aria-selected={activeTab === 'login'}
+        aria-controls="login-panel"
+        id="login-tab"
+        onClick={() => onTabChange('login')}
+        className={`relative flex-1 py-2.5 text-sm font-medium rounded-lg transition-colors duration-200 min-h-[44px] ${
+          activeTab === 'login' ? 'text-gray-900' : 'text-gray-500'
+        }`}
+      >
+        {labels.login}
+      </button>
+      <button
+        role="tab"
+        aria-selected={activeTab === 'register'}
+        aria-controls="register-panel"
+        id="register-tab"
+        onClick={() => onTabChange('register')}
+        className={`relative flex-1 py-2.5 text-sm font-medium rounded-lg transition-colors duration-200 min-h-[44px] ${
+          activeTab === 'register' ? 'text-gray-900' : 'text-gray-500'
+        }`}
+      >
+        {labels.register}
+      </button>
+    </div>
+  );
+}
+
+// Unified tenant code input component
+function TenantCodeInput({
+  value,
+  onChange,
+  error,
+  placeholder,
+  helpText,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  error?: string;
+  placeholder: string;
+  helpText: string;
+}) {
+  return (
+    <div>
+      <div
+        className={`flex items-center h-12 border rounded-xl overflow-hidden transition-all ${
+          error
+            ? 'border-red-300 bg-red-50 focus-within:ring-2 focus-within:ring-red-500'
+            : 'border-gray-200 bg-gray-50 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent focus-within:bg-white'
+        }`}
+      >
+        <span className="px-4 text-gray-400 font-medium select-none border-r border-gray-200 bg-gray-100 h-full flex items-center">
+          TEN-
+        </span>
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => {
+            const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            onChange(val);
+          }}
+          className="flex-1 h-full px-4 bg-transparent focus:outline-none uppercase font-medium tracking-wide"
+          placeholder={placeholder}
+          autoCapitalize="characters"
+          autoComplete="organization"
+        />
+      </div>
+      {error ? (
+        <p className="mt-1.5 text-xs text-red-600">{error}</p>
+      ) : (
+        <p className="mt-1.5 text-xs text-gray-400">{helpText}</p>
+      )}
+    </div>
+  );
+}
+
+// Language selector component
+function LanguageSelector({
+  currentLocale,
+  isChanging,
+  onChangeLanguage,
+}: {
+  currentLocale: string;
+  isChanging: boolean;
+  onChangeLanguage: (locale: string) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const languages = [
+    { code: 'ja', label: '日本語' },
+    { code: 'zh', label: '中文' },
+    { code: 'en', label: 'English' },
+  ];
+
+  const currentLabel = languages.find(l => l.code === currentLocale)?.label || 'Language';
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        disabled={isChanging}
+        className="flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 bg-white/90 backdrop-blur-sm rounded-full shadow-sm border border-gray-200/80 transition-all min-h-[44px] disabled:opacity-70"
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+      >
+        {isChanging ? (
+          <Loader2 className="w-4 h-4 animate-spin" />
+        ) : (
+          <Globe className="w-4 h-4" />
+        )}
+        <span>{currentLabel}</span>
+        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      {isOpen && !isChanging && (
+        <>
+          {/* Backdrop to close menu */}
+          <div
+            className="fixed inset-0 z-10"
+            onClick={() => setIsOpen(false)}
+            aria-hidden="true"
+          />
+
+          <div
+            className="absolute top-full right-0 mt-2 bg-white rounded-xl shadow-lg border border-gray-200 py-1 z-20 min-w-[140px] overflow-hidden"
+            role="listbox"
+          >
+            {languages.map((lang) => (
+              <button
+                key={lang.code}
+                role="option"
+                aria-selected={currentLocale === lang.code}
+                onClick={() => {
+                  setIsOpen(false);
+                  if (lang.code !== currentLocale) {
+                    onChangeLanguage(lang.code);
+                  }
+                }}
+                className={`w-full px-4 py-3 text-left text-sm hover:bg-gray-50 transition-colors min-h-[44px] ${
+                  currentLocale === lang.code
+                    ? 'text-blue-600 font-medium bg-blue-50'
+                    : 'text-gray-700'
+                }`}
+              >
+                {lang.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function LoginPage() {
   const t = useTranslations('auth');
   const locale = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [isPending, startTransition] = useTransition();
 
   const [activeTab, setActiveTab] = useState<TabType>('login');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [currentLocale, setCurrentLocale] = useState(locale);
+  const [isChangingLanguage, setIsChangingLanguage] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [showLanguageMenu, setShowLanguageMenu] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
 
   // Form data
@@ -87,8 +266,6 @@ export default function LoginPage() {
 
   // Load saved login info on mount
   useEffect(() => {
-    setCurrentLocale(locale);
-
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
@@ -105,7 +282,7 @@ export default function LoginPage() {
     } catch {
       // Ignore parse errors
     }
-  }, [locale]);
+  }, []);
 
   // Cooldown timer
   useEffect(() => {
@@ -117,12 +294,21 @@ export default function LoginPage() {
     }
   }, [emailRegState.cooldown]);
 
-  const changeLanguage = (newLocale: string) => {
+  // Smooth language change
+  const changeLanguage = useCallback((newLocale: string) => {
+    setIsChangingLanguage(true);
     document.cookie = `locale=${newLocale}; path=/; max-age=31536000`;
     localStorage.setItem('preferred_locale', newLocale);
-    setShowLanguageMenu(false);
-    window.location.reload();
-  };
+
+    // Use router.refresh() for smoother transition
+    startTransition(() => {
+      router.refresh();
+      // Small delay to ensure the refresh completes
+      setTimeout(() => {
+        setIsChangingLanguage(false);
+      }, 300);
+    });
+  }, [router]);
 
   const handleGoogleLogin = () => {
     window.location.href = '/api/auth/google';
@@ -130,11 +316,8 @@ export default function LoginPage() {
 
   // Normalize tenant code input - always add TEN- prefix
   const normalizeTenantCode = (input: string): string => {
-    // Remove any existing prefix and clean up
     let normalized = input.trim().toUpperCase().replace(/^TEN-/i, '');
-    // Remove any non-alphanumeric characters
     normalized = normalized.replace(/[^A-Z0-9]/g, '');
-    // Add prefix
     return normalized ? TENANT_PREFIX + normalized : '';
   };
 
@@ -265,7 +448,6 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        // Generic error message to prevent account enumeration
         throw new Error(getText(
           '账号或密码不正确',
           'アカウントまたはパスワードが正しくありません',
@@ -298,7 +480,6 @@ export default function LoginPage() {
   };
 
   const handleForgotPassword = () => {
-    // For now, show a helpful message. Can be expanded to full flow later.
     alert(getText(
       '请联系管理员重置密码，或使用 Google 账号登录',
       '管理者に連絡してパスワードをリセットするか、Googleアカウントでログインしてください',
@@ -306,415 +487,391 @@ export default function LoginPage() {
     ));
   };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-100 p-4">
-      <div className="w-full max-w-md">
-        {/* Language Selector - Top Right */}
-        <div className="flex justify-end mb-4 relative">
-          <button
-            onClick={() => setShowLanguageMenu(!showLanguageMenu)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 bg-white/80 backdrop-blur rounded-full shadow-sm border border-gray-200 transition"
-          >
-            <Globe className="w-4 h-4" />
-            {currentLocale === 'ja' ? '日本語' : currentLocale === 'zh' ? '中文' : 'EN'}
-          </button>
+  const handleTabChange = (tab: TabType) => {
+    setActiveTab(tab);
+    setError('');
+    setFieldErrors({});
+  };
 
-          {showLanguageMenu && (
-            <div className="absolute top-full right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10 min-w-[120px]">
-              <button
-                onClick={() => changeLanguage('ja')}
-                className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 ${currentLocale === 'ja' ? 'text-blue-600 font-medium' : 'text-gray-700'}`}
-              >
-                日本語
-              </button>
-              <button
-                onClick={() => changeLanguage('zh')}
-                className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 ${currentLocale === 'zh' ? 'text-blue-600 font-medium' : 'text-gray-700'}`}
-              >
-                中文
-              </button>
-              <button
-                onClick={() => changeLanguage('en')}
-                className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 ${currentLocale === 'en' ? 'text-blue-600 font-medium' : 'text-gray-700'}`}
-              >
-                English
-              </button>
-            </div>
-          )}
+  return (
+    <div className="min-h-screen min-h-[100dvh] flex flex-col bg-gradient-to-br from-slate-50 to-blue-100">
+      {/* Safe area padding for iOS */}
+      <div className="flex-1 flex flex-col px-4 py-6" style={{ paddingTop: 'max(env(safe-area-inset-top), 24px)', paddingBottom: 'max(env(safe-area-inset-bottom), 24px)' }}>
+
+        {/* Language Selector - Top Right */}
+        <div className="flex justify-end mb-4">
+          <LanguageSelector
+            currentLocale={locale}
+            isChanging={isChangingLanguage || isPending}
+            onChangeLanguage={changeLanguage}
+          />
         </div>
 
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-          {/* Logo */}
-          <div className="text-center pt-8 pb-4 px-8">
-            <h1 className="text-2xl font-bold text-gray-900">Seisei BizNexus</h1>
-            <p className="text-gray-500 mt-1 text-sm">
-              {getText('智能业务管理平台', 'スマートビジネス管理', 'Smart Business Management')}
-            </p>
-          </div>
-
-          {/* Tabs */}
-          <div className="flex border-b border-gray-200 px-8">
-            <button
-              onClick={() => { setActiveTab('login'); setError(''); setFieldErrors({}); }}
-              className={`flex-1 py-3 text-sm font-medium border-b-2 transition ${
-                activeTab === 'login'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              {getText('登录', 'ログイン', 'Login')}
-            </button>
-            <button
-              onClick={() => { setActiveTab('register'); setError(''); setFieldErrors({}); }}
-              className={`flex-1 py-3 text-sm font-medium border-b-2 transition ${
-                activeTab === 'register'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              {getText('注册', '新規登録', 'Register')}
-            </button>
-          </div>
-
-          <div className="p-8">
-            {/* Global Error Message */}
-            {error && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
-                {error}
+        {/* Main Content - Centered */}
+        <div className="flex-1 flex items-center justify-center">
+          <div className="w-full max-w-[400px]">
+            <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+              {/* Logo */}
+              <div className="text-center pt-8 pb-2 px-6">
+                <h1 className="text-2xl font-bold text-gray-900">Seisei BizNexus</h1>
+                <p className="text-gray-500 mt-1 text-sm">
+                  {getText('智能业务管理平台', 'スマートビジネス管理', 'Smart Business Management')}
+                </p>
               </div>
-            )}
 
-            {activeTab === 'login' ? (
-              <>
-                {/* Google Login */}
-                <button
-                  onClick={handleGoogleLogin}
-                  className="w-full h-12 px-4 bg-white border-2 border-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-50 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition flex items-center justify-center gap-3"
+              {/* Tabs - iOS style segmented control */}
+              <AuthTabs
+                activeTab={activeTab}
+                onTabChange={handleTabChange}
+                labels={{
+                  login: getText('登录', 'ログイン', 'Login'),
+                  register: getText('注册', '新規登録', 'Register'),
+                }}
+              />
+
+              {/* Content */}
+              <div className="p-6">
+                {/* Global Error Message */}
+                {error && (
+                  <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm">
+                    {error}
+                  </div>
+                )}
+
+                {/* Tab Panels */}
+                <div
+                  id="login-panel"
+                  role="tabpanel"
+                  aria-labelledby="login-tab"
+                  hidden={activeTab !== 'login'}
                 >
-                  <GoogleIcon className="w-5 h-5" />
-                  {getText('使用 Google 登录', 'Google でログイン', 'Continue with Google')}
-                </button>
-
-                {/* Divider */}
-                <div className="relative my-6">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-200"></div>
-                  </div>
-                  <div className="relative flex justify-center text-sm">
-                    <span className="px-4 bg-white text-gray-500">
-                      {getText('或使用企业账号', 'または企業アカウント', 'or with enterprise account')}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Login Form */}
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  {/* Tenant Code */}
-                  <div>
-                    <label htmlFor="tenantCode" className="flex items-center gap-1 text-sm font-medium text-gray-700 mb-1">
-                      {getText('租户代码', 'テナントコード', 'Tenant Code')}
+                  {activeTab === 'login' && (
+                    <div className="space-y-4">
+                      {/* Google Login */}
                       <button
-                        type="button"
-                        className="text-gray-400 hover:text-gray-600"
-                        title={getText(
-                          '租户代码由管理员提供，例如: DEMO01',
-                          'テナントコードは管理者から提供されます。例: DEMO01',
-                          'Tenant code is provided by your administrator, e.g., DEMO01'
-                        )}
+                        onClick={handleGoogleLogin}
+                        className="w-full h-12 px-4 bg-white border border-gray-200 text-gray-700 font-medium rounded-xl hover:bg-gray-50 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition flex items-center justify-center gap-3 min-h-[48px]"
                       >
-                        <HelpCircle className="w-3.5 h-3.5" />
+                        <GoogleIcon className="w-5 h-5" />
+                        {getText('使用 Google 登录', 'Google でログイン', 'Continue with Google')}
                       </button>
-                    </label>
-                    <div className="flex">
-                      <span className="inline-flex items-center px-4 h-12 text-gray-500 bg-gray-100 border border-r-0 border-gray-300 rounded-l-lg font-medium">
-                        TEN-
-                      </span>
-                      <input
-                        type="text"
-                        id="tenantCode"
-                        value={formData.tenantCode.replace(/^TEN-/i, '')}
-                        onChange={(e) => {
-                          // Only store the code part without prefix, allow alphanumeric
-                          const value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-                          setFormData({ ...formData, tenantCode: value });
-                          setFieldErrors({ ...fieldErrors, tenantCode: '' });
-                        }}
-                        className={`flex-1 h-12 px-4 border rounded-r-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition uppercase ${
-                          fieldErrors.tenantCode ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                        }`}
-                        placeholder="DEMO01"
-                        autoCapitalize="characters"
-                        autoComplete="organization"
-                      />
-                    </div>
-                    {fieldErrors.tenantCode && (
-                      <p className="mt-1 text-xs text-red-600">{fieldErrors.tenantCode}</p>
-                    )}
-                    <p className="mt-1 text-xs text-gray-500">
-                      {getText(
-                        '示例: DEMO01 (只需输入代码部分)',
-                        '例: DEMO01 (コード部分のみ入力)',
-                        'Example: DEMO01 (enter code part only)'
-                      )}
-                    </p>
-                  </div>
 
-                  {/* Username */}
-                  <div>
-                    <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
-                      {getText('用户名 / 邮箱', 'ユーザー名 / メール', 'Username / Email')}
-                    </label>
-                    <input
-                      type="text"
-                      id="username"
-                      value={formData.username}
-                      onChange={(e) => {
-                        setFormData({ ...formData, username: e.target.value });
-                        setFieldErrors({ ...fieldErrors, username: '' });
-                      }}
-                      className={`w-full h-12 px-4 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${
-                        fieldErrors.username ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                      }`}
-                      autoCapitalize="none"
-                      autoCorrect="off"
-                      autoComplete="username"
-                    />
-                    {fieldErrors.username && (
-                      <p className="mt-1 text-xs text-red-600">{fieldErrors.username}</p>
-                    )}
-                  </div>
-
-                  {/* Password */}
-                  <div>
-                    <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                      {getText('密码', 'パスワード', 'Password')}
-                    </label>
-                    <div className="relative">
-                      <input
-                        type={showPassword ? 'text' : 'password'}
-                        id="password"
-                        value={formData.password}
-                        onChange={(e) => {
-                          setFormData({ ...formData, password: e.target.value });
-                          setFieldErrors({ ...fieldErrors, password: '' });
-                        }}
-                        className={`w-full h-12 px-4 pr-12 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${
-                          fieldErrors.password ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                        }`}
-                        autoComplete="current-password"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
-                      >
-                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                      </button>
-                    </div>
-                    {fieldErrors.password && (
-                      <p className="mt-1 text-xs text-red-600">{fieldErrors.password}</p>
-                    )}
-                  </div>
-
-                  {/* Remember Me & Forgot Password */}
-                  <div className="flex items-center justify-between">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={rememberMe}
-                        onChange={(e) => setRememberMe(e.target.checked)}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <span className="text-sm text-gray-600">
-                        {getText('记住我', 'ログイン状態を保持', 'Remember me')}
-                      </span>
-                    </label>
-                    <button
-                      type="button"
-                      onClick={handleForgotPassword}
-                      className="text-sm text-blue-600 hover:text-blue-700"
-                    >
-                      {getText('忘记密码?', 'パスワードを忘れた?', 'Forgot password?')}
-                    </button>
-                  </div>
-
-                  {/* Submit Button */}
-                  <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="w-full h-12 px-4 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        {getText('登录中...', 'ログイン中...', 'Logging in...')}
-                      </>
-                    ) : (
-                      getText('登录', 'ログイン', 'Login')
-                    )}
-                  </button>
-                </form>
-
-                {/* Enterprise SSO Section */}
-                <div className="mt-6 pt-6 border-t border-gray-100">
-                  <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
-                    <Building2 className="w-4 h-4" />
-                    {getText('企业 SSO 登录', '企業SSOログイン', 'Enterprise SSO Login')}
-                  </div>
-                  <p className="text-xs text-gray-400 mb-3">
-                    {getText(
-                      '仅适用于已开通 SSO 的企业 (Google Workspace/Azure AD)',
-                      'SSO対応企業のみ (Google Workspace/Azure AD)',
-                      'For SSO-enabled organizations only (Google Workspace/Azure AD)'
-                    )}
-                  </p>
-                  <button
-                    onClick={handleGoogleLogin}
-                    className="w-full h-10 px-4 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition flex items-center justify-center gap-2"
-                  >
-                    <GoogleIcon className="w-4 h-4" />
-                    {getText('使用企业 Google 账号', 'Google Workspaceでログイン', 'Sign in with Google Workspace')}
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-                {/* Register Tab */}
-
-                {/* Google Register */}
-                <button
-                  onClick={handleGoogleLogin}
-                  className="w-full h-12 px-4 bg-white border-2 border-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-50 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition flex items-center justify-center gap-3"
-                >
-                  <GoogleIcon className="w-5 h-5" />
-                  {getText('使用 Google 注册', 'Google で登録', 'Register with Google')}
-                </button>
-
-                {/* Divider */}
-                <div className="relative my-6">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-200"></div>
-                  </div>
-                  <div className="relative flex justify-center text-sm">
-                    <span className="px-4 bg-white text-gray-500">
-                      {getText('或使用邮箱', 'またはメールで', 'or with email')}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Email Registration Form */}
-                <div className="space-y-4">
-                  {emailRegState.step === 'email' ? (
-                    <>
-                      <div>
-                        <label htmlFor="regEmail" className="block text-sm font-medium text-gray-700 mb-1">
-                          {getText('邮箱地址', 'メールアドレス', 'Email Address')}
-                        </label>
-                        <input
-                          type="email"
-                          id="regEmail"
-                          value={emailRegState.email}
-                          onChange={(e) => setEmailRegState(prev => ({ ...prev, email: e.target.value }))}
-                          className="w-full h-12 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                          placeholder="your@email.com"
-                          autoComplete="email"
-                        />
+                      {/* Divider */}
+                      <div className="relative my-5">
+                        <div className="absolute inset-0 flex items-center">
+                          <div className="w-full border-t border-gray-200"></div>
+                        </div>
+                        <div className="relative flex justify-center text-xs">
+                          <span className="px-3 bg-white text-gray-400">
+                            {getText('或使用企业账号', 'または企業アカウント', 'or with enterprise account')}
+                          </span>
+                        </div>
                       </div>
-                      <button
-                        onClick={handleSendCode}
-                        disabled={emailRegState.isSending}
-                        className="w-full h-12 px-4 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                      >
-                        {emailRegState.isSending ? (
-                          <>
-                            <Loader2 className="w-5 h-5 animate-spin" />
-                            {getText('发送中...', '送信中...', 'Sending...')}
-                          </>
-                        ) : (
-                          <>
-                            <Mail className="w-5 h-5" />
-                            {getText('发送验证码', '認証コードを送信', 'Send Verification Code')}
-                          </>
-                        )}
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <p className="text-sm text-gray-600">
-                        {getText(
-                          `验证码已发送至 ${emailRegState.email}`,
-                          `${emailRegState.email} に認証コードを送信しました`,
-                          `Verification code sent to ${emailRegState.email}`
-                        )}
-                      </p>
-                      <div>
-                        <label htmlFor="verifyCode" className="block text-sm font-medium text-gray-700 mb-1">
-                          {getText('验证码', '認証コード', 'Verification Code')}
-                        </label>
-                        <input
-                          type="text"
-                          id="verifyCode"
-                          value={emailRegState.code}
-                          onChange={(e) => setEmailRegState(prev => ({ ...prev, code: e.target.value.replace(/\D/g, '').slice(0, 6) }))}
-                          className="w-full h-12 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-center text-2xl tracking-widest font-mono"
-                          placeholder="000000"
-                          maxLength={6}
-                          autoComplete="one-time-code"
-                        />
-                      </div>
-                      <button
-                        onClick={handleVerifyCode}
-                        disabled={emailRegState.isVerifying}
-                        className="w-full h-12 px-4 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                      >
-                        {emailRegState.isVerifying ? (
-                          <>
-                            <Loader2 className="w-5 h-5 animate-spin" />
-                            {getText('验证中...', '確認中...', 'Verifying...')}
-                          </>
-                        ) : (
-                          getText('验证并继续', '確認して続行', 'Verify & Continue')
-                        )}
-                      </button>
-                      <button
-                        onClick={handleSendCode}
-                        disabled={emailRegState.cooldown > 0 || emailRegState.isSending}
-                        className="w-full h-10 px-4 text-blue-600 font-medium rounded-lg hover:bg-blue-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {emailRegState.cooldown > 0
-                          ? getText(`${emailRegState.cooldown}秒后可重发`, `${emailRegState.cooldown}秒後に再送信`, `Resend in ${emailRegState.cooldown}s`)
-                          : getText('重新发送验证码', '認証コードを再送信', 'Resend Code')}
-                      </button>
-                      <button
-                        onClick={() => setEmailRegState(prev => ({ ...prev, step: 'email', code: '' }))}
-                        className="w-full text-sm text-gray-500 hover:text-gray-700"
-                      >
-                        {getText('使用其他邮箱', '別のメールを使用', 'Use different email')}
-                      </button>
-                    </>
+
+                      {/* Login Form */}
+                      <form onSubmit={handleSubmit} className="space-y-4">
+                        {/* Tenant Code */}
+                        <div>
+                          <label htmlFor="tenantCode" className="flex items-center gap-1 text-sm font-medium text-gray-700 mb-2">
+                            {getText('租户代码', 'テナントコード', 'Tenant Code')}
+                            <button
+                              type="button"
+                              className="text-gray-400 hover:text-gray-600 p-1 min-w-[44px] min-h-[44px] -m-1 flex items-center justify-center"
+                              title={getText(
+                                '租户代码由管理员提供，例如: DEMO01',
+                                'テナントコードは管理者から提供されます。例: DEMO01',
+                                'Tenant code is provided by your administrator, e.g., DEMO01'
+                              )}
+                            >
+                              <HelpCircle className="w-4 h-4" />
+                            </button>
+                          </label>
+                          <TenantCodeInput
+                            value={formData.tenantCode.replace(/^TEN-/i, '')}
+                            onChange={(value) => {
+                              setFormData({ ...formData, tenantCode: value });
+                              setFieldErrors({ ...fieldErrors, tenantCode: '' });
+                            }}
+                            error={fieldErrors.tenantCode}
+                            placeholder="DEMO01"
+                            helpText={getText(
+                              '示例: DEMO01',
+                              '例: DEMO01',
+                              'Example: DEMO01'
+                            )}
+                          />
+                        </div>
+
+                        {/* Username */}
+                        <div>
+                          <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
+                            {getText('用户名 / 邮箱', 'ユーザー名 / メール', 'Username / Email')}
+                          </label>
+                          <input
+                            type="text"
+                            id="username"
+                            value={formData.username}
+                            onChange={(e) => {
+                              setFormData({ ...formData, username: e.target.value });
+                              setFieldErrors({ ...fieldErrors, username: '' });
+                            }}
+                            className={`w-full h-12 px-4 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${
+                              fieldErrors.username ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                            }`}
+                            autoCapitalize="none"
+                            autoCorrect="off"
+                            autoComplete="username"
+                          />
+                          {fieldErrors.username && (
+                            <p className="mt-1.5 text-xs text-red-600">{fieldErrors.username}</p>
+                          )}
+                        </div>
+
+                        {/* Password */}
+                        <div>
+                          <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                            {getText('密码', 'パスワード', 'Password')}
+                          </label>
+                          <div className="relative">
+                            <input
+                              type={showPassword ? 'text' : 'password'}
+                              id="password"
+                              value={formData.password}
+                              onChange={(e) => {
+                                setFormData({ ...formData, password: e.target.value });
+                                setFieldErrors({ ...fieldErrors, password: '' });
+                              }}
+                              className={`w-full h-12 px-4 pr-12 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${
+                                fieldErrors.password ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                              }`}
+                              autoComplete="current-password"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowPassword(!showPassword)}
+                              className="absolute right-0 top-0 h-12 w-12 flex items-center justify-center text-gray-400 hover:text-gray-600"
+                              aria-label={showPassword ? 'Hide password' : 'Show password'}
+                            >
+                              {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                            </button>
+                          </div>
+                          {fieldErrors.password && (
+                            <p className="mt-1.5 text-xs text-red-600">{fieldErrors.password}</p>
+                          )}
+                        </div>
+
+                        {/* Remember Me & Forgot Password */}
+                        <div className="flex items-center justify-between">
+                          <label className="flex items-center gap-2 cursor-pointer min-h-[44px]">
+                            <input
+                              type="checkbox"
+                              checked={rememberMe}
+                              onChange={(e) => setRememberMe(e.target.checked)}
+                              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                            />
+                            <span className="text-sm text-gray-600">
+                              {getText('记住我', 'ログイン状態を保持', 'Remember me')}
+                            </span>
+                          </label>
+                          <button
+                            type="button"
+                            onClick={handleForgotPassword}
+                            className="text-sm text-blue-600 hover:text-blue-700 min-h-[44px] px-2"
+                          >
+                            {getText('忘记密码?', 'パスワードを忘れた?', 'Forgot password?')}
+                          </button>
+                        </div>
+
+                        {/* Submit Button */}
+                        <button
+                          type="submit"
+                          disabled={isLoading}
+                          className="w-full h-12 px-4 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[48px]"
+                        >
+                          {isLoading ? (
+                            <>
+                              <Loader2 className="w-5 h-5 animate-spin" />
+                              {getText('登录中...', 'ログイン中...', 'Logging in...')}
+                            </>
+                          ) : (
+                            getText('登录', 'ログイン', 'Login')
+                          )}
+                        </button>
+                      </form>
+                    </div>
                   )}
                 </div>
 
-                {/* Already have account */}
-                <p className="mt-6 text-center text-sm text-gray-500">
-                  {getText('已有账号?', 'アカウントをお持ちですか?', 'Already have an account?')}
-                  {' '}
-                  <button
-                    onClick={() => setActiveTab('login')}
-                    className="text-blue-600 hover:text-blue-700 font-medium"
-                  >
-                    {getText('立即登录', 'ログイン', 'Login now')}
-                  </button>
-                </p>
-              </>
-            )}
+                <div
+                  id="register-panel"
+                  role="tabpanel"
+                  aria-labelledby="register-tab"
+                  hidden={activeTab !== 'register'}
+                >
+                  {activeTab === 'register' && (
+                    <div className="space-y-4">
+                      {/* Google Register */}
+                      <button
+                        onClick={handleGoogleLogin}
+                        className="w-full h-12 px-4 bg-white border border-gray-200 text-gray-700 font-medium rounded-xl hover:bg-gray-50 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition flex items-center justify-center gap-3 min-h-[48px]"
+                      >
+                        <GoogleIcon className="w-5 h-5" />
+                        {getText('使用 Google 注册', 'Google で登録', 'Register with Google')}
+                      </button>
+
+                      {/* Divider */}
+                      <div className="relative my-5">
+                        <div className="absolute inset-0 flex items-center">
+                          <div className="w-full border-t border-gray-200"></div>
+                        </div>
+                        <div className="relative flex justify-center text-xs">
+                          <span className="px-3 bg-white text-gray-400">
+                            {getText('或使用邮箱', 'またはメールで', 'or with email')}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Email Registration Form */}
+                      <div className="space-y-4">
+                        {emailRegState.step === 'email' ? (
+                          <>
+                            <div>
+                              <label htmlFor="regEmail" className="block text-sm font-medium text-gray-700 mb-2">
+                                {getText('邮箱地址', 'メールアドレス', 'Email Address')}
+                              </label>
+                              <input
+                                type="email"
+                                id="regEmail"
+                                value={emailRegState.email}
+                                onChange={(e) => setEmailRegState(prev => ({ ...prev, email: e.target.value }))}
+                                className="w-full h-12 px-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                                placeholder="your@email.com"
+                                autoComplete="email"
+                              />
+                            </div>
+                            <button
+                              onClick={handleSendCode}
+                              disabled={emailRegState.isSending}
+                              className="w-full h-12 px-4 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[48px]"
+                            >
+                              {emailRegState.isSending ? (
+                                <>
+                                  <Loader2 className="w-5 h-5 animate-spin" />
+                                  {getText('发送中...', '送信中...', 'Sending...')}
+                                </>
+                              ) : (
+                                <>
+                                  <Mail className="w-5 h-5" />
+                                  {getText('发送验证码', '認証コードを送信', 'Send Verification Code')}
+                                </>
+                              )}
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-sm text-gray-600 text-center">
+                              {getText(
+                                `验证码已发送至`,
+                                `認証コードを送信しました`,
+                                `Verification code sent to`
+                              )}
+                              <br />
+                              <span className="font-medium text-gray-900">{emailRegState.email}</span>
+                            </p>
+                            <div>
+                              <label htmlFor="verifyCode" className="block text-sm font-medium text-gray-700 mb-2">
+                                {getText('验证码', '認証コード', 'Verification Code')}
+                              </label>
+                              <input
+                                type="text"
+                                id="verifyCode"
+                                value={emailRegState.code}
+                                onChange={(e) => setEmailRegState(prev => ({ ...prev, code: e.target.value.replace(/\D/g, '').slice(0, 6) }))}
+                                className="w-full h-14 px-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-center text-2xl tracking-[0.5em] font-mono"
+                                placeholder="000000"
+                                maxLength={6}
+                                autoComplete="one-time-code"
+                                inputMode="numeric"
+                              />
+                            </div>
+                            <button
+                              onClick={handleVerifyCode}
+                              disabled={emailRegState.isVerifying}
+                              className="w-full h-12 px-4 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[48px]"
+                            >
+                              {emailRegState.isVerifying ? (
+                                <>
+                                  <Loader2 className="w-5 h-5 animate-spin" />
+                                  {getText('验证中...', '確認中...', 'Verifying...')}
+                                </>
+                              ) : (
+                                getText('验证并继续', '確認して続行', 'Verify & Continue')
+                              )}
+                            </button>
+                            <div className="flex flex-col gap-2">
+                              <button
+                                onClick={handleSendCode}
+                                disabled={emailRegState.cooldown > 0 || emailRegState.isSending}
+                                className="w-full h-11 px-4 text-blue-600 font-medium rounded-xl hover:bg-blue-50 transition disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
+                              >
+                                {emailRegState.cooldown > 0
+                                  ? getText(`${emailRegState.cooldown}秒后可重发`, `${emailRegState.cooldown}秒後に再送信`, `Resend in ${emailRegState.cooldown}s`)
+                                  : getText('重新发送验证码', '認証コードを再送信', 'Resend Code')}
+                              </button>
+                              <button
+                                onClick={() => setEmailRegState(prev => ({ ...prev, step: 'email', code: '' }))}
+                                className="w-full text-sm text-gray-500 hover:text-gray-700 min-h-[44px]"
+                              >
+                                {getText('使用其他邮箱', '別のメールを使用', 'Use different email')}
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Already have account */}
+                      <p className="pt-2 text-center text-sm text-gray-500">
+                        {getText('已有账号?', 'アカウントをお持ちですか?', 'Already have an account?')}
+                        {' '}
+                        <button
+                          onClick={() => handleTabChange('login')}
+                          className="text-blue-600 hover:text-blue-700 font-medium"
+                        >
+                          {getText('立即登录', 'ログイン', 'Login now')}
+                        </button>
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Footer */}
-        <p className="mt-6 text-center text-xs text-gray-400">
-          © 2026 Seisei Inc. All rights reserved.
-        </p>
+        {/* Footer - Outside card */}
+        <div className="mt-6 text-center space-y-2">
+          {/* Legal Links */}
+          <div className="flex items-center justify-center gap-3 text-xs">
+            <a
+              href="/legal/tokusho"
+              className="text-gray-500 hover:text-gray-700 transition"
+            >
+              {getText('特定商取引法', '特定商取引法', 'Legal Notice')}
+            </a>
+            <span className="text-gray-300">|</span>
+            <a
+              href="https://seisei.tokyo"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-500 hover:text-gray-700 transition"
+            >
+              seisei.tokyo
+            </a>
+          </div>
+          <p className="text-xs text-gray-400">
+            &copy; {new Date().getFullYear()} Seisei Inc. All rights reserved.
+          </p>
+        </div>
       </div>
     </div>
   );

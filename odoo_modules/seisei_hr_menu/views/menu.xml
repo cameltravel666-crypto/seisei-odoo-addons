@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ============================================== -->
+    <!-- 1. PERSONNEL (人事) - sequence 10 -->
+    <!-- ============================================== -->
+    <menuitem id="menu_seisei_personnel_root"
+        name="Personnel"
+        sequence="10"
+        groups="group_seisei_store_manager,group_seisei_hr_manager,group_seisei_hr_admin"
+        web_icon="hr,static/description/icon.png"/>
+
+    <!-- Employees -->
+    <menuitem id="menu_seisei_employees"
+        name="Employees"
+        parent="menu_seisei_personnel_root"
+        action="hr.open_view_employee_list_my"
+        sequence="10"
+        groups="group_seisei_store_manager,group_seisei_hr_manager,group_seisei_hr_admin"/>
+
+    <!-- Organization -->
+    <menuitem id="menu_seisei_organization"
+        name="Organization"
+        parent="menu_seisei_personnel_root"
+        sequence="20"
+        groups="group_seisei_store_manager,group_seisei_hr_manager,group_seisei_hr_admin"/>
+
+    <!-- Departments under Organization -->
+    <menuitem id="menu_seisei_departments"
+        name="Departments"
+        parent="menu_seisei_organization"
+        action="hr.hr_department_kanban_action"
+        sequence="10"
+        groups="group_seisei_store_manager,group_seisei_hr_manager,group_seisei_hr_admin"/>
+
+    <!-- Contracts -->
+    <menuitem id="menu_seisei_contracts"
+        name="Contracts"
+        parent="menu_seisei_personnel_root"
+        action="hr_contract.action_hr_contract"
+        sequence="30"
+        groups="group_seisei_hr_manager,group_seisei_hr_admin"/>
+
+
+    <!-- ============================================== -->
+    <!-- 2. PAYROLL (薪资) - sequence 20 -->
+    <!-- ============================================== -->
+    <menuitem id="menu_seisei_payroll_root"
+        name="Payroll"
+        sequence="20"
+        groups="group_seisei_hr_manager,group_seisei_hr_admin"
+        web_icon="bi_hr_payroll,static/description/icon.png"/>
+
+    <!-- Payslips -->
+    <menuitem id="menu_seisei_payslips"
+        name="Payslips"
+        parent="menu_seisei_payroll_root"
+        action="bi_hr_payroll.action_view_hr_payslip_form"
+        sequence="10"
+        groups="group_seisei_hr_manager,group_seisei_hr_admin"/>
+
+    <!-- Batches -->
+    <menuitem id="menu_seisei_batches"
+        name="Batches"
+        parent="menu_seisei_payroll_root"
+        action="bi_hr_payroll.action_hr_payslip_run_tree"
+        sequence="20"
+        groups="group_seisei_hr_manager,group_seisei_hr_admin"/>
+
+    <!-- Japan: Social Insurance & Tax -->
+    <menuitem id="menu_seisei_japan_social_tax"
+        name="Japan: Social &amp; Tax"
+        parent="menu_seisei_payroll_root"
+        sequence="30"
+        groups="group_seisei_hr_manager,group_seisei_hr_admin"/>
+
+    <!-- Japan sub-menus - These reference bi_hr_payroll actions -->
+    <menuitem id="menu_seisei_contribution_register"
+        name="Contribution Registers"
+        parent="menu_seisei_japan_social_tax"
+        action="bi_hr_payroll.action_contribution_register_form"
+        sequence="10"
+        groups="group_seisei_hr_admin"/>
+
+    <menuitem id="menu_seisei_insurance_prefecture"
+        name="Insurance Prefectures"
+        parent="menu_seisei_japan_social_tax"
+        action="bi_hr_payroll.hr_insurance_prefecture_action"
+        sequence="20"
+        groups="group_seisei_hr_admin"/>
+
+    <menuitem id="menu_seisei_insurance_rate"
+        name="Insurance Rates"
+        parent="menu_seisei_japan_social_tax"
+        action="bi_hr_payroll.hr_insurance_rate_action"
+        sequence="30"
+        groups="group_seisei_hr_admin"/>
+
+    <menuitem id="menu_seisei_insurance_grade"
+        name="Insurance Grades"
+        parent="menu_seisei_japan_social_tax"
+        action="bi_hr_payroll.hr_insurance_grade_action"
+        sequence="40"
+        groups="group_seisei_hr_admin"/>
+
+    <menuitem id="menu_seisei_withholding_tax"
+        name="Withholding Tax"
+        parent="menu_seisei_japan_social_tax"
+        action="bi_hr_payroll.hr_withholding_tax_action"
+        sequence="50"
+        groups="group_seisei_hr_admin"/>
+
+
+    <!-- ============================================== -->
+    <!-- 3. REPORTS (报表) - sequence 30 -->
+    <!-- ============================================== -->
+    <menuitem id="menu_seisei_reports_root"
+        name="Reports"
+        sequence="30"
+        groups="group_seisei_store_manager,group_seisei_hr_manager,group_seisei_hr_admin"
+        web_icon="hr,static/description/icon.png"/>
+
+    <!-- HR Reports placeholder -->
+    <menuitem id="menu_seisei_hr_reports"
+        name="HR Reports"
+        parent="menu_seisei_reports_root"
+        sequence="10"
+        groups="group_seisei_store_manager,group_seisei_hr_manager,group_seisei_hr_admin"/>
+
+    <!-- Payroll Reports placeholder -->
+    <menuitem id="menu_seisei_payroll_reports"
+        name="Payroll Reports"
+        parent="menu_seisei_reports_root"
+        sequence="20"
+        groups="group_seisei_hr_manager,group_seisei_hr_admin"/>
+
+
+    <!-- ============================================== -->
+    <!-- 4. SETTINGS (设置) - sequence 90 (独立顶栏, Admin only) -->
+    <!-- ============================================== -->
+    <menuitem id="menu_seisei_settings_root"
+        name="Settings"
+        sequence="90"
+        groups="group_seisei_hr_admin"
+        web_icon="hr,static/description/icon.png"/>
+
+    <!-- General Settings -->
+    <menuitem id="menu_seisei_settings_general"
+        name="General"
+        parent="menu_seisei_settings_root"
+        sequence="10"
+        groups="group_seisei_hr_admin"/>
+
+    <menuitem id="menu_seisei_hr_settings"
+        name="HR Settings"
+        parent="menu_seisei_settings_general"
+        action="hr.hr_config_settings_action"
+        sequence="10"
+        groups="group_seisei_hr_admin"/>
+
+    <!-- Basic Data / Dictionary -->
+    <menuitem id="menu_seisei_settings_basic_data"
+        name="Basic Data"
+        parent="menu_seisei_settings_root"
+        sequence="20"
+        groups="group_seisei_hr_admin"/>
+
+    <menuitem id="menu_seisei_work_locations"
+        name="Work Locations"
+        parent="menu_seisei_settings_basic_data"
+        action="hr.hr_work_location_action"
+        sequence="10"
+        groups="group_seisei_hr_admin"/>
+
+    <menuitem id="menu_seisei_departure_reasons"
+        name="Departure Reasons"
+        parent="menu_seisei_settings_basic_data"
+        action="hr.hr_departure_reason_action"
+        sequence="20"
+        groups="group_seisei_hr_admin"/>
+
+    <!-- Payroll Configuration -->
+    <menuitem id="menu_seisei_settings_payroll"
+        name="Payroll Configuration"
+        parent="menu_seisei_settings_root"
+        sequence="30"
+        groups="group_seisei_hr_admin"/>
+
+    <menuitem id="menu_seisei_salary_structures"
+        name="Salary Structures"
+        parent="menu_seisei_settings_payroll"
+        action="bi_hr_payroll.action_view_hr_payroll_structure_list_form"
+        sequence="10"
+        groups="group_seisei_hr_admin"/>
+
+    <menuitem id="menu_seisei_salary_rule_categories"
+        name="Salary Rule Categories"
+        parent="menu_seisei_settings_payroll"
+        action="bi_hr_payroll.action_hr_salary_rule_category"
+        sequence="20"
+        groups="group_seisei_hr_admin"/>
+
+    <menuitem id="menu_seisei_salary_rules"
+        name="Salary Rules"
+        parent="menu_seisei_settings_payroll"
+        action="bi_hr_payroll.action_salary_rule_form"
+        sequence="30"
+        groups="group_seisei_hr_admin"/>
+
+    <menuitem id="menu_seisei_contract_templates"
+        name="Contract Templates"
+        parent="menu_seisei_settings_payroll"
+        action="bi_hr_payroll.hr_contract_advantage_template_action"
+        sequence="40"
+        groups="group_seisei_hr_admin"/>
+
+    <!-- Recruitment -->
+    <menuitem id="menu_seisei_settings_recruitment"
+        name="Recruitment"
+        parent="menu_seisei_settings_root"
+        sequence="40"
+        groups="group_seisei_hr_admin"/>
+
+    <menuitem id="menu_seisei_job_positions"
+        name="Job Positions"
+        parent="menu_seisei_settings_recruitment"
+        action="hr.action_hr_job"
+        sequence="10"
+        groups="group_seisei_hr_admin"/>
+
+</odoo>

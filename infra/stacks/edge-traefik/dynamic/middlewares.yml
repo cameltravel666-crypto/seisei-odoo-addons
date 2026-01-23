@@ -1,0 +1,52 @@
+http:
+  middlewares:
+    # 安全头
+    secure-headers:
+      headers:
+        browserXssFilter: true
+        contentTypeNosniff: true
+        frameDeny: false
+        customFrameOptionsValue: "SAMEORIGIN"
+        stsIncludeSubdomains: true
+        stsPreload: true
+        stsSeconds: 31536000
+
+    # 速率限制
+    rate-limit:
+      rateLimit:
+        average: 100
+        burst: 50
+        period: 1s
+
+    # 压缩
+    compress:
+      compress:
+        excludedContentTypes:
+          - text/event-stream
+
+    # CORS
+    cors-all:
+      headers:
+        accessControlAllowMethods:
+          - GET
+          - OPTIONS
+          - PUT
+          - POST
+          - DELETE
+          - PATCH
+        accessControlAllowHeaders:
+          - "*"
+        accessControlAllowOriginList:
+          - "https://erp.seisei.tokyo"
+          - "https://biznexus.seisei.tokyo"
+          - "https://seisei.tokyo"
+        accessControlMaxAge: 100
+        addVaryHeader: true
+
+    # Odoo Longpolling 专用
+    odoo-websocket:
+      headers:
+        customRequestHeaders:
+          X-Forwarded-Proto: "https"
+        customResponseHeaders:
+          X-Frame-Options: "SAMEORIGIN"

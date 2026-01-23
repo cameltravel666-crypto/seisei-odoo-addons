@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- API Key List View -->
+    <record id="seisei_api_key_view_list" model="ir.ui.view">
+        <field name="name">seisei.api.key.list</field>
+        <field name="model">seisei.api.key</field>
+        <field name="arch" type="xml">
+            <list string="API Keys" decoration-muted="not active">
+                <field name="name"/>
+                <field name="key_prefix"/>
+                <field name="active"/>
+                <field name="last_used"/>
+                <field name="created_by"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- API Key Form View -->
+    <record id="seisei_api_key_view_form" model="ir.ui.view">
+        <field name="name">seisei.api.key.form</field>
+        <field name="model">seisei.api.key</field>
+        <field name="arch" type="xml">
+            <form string="API Key">
+                <header>
+                    <button name="action_regenerate_key" string="Regenerate Key" type="object" class="btn-primary" confirm="This will invalidate the current key. Are you sure?"/>
+                </header>
+                <sheet>
+                    <widget name="web_ribbon" title="Inactive" bg_color="bg-danger" invisible="active"/>
+                    <group>
+                        <group string="Key Info">
+                            <field name="name"/>
+                            <field name="key_prefix" help="First 8 characters of the key for identification"/>
+                            <field name="active"/>
+                        </group>
+                        <group string="Usage Info">
+                            <field name="last_used"/>
+                            <field name="created_by"/>
+                        </group>
+                    </group>
+                    <group string="Notes">
+                        <field name="notes" nolabel="1"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- API Key Search View -->
+    <record id="seisei_api_key_view_search" model="ir.ui.view">
+        <field name="name">seisei.api.key.search</field>
+        <field name="model">seisei.api.key</field>
+        <field name="arch" type="xml">
+            <search string="Search API Keys">
+                <field name="name"/>
+                <field name="key_prefix"/>
+                <filter string="Active" name="active" domain="[('active', '=', True)]"/>
+                <filter string="Inactive" name="inactive" domain="[('active', '=', False)]"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- API Key Action -->
+    <record id="seisei_api_key_action" model="ir.actions.act_window">
+        <field name="name">API Keys</field>
+        <field name="res_model">seisei.api.key</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="seisei_api_key_view_search"/>
+        <field name="context">{'search_default_active': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first API key
+            </p>
+            <p>
+                API keys are used to authenticate requests from the billing system.
+            </p>
+        </field>
+    </record>
+</odoo>

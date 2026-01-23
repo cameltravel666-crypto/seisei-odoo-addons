@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="ocr_file.MultiFileUploadWidget">
+        <div class="o_multi_file_upload">
+            <input
+                t-ref="fileInput"
+                type="file"
+                multiple="multiple"
+                accept=".jpg,.jpeg,.png,.gif,.bmp,.pdf"
+                t-on-change="onFileSelect"
+                class="d-none"
+            />
+
+            <div class="d-flex gap-2 align-items-center flex-wrap">
+                <button
+                    type="button"
+                    class="btn btn-primary btn-lg"
+                    t-on-click="triggerFileInput"
+                    t-att-disabled="state.uploading"
+                >
+                    <t t-if="state.uploading">
+                        <i class="fa fa-spinner fa-spin me-2"/>
+                        Uploading...
+                    </t>
+                    <t t-else="">
+                        <i class="fa fa-plus me-2"/>
+                        Select &amp; Upload Files
+                    </t>
+                </button>
+            </div>
+        </div>
+    </t>
+</templates>

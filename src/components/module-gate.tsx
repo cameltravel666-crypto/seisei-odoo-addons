@@ -1,16 +1,19 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
-import { useAuthStore } from '@/stores/auth';
+import { useTranslations, useLocale } from 'next-intl';
 import { Loading } from '@/components/ui/loading';
 import {
   ArrowRight,
   Lock,
   Sparkles,
   Check,
+  Info,
+  Clock,
 } from 'lucide-react';
 import Link from 'next/link';
 import type { ModuleCode } from '@prisma/client';
+import { useIsIOSAppStoreBuild, FEATURE_RESTRICTED_MESSAGE } from '@/lib/appChannel';
+import { useEntitlements } from '@/hooks/use-entitlements';
 
 interface ModuleFeature {
   icon: React.ComponentType<{ className?: string }>;
@@ -90,22 +93,84 @@ export function ModuleGate({
   children,
 }: ModuleGateProps) {
   const t = useTranslations();
-  const { visibleModules } = useAuthStore();
+  const locale = useLocale();
+  const { canAccess, isLoading, isTrialing, trialDaysRemaining, getAccessReason, gatingMode } = useEntitlements();
+  const isIOSAppStore = useIsIOSAppStoreBuild();
+
+  // Neutral message for iOS App Store builds
+  const neutralMessage = FEATURE_RESTRICTED_MESSAGE[locale as keyof typeof FEATURE_RESTRICTED_MESSAGE] || FEATURE_RESTRICTED_MESSAGE.en;
 
   // Check if user has access to this module
-  const hasAccess = visibleModules.some(m => m.code === moduleCode);
+  const hasAccess = canAccess(moduleCode);
+  const accessReason = getAccessReason(moduleCode);
 
-  // If loading auth state, show loading
-  if (!visibleModules) {
+  // If loading entitlements, show loading
+  if (isLoading) {
     return <Loading />;
   }
 
-  // If user has access, render the module content
+  // If user has access, render the module content with optional trial banner
   if (hasAccess) {
+    // Show trial banner if in trial
+    if (isTrialing && accessReason === 'trial' && trialDaysRemaining !== null) {
+      return (
+        <>
+          {/* Trial Banner */}
+          <div className="mb-4 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-lg flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Clock className="w-5 h-5 text-blue-600" />
+              <span className="text-sm text-blue-800">
+                {locale === 'zh' && `试用期还剩 ${trialDaysRemaining} 天`}
+                {locale === 'ja' && `トライアル残り ${trialDaysRemaining} 日`}
+                {locale === 'en' && `${trialDaysRemaining} days left in trial`}
+              </span>
+            </div>
+            {!isIOSAppStore && (
+              <Link
+                href="/settings/subscription"
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
+              >
+                {locale === 'zh' ? '订阅以继续使用' : locale === 'ja' ? '購読して継続' : 'Subscribe to continue'}
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            )}
+          </div>
+          {children}
+        </>
+      );
+    }
     return <>{children}</>;
   }
 
-  // Otherwise, show the upgrade page
+  // Otherwise, show the upgrade page (or neutral message for iOS App Store)
+  // iOS App Store builds: Show neutral message without pricing/subscription CTAs
+  if (isIOSAppStore) {
+    return (
+      <div className="max-w-4xl mx-auto">
+        <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${heroGradient} p-8 md:p-12 mb-8`}>
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMzLjMxNCAwIDYgMi42ODYgNiA2cy0yLjY4NiA2LTYgNi02LTIuNjg2LTYtNiAyLjY4Ni02IDYtNnoiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLW9wYWNpdHk9Ii4xIi8+PC9nPjwvc3ZnPg==')] opacity-30"></div>
+          <div className="relative">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
+                <Lock className="w-6 h-6 text-white" />
+              </div>
+            </div>
+            <h1 className="text-3xl md:text-4xl font-bold text-white mb-4">
+              {moduleNameZh}
+            </h1>
+            <p className="text-lg text-white/90 mb-4 max-w-2xl">
+              {descriptionZh}
+            </p>
+            <div className="flex items-center gap-2 text-white/80">
+              <Info className="w-5 h-5" />
+              <span>{neutralMessage}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto">
       {/* Hero Section */}

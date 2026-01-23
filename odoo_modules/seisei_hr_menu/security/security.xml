@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Module Category -->
+    <record id="module_category_seisei_hr" model="ir.module.category">
+        <field name="name">Seisei HR</field>
+        <field name="sequence">50</field>
+    </record>
+
+    <!-- Permission Groups -->
+
+    <!-- Store Manager: Can see Personnel + Reports -->
+    <record id="group_seisei_store_manager" model="res.groups">
+        <field name="name">Store Manager</field>
+        <field name="category_id" ref="module_category_seisei_hr"/>
+        <field name="comment">Can view Personnel and Reports. Limited payroll access.</field>
+    </record>
+
+    <!-- HR Manager: Can see Personnel + Payroll (daily) + Reports -->
+    <record id="group_seisei_hr_manager" model="res.groups">
+        <field name="name">HR Manager</field>
+        <field name="category_id" ref="module_category_seisei_hr"/>
+        <field name="implied_ids" eval="[(4, ref('group_seisei_store_manager'))]"/>
+        <field name="comment">Can manage daily Payroll operations (payslips, batches) and view Reports.</field>
+    </record>
+
+    <!-- HR Admin: Full access including Settings -->
+    <record id="group_seisei_hr_admin" model="res.groups">
+        <field name="name">HR Administrator</field>
+        <field name="category_id" ref="module_category_seisei_hr"/>
+        <field name="implied_ids" eval="[(4, ref('group_seisei_hr_manager'))]"/>
+        <field name="comment">Full HR access including Settings and payroll configuration.</field>
+        <field name="users" eval="[(4, ref('base.user_admin'))]"/>
+    </record>
+
+</odoo>

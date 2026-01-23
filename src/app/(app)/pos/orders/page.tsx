@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Receipt, ChevronRight, Calendar } from 'lucide-react';
+import { Receipt, ChevronRight, Calendar, ChevronLeft } from 'lucide-react';
 import { useOrders } from '@/hooks/use-pos';
 import { Loading } from '@/components/ui/loading';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -122,7 +123,10 @@ export default function OrdersPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="page-title">{t('pos.orders')}</h1>
+      <Link href="/pos" className="page-title flex items-center gap-1 hover:text-[var(--color-primary)] transition-colors">
+        <ChevronLeft className="w-5 h-5" />
+        {t('pos.orders')}
+      </Link>
 
       {/* 1. Date Filter Bar (First Priority) */}
       <div className="flex flex-wrap items-center gap-2">

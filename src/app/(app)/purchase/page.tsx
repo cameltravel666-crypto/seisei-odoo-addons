@@ -1,13 +1,16 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
+import { Scan, Package } from 'lucide-react';
 import { EmptyState, Pagination, DateRangeFilter, type PeriodType, FAB, ListSkeleton, Skeleton } from '@/components/ui';
 import { StatusTabs, type QueueType } from '@/components/purchase/status-tabs';
 import { SummaryBar } from '@/components/purchase/summary-bar';
 import { SortFilterBar, type SortOption } from '@/components/purchase/sort-filter-bar';
 import { PurchaseListItem } from '@/components/purchase/purchase-list-item';
+import { OcrBatchButton } from '@/components/ocr';
 import type { ApiResponse } from '@/types';
 
 // Types matching the API response
@@ -56,6 +59,11 @@ interface BillItem {
   isOverdue: boolean;
   overdueDays: number;
   invoiceOrigin: string | null;
+  // OCR fields
+  ocrStatus?: 'pending' | 'processing' | 'done' | 'failed';
+  ocrConfidence?: number;
+  ocrPages?: number;
+  hasAttachment?: boolean;
 }
 
 interface PurchaseData {
@@ -80,6 +88,26 @@ export default function PurchasePage() {
   const [activeQueue, setActiveQueue] = useState<QueueType>('to_confirm');
   const [sortBy, setSortBy] = useState<SortOption>('date_desc');
   const [overdueOnly, setOverdueOnly] = useState(false);
+
+  // OCR selection mode (only for to_pay queue - vendor bills)
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+
+  const handleToggleSelect = (id: number) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const handleClearSelection = () => {
+    setSelectedIds([]);
+    setSelectionMode(false);
+  };
+
+  const handleOcrComplete = () => {
+    setSelectedIds([]);
+    setSelectionMode(false);
+  };
 
   // Calculate date range based on period
   const getDateRange = () => {
@@ -193,6 +221,9 @@ export default function PurchasePage() {
     setActiveQueue(queue);
     setPage(1);
     setOverdueOnly(false); // Reset overdue filter when changing tabs
+    // Reset OCR selection when changing queues
+    setSelectionMode(false);
+    setSelectedIds([]);
   };
 
   const handleSortChange = (sort: SortOption) => {
@@ -216,11 +247,43 @@ export default function PurchasePage() {
   };
 
   return (
-    <div className="space-y-3 pb-24">
-      {/* Sticky Header */}
-      <div className="sticky top-0 bg-white z-10 -mx-4 px-4 pt-2 pb-3 border-b border-gray-100">
-        {/* Title */}
-        <h1 className="page-title mb-3">{t('nav.purchase')}</h1>
+    <div className="section-gap pb-24">
+      {/*
+        Sticky Header - 使用统一的 page-header-sticky 类
+        在移动端：main 滚动区 top:0 即可吸顶
+        在桌面端：同样 top:0
+      */}
+      <div className="page-header-sticky">
+        {/* Title - Fixed height */}
+        <div className="page-header-title flex items-center justify-between">
+          <div className="flex items-center">
+            <h1 className="page-title">{t('nav.purchase')}</h1>
+            <Link
+              href="/products"
+              className="ml-2 p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              title={t('nav.products')}
+            >
+              <Package className="w-4 h-4" />
+            </Link>
+          </div>
+          {/* OCR button only for vendor bills (to_pay queue) */}
+          {activeQueue === 'to_pay' && data?.itemType === 'bill' && (
+            <button
+              onClick={() => {
+                setSelectionMode(!selectionMode);
+                if (selectionMode) setSelectedIds([]);
+              }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition ${
+                selectionMode
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <Scan className="w-4 h-4" />
+              {selectionMode ? t('common.cancel') : t('ocr.batchOcr')}
+            </button>
+          )}
+        </div>
 
         {/* Date Range Filter */}
         <DateRangeFilter
@@ -276,6 +339,9 @@ export default function PurchasePage() {
                 item={item as any}
                 itemType={data.itemType}
                 t={t}
+                selectionMode={selectionMode && data.itemType === 'bill'}
+                isSelected={selectedIds.includes(item.id)}
+                onToggleSelect={handleToggleSelect}
               />
             ))}
           </div>
@@ -288,6 +354,16 @@ export default function PurchasePage() {
 
       {/* FAB - Create Purchase Order */}
       <FAB href="/purchase/create" label={t('purchase.createOrder')} />
+
+      {/* OCR Batch Button (for vendor bills) */}
+      {selectionMode && activeQueue === 'to_pay' && (
+        <OcrBatchButton
+          selectedIds={selectedIds}
+          onComplete={handleOcrComplete}
+          onClear={handleClearSelection}
+          t={t}
+        />
+      )}
     </div>
   );
 }

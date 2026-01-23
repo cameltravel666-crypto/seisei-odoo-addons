@@ -17,28 +17,33 @@ import {
   Receipt,
   FileText,
   UserCog,
+  LineChart,
   LucideIcon,
   Loader2,
 } from 'lucide-react';
 import { useState } from 'react';
 
-// Client-side module info (no database dependencies)
+// Client-side module info - must match modules.ts
+// Core modules (included in base plan)
 const CLIENT_MODULES: Array<{
   code: string;
   name: string;
   nameZh: string;
   Icon: LucideIcon;
+  isPremium?: boolean;
 }> = [
   { code: 'DASHBOARD', name: 'Dashboard', nameZh: '数据看板', Icon: BarChart3 },
   { code: 'POS', name: 'POS', nameZh: 'POS', Icon: ShoppingCart },
   { code: 'INVENTORY', name: 'Inventory', nameZh: '库存', Icon: Package },
   { code: 'PURCHASE', name: 'Purchase', nameZh: '采购', Icon: ShoppingBag },
   { code: 'SALES', name: 'Sales', nameZh: '销售', Icon: TrendingUp },
-  { code: 'CRM', name: 'CRM', nameZh: 'CRM', Icon: Users },
   { code: 'CONTACTS', name: 'Contacts', nameZh: '联系人', Icon: Contact },
-  { code: 'ACCOUNTING', name: 'Expenses', nameZh: '费用', Icon: Receipt },
-  { code: 'FINANCE', name: 'Finance', nameZh: '财务', Icon: FileText },
-  { code: 'HR', name: 'Payroll', nameZh: '工资', Icon: UserCog },
+  { code: 'ACCOUNTING', name: 'Cashier', nameZh: '现金出纳', Icon: Receipt },
+  // Premium modules (require additional subscription)
+  { code: 'ANALYTICS', name: 'Analytics', nameZh: '高级数据分析', Icon: LineChart, isPremium: true },
+  { code: 'CRM', name: 'CRM', nameZh: 'CRM', Icon: Users, isPremium: true },
+  { code: 'FINANCE', name: 'Finance', nameZh: '财务', Icon: FileText, isPremium: true },
+  { code: 'HR', name: 'Payroll', nameZh: '工资', Icon: UserCog, isPremium: true },
 ];
 
 interface ModuleFeature {

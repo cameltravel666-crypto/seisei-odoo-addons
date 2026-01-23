@@ -1,9 +1,9 @@
 'use client';
 
-import { Sparkles, ArrowRight, Lock, TrendingUp } from 'lucide-react';
+import { Sparkles, ArrowRight, Lock, TrendingUp, Info } from 'lucide-react';
 import Link from 'next/link';
-import { useTranslations } from 'next-intl';
-import { useIsNative } from '@/hooks/use-native';
+import { useTranslations, useLocale } from 'next-intl';
+import { useIsIOSAppStoreBuild, FEATURE_RESTRICTED_MESSAGE } from '@/lib/appChannel';
 
 interface UpgradePromptProps {
   /**
@@ -39,12 +39,18 @@ export function UpgradePrompt({
   className = '',
 }: UpgradePromptProps) {
   const t = useTranslations();
-  const isNative = useIsNative();
+  const locale = useLocale();
+  const isIOSAppStore = useIsIOSAppStoreBuild();
 
-  // For App Store compliance (3.1.1, 3.1.3), hide purchase CTAs in native apps
-  // Show a generic "premium feature" message instead
-  const upgradeContent = isNative ? (
-    <span className="text-sm text-slate-500">Premium</span>
+  // Get neutral message for iOS App Store builds (no subscription/upgrade/pricing references)
+  const neutralMessage = FEATURE_RESTRICTED_MESSAGE[locale as keyof typeof FEATURE_RESTRICTED_MESSAGE] || FEATURE_RESTRICTED_MESSAGE.en;
+
+  // For App Store compliance (3.1.1, 3.1.3), show neutral message without purchase CTAs
+  const upgradeContent = isIOSAppStore ? (
+    <span className="text-sm text-slate-500 flex items-center gap-1">
+      <Info className="w-3 h-3" />
+      {neutralMessage}
+    </span>
   ) : (
     <Link
       href="/settings/subscription"
@@ -79,7 +85,7 @@ export function UpgradePrompt({
             )}
           </div>
         </div>
-        {!isNative && (
+        {!isIOSAppStore && (
           <Link
             href="/settings/subscription"
             className="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1"
@@ -104,7 +110,7 @@ export function UpgradePrompt({
           {description && (
             <p className="text-sm text-slate-600 mt-1">{description}</p>
           )}
-          {!isNative && (
+          {!isIOSAppStore && (
             <Link
               href="/settings/subscription"
               className="text-sm text-blue-600 hover:text-blue-700 mt-2 inline-flex items-center gap-1 font-medium"
@@ -130,7 +136,11 @@ export function UpgradeFeatureList({
   className?: string;
 }) {
   const t = useTranslations();
-  const isNative = useIsNative();
+  const locale = useLocale();
+  const isIOSAppStore = useIsIOSAppStoreBuild();
+
+  // Neutral message for iOS App Store builds
+  const neutralMessage = FEATURE_RESTRICTED_MESSAGE[locale as keyof typeof FEATURE_RESTRICTED_MESSAGE] || FEATURE_RESTRICTED_MESSAGE.en;
 
   return (
     <div className={`card p-5 bg-gradient-to-br from-slate-50 to-blue-50 border-slate-200 ${className}`}>
@@ -143,7 +153,7 @@ export function UpgradeFeatureList({
             高级数据分析
           </h3>
           <p className="text-sm text-slate-500">
-            {isNative ? 'Premium 功能' : '解锁更多分析功能'}
+            {isIOSAppStore ? neutralMessage : '解锁更多分析功能'}
           </p>
         </div>
       </div>
@@ -163,7 +173,7 @@ export function UpgradeFeatureList({
       </ul>
 
       {/* Hide purchase CTA in native apps for App Store compliance */}
-      {!isNative && (
+      {!isIOSAppStore && (
         <Link
           href="/settings/subscription"
           className="w-full py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-medium rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20"
@@ -189,7 +199,7 @@ export function LockedFeatureOverlay({
   className?: string;
 }) {
   const t = useTranslations();
-  const isNative = useIsNative();
+  const isIOSAppStore = useIsIOSAppStoreBuild();
 
   return (
     <div className={`relative ${className}`}>
@@ -203,7 +213,7 @@ export function LockedFeatureOverlay({
           </div>
           <p className="text-sm font-medium text-slate-700 mb-2">{feature}</p>
           {/* Hide purchase CTA in native apps for App Store compliance */}
-          {!isNative && (
+          {!isIOSAppStore && (
             <Link
               href="/settings/subscription"
               className="text-sm text-blue-600 hover:underline inline-flex items-center gap-1"

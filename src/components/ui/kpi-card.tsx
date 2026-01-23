@@ -13,34 +13,38 @@ interface KpiCardProps {
   className?: string;
 }
 
+/**
+ * Business Professional Color Scheme - No red/green
+ * All tones use slate/blue for professional appearance
+ */
 const toneStyles = {
   default: {
-    iconBg: 'bg-[var(--color-primary-bg)]',
-    iconColor: 'text-[var(--color-primary)]',
-    valueColor: 'text-[var(--color-text-primary)]',
-    activeBg: 'bg-[var(--color-primary-bg)]',
-    activeRing: 'ring-[var(--color-primary)]',
+    iconBg: 'bg-slate-100',
+    iconColor: 'text-slate-600',
+    valueColor: 'text-slate-800',
+    activeBg: 'bg-slate-50',
+    activeRing: 'ring-slate-400',
   },
   success: {
-    iconBg: 'bg-[var(--color-success-bg)]',
-    iconColor: 'text-[var(--color-success)]',
-    valueColor: 'text-[var(--color-success)]',
-    activeBg: 'bg-[var(--color-success-bg)]',
-    activeRing: 'ring-[var(--color-success)]',
+    iconBg: 'bg-blue-50',
+    iconColor: 'text-blue-600',
+    valueColor: 'text-slate-800',
+    activeBg: 'bg-blue-50',
+    activeRing: 'ring-blue-400',
   },
   warning: {
-    iconBg: 'bg-[var(--color-warning-bg)]',
-    iconColor: 'text-[var(--color-warning)]',
-    valueColor: 'text-[var(--color-warning)]',
-    activeBg: 'bg-[var(--color-warning-bg)]',
-    activeRing: 'ring-[var(--color-warning)]',
+    iconBg: 'bg-amber-50',
+    iconColor: 'text-amber-600',
+    valueColor: 'text-slate-800',
+    activeBg: 'bg-amber-50',
+    activeRing: 'ring-amber-400',
   },
   danger: {
-    iconBg: 'bg-[var(--color-danger-bg)]',
-    iconColor: 'text-[var(--color-danger)]',
-    valueColor: 'text-[var(--color-danger)]',
-    activeBg: 'bg-[var(--color-danger-bg)]',
-    activeRing: 'ring-[var(--color-danger)]',
+    iconBg: 'bg-slate-100',
+    iconColor: 'text-slate-500',
+    valueColor: 'text-slate-600',
+    activeBg: 'bg-slate-50',
+    activeRing: 'ring-slate-400',
   },
 };
 

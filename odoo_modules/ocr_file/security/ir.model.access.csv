@@ -1,0 +1,6 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_ocr_file_task_user,ocr.file.task.user,model_ocr_file_task,base.group_user,1,1,1,1
+access_ocr_file_source_user,ocr.file.source.user,model_ocr_file_source,base.group_user,1,1,1,1
+access_ocr_file_upload_wizard_user,ocr.file.upload.wizard.user,model_ocr_file_upload_wizard,base.group_user,1,1,1,1
+access_ocr_file_upload_line_user,ocr.file.upload.line.user,model_ocr_file_upload_line,base.group_user,1,1,1,1
+access_ocr_file_usage_user,ocr.file.usage.user,model_ocr_file_usage,base.group_user,1,1,1,1

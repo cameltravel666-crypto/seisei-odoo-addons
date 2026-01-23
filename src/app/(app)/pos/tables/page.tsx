@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -11,7 +11,6 @@ import { useTables, useUpdateTable, type FloorInfo, type TableInfo } from '@/hoo
 import { Loading } from '@/components/ui/loading';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ModuleGate } from '@/components/module-gate';
-import { ALL_MODULES } from '@/lib/modules';
 
 // QR Ordering module features for upgrade page
 const qrOrderingFeatures = [
@@ -59,20 +58,11 @@ export default function TablesPage() {
   const [selectedFloor, setSelectedFloor] = useState<number | null>(null);
   const [updatingTable, setUpdatingTable] = useState<number | null>(null);
 
-  // Check if module is hidden - redirect to POS if so
-  const qrModule = ALL_MODULES.find(m => m.code === 'QR_ORDERING');
-  useEffect(() => {
-    if (qrModule?.isHidden) {
-      router.replace('/pos');
-    }
-  }, [qrModule?.isHidden, router]);
+  // Module access is now handled by ModuleGate component via entitlements
+  // No need for manual isHidden check
 
   const { data, isLoading, error, refetch, isFetching } = useTables();
 
-  // Don't render anything while redirecting
-  if (qrModule?.isHidden) {
-    return <Loading />;
-  }
   const updateMutation = useUpdateTable();
 
   const handleToggleTable = async (table: TableInfo) => {

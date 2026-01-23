@@ -1,0 +1,420 @@
+# Japanese translation for OCR File Module
+# Copyright (C) 2024 Seisei ERP
+# This file is distributed under the same license as the OCR File module.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: OCR File 18.0.1.0.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2024-01-18 00:00+0000\n"
+"PO-Revision-Date: 2024-01-18 00:00+0000\n"
+"Last-Translator: Seisei ERP\n"
+"Language-Team: Japanese\n"
+"Language: ja\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. module: ocr_file
+#: model:ir.model,name:ocr_file.model_ocr_file_task
+msgid "OCR File Processing Task"
+msgstr "OCRファイル処理タスク"
+
+#. module: ocr_file
+#: model:ir.model,name:ocr_file.model_ocr_file_source
+msgid "OCR Source File"
+msgstr "OCRソースファイル"
+
+#. module: ocr_file
+#: model:ir.model,name:ocr_file.model_ocr_file_usage
+msgid "OCR File Usage"
+msgstr "OCRファイル利用状況"
+
+#. module: ocr_file
+#: model:ir.actions.act_window,name:ocr_file.action_ocr_file_task
+msgid "OCR File Processing"
+msgstr "OCRファイル処理"
+
+#. module: ocr_file
+#: model:ir.actions.act_window,name:ocr_file.action_ocr_file_usage
+msgid "OCR Usage"
+msgstr "OCR利用状況"
+
+#. module: ocr_file
+#: model:ir.ui.menu,name:ocr_file.menu_ocr_file_root
+msgid "Sheet Forge"
+msgstr "シートフォージ"
+
+#. module: ocr_file
+#: model:ir.ui.menu,name:ocr_file.menu_ocr_file_tasks
+msgid "OCR Tasks"
+msgstr "OCRタスク"
+
+#. module: ocr_file
+#: model:ir.ui.menu,name:ocr_file.menu_ocr_file_usage
+msgid "Usage & Billing"
+msgstr "利用状況・請求"
+
+#. module: ocr_file
+#: model:ir.model.fields,field_description:ocr_file.field_ocr_file_task__name
+msgid "Task Name"
+msgstr "タスク名"
+
+#. module: ocr_file
+#: model:ir.model.fields,field_description:ocr_file.field_ocr_file_task__template_file
+msgid "Excel Template"
+msgstr "Excelテンプレート"
+
+#. module: ocr_file
+#: model:ir.model.fields,field_description:ocr_file.field_ocr_file_task__source_file_ids
+msgid "Source Files"
+msgstr "ソースファイル"
+
+#. module: ocr_file
+#: model:ir.model.fields,field_description:ocr_file.field_ocr_file_task__source_file_count
+msgid "File Count"
+msgstr "ファイル数"
+
+#. module: ocr_file
+#: model:ir.model.fields,field_description:ocr_file.field_ocr_file_task__state
+msgid "Status"
+msgstr "ステータス"
+
+#. module: ocr_file
+#: model:ir.model.fields,field_description:ocr_file.field_ocr_file_task__ocr_processed_at
+msgid "Processed At"
+msgstr "処理日時"
+
+#. module: ocr_file
+#: model:ir.model.fields,field_description:ocr_file.field_ocr_file_task__output_file
+msgid "Filled Template"
+msgstr "入力済みテンプレート"
+
+#. module: ocr_file
+#: model:ir.model.fields,field_description:ocr_file.field_ocr_file_task__template_header_row
+msgid "Header Row"
+msgstr "ヘッダー行"
+
+#. module: ocr_file
+#: model:ir.model.fields,field_description:ocr_file.field_ocr_file_task__usage_display
+msgid "Quota"
+msgstr "利用枠"
+
+#. module: ocr_file
+#: model:ir.model.fields,field_description:ocr_file.field_ocr_file_source__source_file
+msgid "Source File"
+msgstr "ソースファイル"
+
+#. module: ocr_file
+#: model:ir.model.fields,field_description:ocr_file.field_ocr_file_source__source_filename
+msgid "Filename"
+msgstr "ファイル名"
+
+#. module: ocr_file
+#: model:ir.model.fields,field_description:ocr_file.field_ocr_file_source__extracted_vendor_name
+msgid "Vendor Name"
+msgstr "仕入先名"
+
+#. module: ocr_file
+#: model:ir.model.fields,field_description:ocr_file.field_ocr_file_source__extracted_invoice_date
+msgid "Invoice Date"
+msgstr "請求日"
+
+#. module: ocr_file
+#: model:ir.model.fields,field_description:ocr_file.field_ocr_file_source__extracted_invoice_number
+msgid "Invoice Number"
+msgstr "請求書番号"
+
+#. module: ocr_file
+#: model:ir.model.fields,field_description:ocr_file.field_ocr_file_source__extracted_tax_id
+msgid "Tax ID"
+msgstr "登録番号"
+
+#. module: ocr_file
+#: model:ir.model.fields,field_description:ocr_file.field_ocr_file_source__extracted_total_amount
+msgid "Total Amount"
+msgstr "合計金額"
+
+#. module: ocr_file
+#: model:ir.model.fields,field_description:ocr_file.field_ocr_file_source__extracted_currency
+msgid "Currency"
+msgstr "通貨"
+
+#. module: ocr_file
+#: model:ir.model.fields,field_description:ocr_file.field_ocr_file_source__ocr_error_message
+msgid "Error Message"
+msgstr "エラーメッセージ"
+
+#. module: ocr_file
+#: model:ir.model.fields,field_description:ocr_file.field_ocr_file_source__extracted_data
+msgid "Extracted Data (JSON)"
+msgstr "抽出データ (JSON)"
+
+#. module: ocr_file
+#: model:ir.model.fields,field_description:ocr_file.field_ocr_file_source__extracted_line_items
+msgid "Line Items (JSON)"
+msgstr "明細行 (JSON)"
+
+#. module: ocr_file
+#: model:ir.model.fields,field_description:ocr_file.field_ocr_file_usage__image_count
+msgid "Images Processed"
+msgstr "処理済み画像数"
+
+#. module: ocr_file
+#: model:ir.model.fields,field_description:ocr_file.field_ocr_file_usage__free_quota
+msgid "Free Quota"
+msgstr "無料枠"
+
+#. module: ocr_file
+#: model:ir.model.fields,field_description:ocr_file.field_ocr_file_usage__remaining_free
+msgid "Remaining Free"
+msgstr "無料残り"
+
+#. module: ocr_file
+#: model:ir.model.fields,field_description:ocr_file.field_ocr_file_usage__billable_count
+msgid "Billable Images"
+msgstr "課金対象数"
+
+#. module: ocr_file
+#: model:ir.model.fields,field_description:ocr_file.field_ocr_file_usage__total_charge
+msgid "Total Charge (JPY)"
+msgstr "合計料金 (円)"
+
+#. module: ocr_file
+#: model:ir.model.fields,field_description:ocr_file.field_ocr_file_usage__price_per_image
+msgid "Price per Image (JPY)"
+msgstr "1枚あたり料金 (円)"
+
+#. module: ocr_file
+#: selection:ocr.file.task,state:0
+msgid "Draft"
+msgstr "下書き"
+
+#. module: ocr_file
+#: selection:ocr.file.task,state:0
+msgid "Processing"
+msgstr "処理中"
+
+#. module: ocr_file
+#: selection:ocr.file.task,state:0
+msgid "Done"
+msgstr "完了"
+
+#. module: ocr_file
+#: selection:ocr.file.task,state:0
+msgid "Failed"
+msgstr "失敗"
+
+#. module: ocr_file
+#: selection:ocr.file.source,state:0
+msgid "Pending"
+msgstr "待機中"
+
+#. module: ocr_file
+#: code:ocr_file/views/ocr_file_views.xml:0
+msgid "Start OCR"
+msgstr "OCR開始"
+
+#. module: ocr_file
+#: code:ocr_file/views/ocr_file_views.xml:0
+msgid "Fill Template"
+msgstr "テンプレート入力"
+
+#. module: ocr_file
+#: code:ocr_file/views/ocr_file_views.xml:0
+msgid "Download Result"
+msgstr "結果をダウンロード"
+
+#. module: ocr_file
+#: code:ocr_file/views/ocr_file_views.xml:0
+msgid "Download Excel"
+msgstr "Excelダウンロード"
+
+#. module: ocr_file
+#: code:ocr_file/views/ocr_file_views.xml:0
+msgid "Reset"
+msgstr "リセット"
+
+#. module: ocr_file
+#: code:ocr_file/views/ocr_file_views.xml:0
+msgid "Result Ready!"
+msgstr "結果準備完了！"
+
+#. module: ocr_file
+#: code:ocr_file/views/ocr_file_views.xml:0
+msgid "Detected Header Row:"
+msgstr "検出されたヘッダー行："
+
+#. module: ocr_file
+#: code:ocr_file/views/ocr_file_views.xml:0
+msgid "Columns:"
+msgstr "列："
+
+#. module: ocr_file
+#: code:ocr_file/views/ocr_file_views.xml:0
+msgid "Batch Upload (Select Multiple Files):"
+msgstr "一括アップロード（複数ファイル選択）："
+
+#. module: ocr_file
+#: code:ocr_file/views/ocr_file_views.xml:0
+msgid "Extracted Data"
+msgstr "抽出データ"
+
+#. module: ocr_file
+#: code:ocr_file/views/ocr_file_views.xml:0
+msgid "Raw Data"
+msgstr "生データ"
+
+#. module: ocr_file
+#: code:ocr_file/views/ocr_file_views.xml:0
+msgid "Period"
+msgstr "期間"
+
+#. module: ocr_file
+#: code:ocr_file/views/ocr_file_views.xml:0
+msgid "Usage"
+msgstr "利用状況"
+
+#. module: ocr_file
+#: code:ocr_file/views/ocr_file_views.xml:0
+msgid "Billing"
+msgstr "請求"
+
+#. module: ocr_file
+#: code:ocr_file/static/src/xml/multi_file_upload.xml:0
+msgid "Select & Upload Files"
+msgstr "ファイルを選択してアップロード"
+
+#. module: ocr_file
+#: code:ocr_file/static/src/xml/multi_file_upload.xml:0
+msgid "Uploading..."
+msgstr "アップロード中..."
+
+#. module: ocr_file
+#: code:ocr_file/models/ocr_file_task.py:0
+msgid "Please upload an Excel template first!"
+msgstr "先にExcelテンプレートをアップロードしてください！"
+
+#. module: ocr_file
+#: code:ocr_file/models/ocr_file_task.py:0
+msgid "Please upload at least one source document!"
+msgstr "少なくとも1つのソースドキュメントをアップロードしてください！"
+
+#. module: ocr_file
+#: code:ocr_file/models/ocr_file_task.py:0
+msgid "OCR is already processing."
+msgstr "OCRは既に処理中です。"
+
+#. module: ocr_file
+#: code:ocr_file/models/ocr_file_task.py:0
+msgid "OCR processing must be completed before filling the template!"
+msgstr "テンプレートを入力する前にOCR処理を完了する必要があります！"
+
+#. module: ocr_file
+#: code:ocr_file/models/ocr_file_task.py:0
+msgid "No output file available. Please fill the template first."
+msgstr "出力ファイルがありません。先にテンプレートを入力してください。"
+
+#. module: ocr_file
+#: code:ocr_file/models/ocr_file_task.py:0
+msgid "file(s) processed successfully."
+msgstr "ファイルの処理が完了しました。"
+
+#. module: ocr_file
+#: model:ir.model.fields,field_description:ocr_file.field_ocr_file_task__template_filename
+msgid "Template Filename"
+msgstr "テンプレートファイル名"
+
+#. module: ocr_file
+#: model:ir.model.fields,field_description:ocr_file.field_ocr_file_task__create_date
+msgid "Created on"
+msgstr "作成日時"
+
+#. module: ocr_file
+#: model:ir.model.fields,field_description:ocr_file.field_ocr_file_task__write_date
+msgid "Last Updated on"
+msgstr "最終更新日時"
+
+#. module: ocr_file
+msgid "Files"
+msgstr "ファイル数"
+
+#. module: ocr_file
+msgid "Source Files"
+msgstr "ソースファイル"
+
+#. module: ocr_file
+msgid "Output File"
+msgstr "出力ファイル"
+
+#. module: ocr_file
+msgid "Error"
+msgstr "エラー"
+
+#. module: ocr_file
+msgid "Company"
+msgstr "会社"
+
+#. module: ocr_file
+msgid "Month"
+msgstr "月"
+
+#. module: ocr_file
+msgid "Year"
+msgstr "年"
+
+#. module: ocr_file
+msgid "Create your first OCR file task"
+msgstr "最初のOCRファイルタスクを作成"
+
+#. module: ocr_file
+msgid "Upload an Excel template and multiple source documents (images/PDFs), then let OCR extract the data and fill your template automatically."
+msgstr "Excelテンプレートと複数のソースドキュメント（画像/PDF）をアップロードし、OCRで自動的にデータを抽出してテンプレートに入力します。"
+
+#. module: ocr_file
+msgid "Today"
+msgstr "今日"
+
+#. module: ocr_file
+msgid "Group By"
+msgstr "グループ化"
+
+#. module: ocr_file
+msgid "Date"
+msgstr "日付"
+
+#. module: ocr_file
+msgid "All Extracted Fields (JSON)"
+msgstr "全抽出フィールド (JSON)"
+
+#. module: ocr_file
+msgid "Line Items"
+msgstr "明細行"
+
+#. module: ocr_file
+msgid "Task"
+msgstr "タスク"
+
+#. module: ocr_file
+msgid "Sequence"
+msgstr "順序"
+
+#. module: ocr_file
+msgid "Add Source Files"
+msgstr "ソースファイルを追加"
+
+#. module: ocr_file
+msgid "Cancel"
+msgstr "キャンセル"
+
+#. module: ocr_file
+msgid "Add Files"
+msgstr "ファイルを追加"
+
+#. module: ocr_file
+msgid "Charge (¥)"
+msgstr "料金 (¥)"
+
+#. module: ocr_file
+msgid "Total (¥)"
+msgstr "合計 (¥)"

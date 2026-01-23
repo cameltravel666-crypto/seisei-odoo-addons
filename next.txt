@@ -1,30 +1,24 @@
-你是资深前端/移动端 UI 工程师。目标：Seisei BizNexus App 在上线前一次性达到商业化 UI 标准，统一全局字体/字号/间距/圆角/组件高度，消除页面切换与标签切换时的“跳动(reflow)”，并重点优化「商品」页面（标题+添加商品按钮+搜索+全选+列表）的布局。
+Odoo客户端错误
 
-约束与要求：
-1) 必须引入“Design Tokens”作为单一真相：字体、字号、行高、间距、圆角、阴影、组件高度。任何页面不得再写散装 px 值（除非极少数例外且要注释原因）。
-2) 必须解决“页面跳动”：
-   - 字体加载导致 reflow：统一 font-family；若使用 WebFont，必须加 font-display: swap，并设置 fallback 接近的 metrics；关键数字用 tabular-nums。
-   - Header / Tab / Chip / Button / Input 高度必须固定（例如 Button/Input 44px，Chip 36px，ListRow min 56px）。
-   - Skeleton/Loading 占位高度必须与真实组件一致。
-   - 页面容器 padding、safe-area、滚动条策略必须一致。
-3) 重点优化「商品」页（Products）：
-   - 顶部深色 Header 保留但压缩高度，品牌名与汉堡菜单垂直对齐。
-   - 标题行：左“商品”(H1 20px)，右 primary 按钮“+ 添加商品”(44px 高，圆角 14px，字体 14-16)。
-   - 搜索框：独占一行，44px 高，图标与文字垂直居中，内边距统一。
-   - 工具条：把“全选”放进工具条容器，并明确语义（全选本页/筛选结果，按当前实现选择其一）。
-   - 列表区域：卡片风格或分割线风格二选一，统一圆角/阴影/间距；不要混用不同阴影和圆角。
-4) 输出必须包含：
-   A) 你定位到的相关文件路径（例如全局 CSS/主题文件、layout 组件、Products 页面组件）
-   B) 你新增/修改的 tokens（CSS variables 或 theme object）
-   C) 关键组件的样式改动（Header, PageTitle, PrimaryButton, SearchInput, Toolbar, ListRow）
-   D) 针对“跳动”问题的根因分析 + 你采取的具体修复点（每点对应代码变更）
-   E) 最后给一个自测清单（iPhone/Android/Pad/Web）确保一致
+UncaughtPromiseError > OwlError
+Uncaught Promise > An error occured in the owl lifecycle (see this Error's "cause" property)
 
-请开始执行：
-Step 1: 扫描项目现有的全局样式/主题方案（CSS/SCSS/Tailwind/Chakra/MUI/自研），找出字体/字号/spacing 的分散定义位置。
-Step 2: 建立 tokens（建议 8pt grid：4/8/12/16/20/24；字号：12/14/16/20；圆角：12/14/16；阴影：统一 1 套轻阴影）。
-Step 3: 重构核心组件使用 tokens，并修复 layout 高度不固定的问题。
-Step 4: 重做 Products 页面布局（按上述要求），保证首屏信息层级清晰、按钮不臃肿、对齐一致。
-Step 5: 运行/说明如何验证“页面不跳动”（包括字体加载、列表 skeleton、切换 tab）。
+Occured on testodoo.seisei.tokyo on 2026-01-23 02:19:21 GMT
 
-注意：不要引入大而全的新 UI 框架；优先在现有技术栈内最小改动落地。代码要可直接合并上线。
+OwlError: An error occured in the owl lifecycle (see this Error's "cause" property)
+    Error: An error occured in the owl lifecycle (see this Error's "cause" property)
+        at handleError (https://testodoo.seisei.tokyo/web/assets/22868a2/web.assets_web.min.js:972:101)
+        at App.handleError (https://testodoo.seisei.tokyo/web/assets/22868a2/web.assets_web.min.js:1630:29)
+        at ComponentNode.initiateRender (https://testodoo.seisei.tokyo/web/assets/22868a2/web.assets_web.min.js:1064:19)
+
+Caused by: Error: "account.move"."ocr_confidence" field is undefined.
+    at Field.parseFieldNode (https://testodoo.seisei.tokyo/web/assets/22868a2/web.assets_web.min.js:7752:330)
+    at https://testodoo.seisei.tokyo/web/assets/22868a2/web.assets_web.min.js:8685:954
+    at visit (https://testodoo.seisei.tokyo/web/assets/22868a2/web.assets_web.min.js:4785:51)
+    at visitChildren (https://testodoo.seisei.tokyo/web/assets/22868a2/web.assets_web.min.js:4784:171)
+    at visit (https://testodoo.seisei.tokyo/web/assets/22868a2/web.assets_web.min.js:4785:129)
+    at visitChildren (https://testodoo.seisei.tokyo/web/assets/22868a2/web.assets_web.min.js:4784:171)
+    at visit (https://testodoo.seisei.tokyo/web/assets/22868a2/web.assets_web.min.js:4785:129)
+    at visitChildren (https://testodoo.seisei.tokyo/web/assets/22868a2/web.assets_web.min.js:4784:171)
+    at visit (https://testodoo.seisei.tokyo/web/assets/22868a2/web.assets_web.min.js:4785:129)
+    at visitChildren (https://testodoo.seisei.tokyo/web/assets/22868a2/web.assets_web.min.js:4784:171)

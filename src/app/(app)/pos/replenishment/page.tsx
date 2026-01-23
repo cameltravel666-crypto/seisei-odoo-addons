@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useQuery } from '@tanstack/react-query';
-import { ClipboardList, ExternalLink, Send, Clock } from 'lucide-react';
+import { ClipboardList, ExternalLink, Send, Clock, ChevronLeft } from 'lucide-react';
 import { Loading } from '@/components/ui/loading';
 import { EmptyState } from '@/components/ui/empty-state';
 import { RestockKpiGrid } from '@/components/pos/restock-kpi-grid';
@@ -140,7 +140,10 @@ export default function ReplenishmentPage() {
   return (
     <div className="space-y-4 pb-20">
       {/* Page Title */}
-      <h1 className="page-title">{t('replenishment')}</h1>
+      <Link href="/pos" className="page-title flex items-center gap-1 hover:text-[var(--color-primary)] transition-colors">
+        <ChevronLeft className="w-5 h-5" />
+        {t('replenishment')}
+      </Link>
 
       {/* KPI Grid - Compact 2x2 */}
       <RestockKpiGrid

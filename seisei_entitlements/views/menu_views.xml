@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Root menu for Seisei Entitlements -->
+    <menuitem id="menu_seisei_entitlements_root"
+              name="Entitlements"
+              sequence="200"
+              groups="base.group_system"/>
+
+    <!-- Entitlements menu -->
+    <menuitem id="menu_seisei_entitlements"
+              name="Active Features"
+              parent="menu_seisei_entitlements_root"
+              action="seisei_entitlement_action"
+              sequence="10"/>
+
+    <!-- Entitlement Logs menu -->
+    <menuitem id="menu_seisei_entitlement_logs"
+              name="Receive Logs"
+              parent="menu_seisei_entitlements_root"
+              action="seisei_entitlement_log_action"
+              sequence="20"/>
+
+    <!-- Configuration submenu -->
+    <menuitem id="menu_seisei_entitlements_config"
+              name="Configuration"
+              parent="menu_seisei_entitlements_root"
+              sequence="100"/>
+
+    <!-- API Keys menu -->
+    <menuitem id="menu_seisei_api_keys"
+              name="API Keys"
+              parent="menu_seisei_entitlements_config"
+              action="seisei_api_key_action"
+              sequence="10"/>
+</odoo>

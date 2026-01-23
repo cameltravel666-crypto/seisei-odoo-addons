@@ -3,11 +3,14 @@ import { Inter } from "next/font/google";
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages } from 'next-intl/server';
 import { QueryProvider } from "@/providers/query-provider";
+import { ViewportHeight } from "@/components/layout/viewport-height";
+import { SplashScreenHandler } from "@/components/layout/splash-screen-handler";
 import "./globals.css";
 
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
+  display: "swap", // Prevent layout shift during font loading
 });
 
 export const metadata: Metadata = {
@@ -33,7 +36,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: 'cover',
-  themeColor: '#111827',
+  themeColor: '#f8fafc', // Match splash screen for seamless transition
 };
 
 export default async function RootLayout({
@@ -46,7 +49,30 @@ export default async function RootLayout({
 
   return (
     <html lang={locale}>
+      <head>
+        {/* Inline critical CSS to prevent flash during app startup */}
+        <style dangerouslySetInnerHTML={{ __html: `
+          /* Critical: Set background immediately to prevent white flash */
+          html, body {
+            background-color: #f8fafc !important;
+            min-height: 100%;
+          }
+          /* Ensure smooth transition from splash to content */
+          body {
+            opacity: 1;
+            transition: opacity 0.15s ease-out;
+          }
+          /* Hide content until hydration completes (prevents layout shift) */
+          body.loading {
+            opacity: 0;
+          }
+        `}} />
+      </head>
       <body className={`${inter.variable} font-sans antialiased`}>
+        {/* iOS Safari 100vh 修复：动态设置 --app-vh CSS 变量 */}
+        <ViewportHeight />
+        {/* Capacitor SplashScreen 控制：防止跳闪 */}
+        <SplashScreenHandler />
         <NextIntlClientProvider locale={locale} messages={messages}>
           <QueryProvider>
             {children}

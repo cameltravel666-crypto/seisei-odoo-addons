@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="ar_ap_netting_wizard_form" model="ir.ui.view">
+        <field name="name">ar.ap.netting.wizard.form</field>
+        <field name="model">ar.ap.netting.wizard</field>
+        <field name="arch" type="xml">
+            <form string="AR/AP Netting">
+                <group>
+                    <group>
+                        <field name="partner_id" readonly="1"/>
+                        <field name="company_id" invisible="1"/>
+                        <field name="currency_id" invisible="1"/>
+                        <field name="journal_id" options="{'no_create': True}"/>
+                        <field name="date"/>
+                    </group>
+                    <group>
+                        <field name="total_receivable" widget="monetary"/>
+                        <field name="total_payable" widget="monetary"/>
+                        <field name="max_netting_amount" widget="monetary"/>
+                        <field name="netting_amount" widget="monetary"/>
+                    </group>
+                </group>
+
+                <div class="alert alert-warning" role="alert" invisible="not has_multi_currency">
+                    <strong>Warning:</strong> Multiple currencies detected.
+                    Netting is only allowed for items in the same currency.
+                </div>
+
+                <field name="has_multi_currency" invisible="1"/>
+
+                <notebook>
+                    <page string="Open Receivables" name="receivables">
+                        <field name="receivable_line_ids" readonly="1">
+                            <list>
+                                <field name="move_id" string="Invoice"/>
+                                <field name="date"/>
+                                <field name="date_maturity"/>
+                                <field name="name"/>
+                                <field name="amount_residual" string="Open Amount"/>
+                                <field name="currency_id" optional="hide"/>
+                            </list>
+                        </field>
+                    </page>
+                    <page string="Open Payables" name="payables">
+                        <field name="payable_line_ids" readonly="1">
+                            <list>
+                                <field name="move_id" string="Bill"/>
+                                <field name="date"/>
+                                <field name="date_maturity"/>
+                                <field name="name"/>
+                                <field name="amount_residual" string="Open Amount"/>
+                                <field name="currency_id" optional="hide"/>
+                            </list>
+                        </field>
+                    </page>
+                </notebook>
+
+                <group>
+                    <field name="memo" placeholder="Enter a memo for this netting entry..."/>
+                </group>
+
+                <footer>
+                    <button name="action_execute_netting"
+                            string="Execute Netting"
+                            type="object"
+                            class="btn-primary"
+                            invisible="has_multi_currency or max_netting_amount == 0"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_ar_ap_netting_wizard" model="ir.actions.act_window">
+        <field name="name">AR/AP Netting</field>
+        <field name="res_model">ar.ap.netting.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+</odoo>

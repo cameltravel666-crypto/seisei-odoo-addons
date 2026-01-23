@@ -23,10 +23,6 @@ export interface ModuleInfo {
    * Price per month in JPY (for display purposes)
    */
   priceMonthly?: number;
-  /**
-   * Whether this module is hidden from the UI (for unreleased features)
-   */
-  isHidden?: boolean;
 }
 
 // All available modules
@@ -40,23 +36,21 @@ export const ALL_MODULES: ModuleInfo[] = [
   { code: 'PURCHASE', name: 'Purchase', nameZh: '采购', nameJa: '仕入', icon: 'ShoppingBag', path: '/purchase' },
   { code: 'SALES', name: 'Sales', nameZh: '销售', nameJa: '販売', icon: 'TrendingUp', path: '/sales' },
   { code: 'CONTACTS', name: 'Contacts', nameZh: '联系人', nameJa: '連絡先', icon: 'Contact', path: '/contacts' },
-  { code: 'ACCOUNTING', name: 'Expenses', nameZh: '收支', nameJa: '収支', icon: 'Receipt', path: '/accounting' },
+  { code: 'ACCOUNTING', name: 'Cashier', nameZh: '现金出纳', nameJa: '現金出納', icon: 'Receipt', path: '/accounting' },
 
   // === Premium Modules (require additional subscription) ===
-  // NOTE: All premium modules hidden for Apple App Store review
-  // Remove isHidden after approval to enable premium features
-  { code: 'QR_ORDERING', name: 'Table Service', nameZh: '桌台服务', nameJa: 'テーブルサービス', icon: 'QrCode', path: '/pos/tables', isPremium: true, priceMonthly: 2980, description: 'QR ordering and table management', isHidden: true },
-  { code: 'ANALYTICS', name: 'Analytics', nameZh: '高级数据分析', nameJa: '高度分析', icon: 'LineChart', path: '/analytics', isPremium: true, priceMonthly: 12800, description: 'BI module with advanced analytics features', isHidden: true },
-  { code: 'CRM', name: 'CRM', nameZh: 'CRM', nameJa: 'CRM', icon: 'Users', path: '/crm', isPremium: true, priceMonthly: 9800, description: 'Customer relationship management', isHidden: true },
-  { code: 'FINANCE', name: 'Finance', nameZh: '财务', nameJa: '財務', icon: 'FileText', path: '/finance', isPremium: true, priceMonthly: 9800, description: 'Advanced financial management', isHidden: true },
-  { code: 'HR', name: 'Payroll', nameZh: '工资', nameJa: '給与', icon: 'UserCog', path: '/hr', isPremium: true, priceMonthly: 6800, description: 'Payroll and HR management', isHidden: true },
+  { code: 'QR_ORDERING', name: 'Table Service', nameZh: '桌台服务', nameJa: 'テーブルサービス', icon: 'QrCode', path: '/pos/tables', isPremium: true, priceMonthly: 2980, description: 'QR ordering and table management' },
+  { code: 'ANALYTICS', name: 'Analytics', nameZh: '高级数据分析', nameJa: '高度分析', icon: 'LineChart', path: '/analytics', isPremium: true, priceMonthly: 12800, description: 'BI module with advanced analytics features' },
+  { code: 'CRM', name: 'CRM', nameZh: 'CRM', nameJa: 'CRM', icon: 'Users', path: '/crm', isPremium: true, priceMonthly: 9800, description: 'Customer relationship management' },
+  { code: 'FINANCE', name: 'Finance', nameZh: '财务', nameJa: '財務', icon: 'FileText', path: '/finance', isPremium: true, priceMonthly: 9800, description: 'Advanced financial management' },
+  { code: 'HR', name: 'Payroll', nameZh: '工资', nameJa: '給与', icon: 'UserCog', path: '/hr', isPremium: true, priceMonthly: 6800, description: 'Payroll and HR management' },
 ];
 
-// Get only core modules (excluding hidden)
-export const CORE_MODULES = ALL_MODULES.filter(m => !m.isPremium && !m.isHidden);
+// Get only core modules
+export const CORE_MODULES = ALL_MODULES.filter(m => !m.isPremium);
 
-// Get only premium modules (excluding hidden)
-export const PREMIUM_MODULES = ALL_MODULES.filter(m => m.isPremium && !m.isHidden);
+// Get only premium modules
+export const PREMIUM_MODULES = ALL_MODULES.filter(m => m.isPremium);
 
 // Get module info by code
 export function getModuleInfo(code: ModuleCode): ModuleInfo | undefined {

@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Import Wizard Form View -->
+    <record id="hr_insurance_rate_import_wizard_view_form" model="ir.ui.view">
+        <field name="name">hr.insurance.rate.import.wizard.form</field>
+        <field name="model">hr.insurance.rate.import.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Import Insurance Rates">
+                <group>
+                    <group>
+                        <field name="file" filename="filename"/>
+                        <field name="filename" invisible="1"/>
+                    </group>
+                    <group>
+                        <field name="fiscal_year"/>
+                        <field name="effective_date"/>
+                        <field name="expire_previous"/>
+                    </group>
+                </group>
+                <group string="Preview / プレビュー" invisible="not preview_ids">
+                    <field name="preview_ids" nolabel="1">
+                        <list editable="bottom">
+                            <field name="prefecture_id" readonly="1"/>
+                            <field name="health_rate" widget="percentage"/>
+                            <field name="health_rate_with_care" widget="percentage"/>
+                            <field name="pension_rate" widget="percentage"/>
+                            <field name="employment_rate" widget="percentage"/>
+                        </list>
+                    </field>
+                </group>
+                <footer>
+                    <button name="action_preview" string="Preview / プレビュー" type="object"
+                            class="btn-secondary" invisible="preview_ids"/>
+                    <button name="action_import" string="Import / インポート" type="object"
+                            class="btn-primary" invisible="not preview_ids"/>
+                    <button string="Cancel / キャンセル" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Import Wizard Action -->
+    <record id="hr_insurance_rate_import_wizard_action" model="ir.actions.act_window">
+        <field name="name">Import Insurance Rates / 保険料率インポート</field>
+        <field name="res_model">hr.insurance.rate.import.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <!-- Add import button to rate action -->
+    <record id="hr_insurance_rate_action" model="ir.actions.act_window">
+        <field name="name">Insurance Rates / 保険料率</field>
+        <field name="res_model">hr.insurance.rate</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_active': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create insurance rates or import from Excel
+            </p>
+            <p>
+                <a type="action" name="%(hr_insurance_rate_import_wizard_action)d">
+                    Click here to import rates from Excel / Excelから保険料率をインポート
+                </a>
+            </p>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,395 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* seisei_entitlements
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 18.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-01-12 00:00+0000\n"
+"PO-Revision-Date: 2026-01-12 00:00+0000\n"
+"Last-Translator: \n"
+"Language-Team: Japanese\n"
+"Language: ja_JP\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#. module: seisei_entitlements
+#: model:ir.model,name:seisei_entitlements.model_seisei_entitlement
+msgid "Seisei Entitlement"
+msgstr "権限"
+
+#. module: seisei_entitlements
+#: model:ir.model,name:seisei_entitlements.model_seisei_api_key
+msgid "Seisei API Key"
+msgstr "APIキー"
+
+#. module: seisei_entitlements
+#: model:ir.model,name:seisei_entitlements.model_seisei_entitlement_log
+msgid "Seisei Entitlement Log"
+msgstr "権限受信ログ"
+
+#. module: seisei_entitlements
+#: model:ir.ui.menu,name:seisei_entitlements.menu_seisei_entitlements_root
+msgid "Entitlements"
+msgstr "権限管理"
+
+#. module: seisei_entitlements
+#: model:ir.ui.menu,name:seisei_entitlements.menu_seisei_entitlements
+#: model:ir.actions.act_window,name:seisei_entitlements.seisei_entitlement_action
+msgid "Active Features"
+msgstr "有効な機能"
+
+#. module: seisei_entitlements
+#: model:ir.ui.menu,name:seisei_entitlements.menu_seisei_entitlement_logs
+#: model:ir.actions.act_window,name:seisei_entitlements.seisei_entitlement_log_action
+msgid "Receive Logs"
+msgstr "受信ログ"
+
+#. module: seisei_entitlements
+#: model:ir.ui.menu,name:seisei_entitlements.menu_seisei_entitlements_config
+msgid "Configuration"
+msgstr "設定"
+
+#. module: seisei_entitlements
+#: model:ir.ui.menu,name:seisei_entitlements.menu_seisei_api_keys
+#: model:ir.actions.act_window,name:seisei_entitlements.seisei_api_key_action
+msgid "API Keys"
+msgstr "APIキー"
+
+#. module: seisei_entitlements
+#: model:ir.model.fields,field_description:seisei_entitlements.field_seisei_entitlement__feature_key
+msgid "Feature Key"
+msgstr "機能キー"
+
+#. module: seisei_entitlements
+#: model:ir.model.fields,field_description:seisei_entitlements.field_seisei_entitlement__feature_name
+msgid "Feature Name"
+msgstr "機能名"
+
+#. module: seisei_entitlements
+#: model:ir.model.fields,field_description:seisei_entitlements.field_seisei_entitlement__active
+msgid "Active"
+msgstr "有効"
+
+#. module: seisei_entitlements
+#: model:ir.model.fields,field_description:seisei_entitlements.field_seisei_entitlement__granted_at
+msgid "Granted At"
+msgstr "付与日時"
+
+#. module: seisei_entitlements
+#: model:ir.model.fields,field_description:seisei_entitlements.field_seisei_entitlement__last_updated
+msgid "Last Updated"
+msgstr "最終更新"
+
+#. module: seisei_entitlements
+#: model:ir.model.fields,field_description:seisei_entitlements.field_seisei_entitlement__source
+msgid "Source"
+msgstr "ソース"
+
+#. module: seisei_entitlements
+#: model:ir.model.fields,field_description:seisei_entitlements.field_seisei_entitlement__tenant_code
+msgid "Tenant Code"
+msgstr "テナントコード"
+
+#. module: seisei_entitlements
+#: model:ir.model.fields,field_description:seisei_entitlements.field_seisei_api_key__name
+msgid "Name"
+msgstr "名前"
+
+#. module: seisei_entitlements
+#: model:ir.model.fields,field_description:seisei_entitlements.field_seisei_api_key__key_hash
+msgid "Key Hash"
+msgstr "キーハッシュ"
+
+#. module: seisei_entitlements
+#: model:ir.model.fields,field_description:seisei_entitlements.field_seisei_api_key__key_prefix
+msgid "Key Prefix"
+msgstr "キープレフィックス"
+
+#. module: seisei_entitlements
+#: model:ir.model.fields,field_description:seisei_entitlements.field_seisei_api_key__last_used
+msgid "Last Used"
+msgstr "最終使用"
+
+#. module: seisei_entitlements
+#: model:ir.model.fields,field_description:seisei_entitlements.field_seisei_api_key__created_by
+msgid "Created By"
+msgstr "作成者"
+
+#. module: seisei_entitlements
+#: model:ir.model.fields,field_description:seisei_entitlements.field_seisei_api_key__notes
+msgid "Notes"
+msgstr "メモ"
+
+#. module: seisei_entitlements
+#: model:ir.model.fields,field_description:seisei_entitlements.field_seisei_entitlement_log__received_at
+msgid "Received At"
+msgstr "受信日時"
+
+#. module: seisei_entitlements
+#: model:ir.model.fields,field_description:seisei_entitlements.field_seisei_entitlement_log__features_received
+msgid "Features Received"
+msgstr "受信した機能"
+
+#. module: seisei_entitlements
+#: model:ir.model.fields,field_description:seisei_entitlements.field_seisei_entitlement_log__features_activated
+msgid "Features Activated"
+msgstr "有効化された機能"
+
+#. module: seisei_entitlements
+#: model:ir.model.fields,field_description:seisei_entitlements.field_seisei_entitlement_log__features_deactivated
+msgid "Features Deactivated"
+msgstr "無効化された機能"
+
+#. module: seisei_entitlements
+#: model:ir.model.fields,field_description:seisei_entitlements.field_seisei_entitlement_log__features_created
+msgid "Features Created"
+msgstr "作成された機能"
+
+#. module: seisei_entitlements
+#: model:ir.model.fields,field_description:seisei_entitlements.field_seisei_entitlement_log__total_active
+msgid "Total Active Features"
+msgstr "有効機能の総数"
+
+#. module: seisei_entitlements
+#: model:ir.model.fields,field_description:seisei_entitlements.field_seisei_entitlement_log__status
+msgid "Status"
+msgstr "ステータス"
+
+#. module: seisei_entitlements
+#: model:ir.model.fields,field_description:seisei_entitlements.field_seisei_entitlement_log__error_message
+msgid "Error Message"
+msgstr "エラーメッセージ"
+
+#. module: seisei_entitlements
+#: model:ir.model.fields,field_description:seisei_entitlements.field_seisei_entitlement_log__request_ip
+msgid "Request IP"
+msgstr "リクエストIP"
+
+#. module: seisei_entitlements
+#: model:ir.model.fields,field_description:seisei_entitlements.field_seisei_entitlement_log__api_key_name
+msgid "API Key Used"
+msgstr "使用されたAPIキー"
+
+#. module: seisei_entitlements
+#: model:ir.model.fields.selection,name:seisei_entitlements.selection__seisei_entitlement_log__status__success
+msgid "Success"
+msgstr "成功"
+
+#. module: seisei_entitlements
+#: model:ir.model.fields.selection,name:seisei_entitlements.selection__seisei_entitlement_log__status__failed
+msgid "Failed"
+msgstr "失敗"
+
+#. module: seisei_entitlements
+#: view button
+msgid "Regenerate Key"
+msgstr "キーを再生成"
+
+#. module: seisei_entitlements
+#: view group title
+msgid "Feature Info"
+msgstr "機能情報"
+
+#. module: seisei_entitlements
+#: view group title
+msgid "Source Info"
+msgstr "ソース情報"
+
+#. module: seisei_entitlements
+#: view group title
+msgid "Key Info"
+msgstr "キー情報"
+
+#. module: seisei_entitlements
+#: view group title
+msgid "Usage Info"
+msgstr "使用情報"
+
+#. module: seisei_entitlements
+#: view group title
+msgid "Request Info"
+msgstr "リクエスト情報"
+
+#. module: seisei_entitlements
+#: view group title
+msgid "API Info"
+msgstr "API情報"
+
+#. module: seisei_entitlements
+#: view page title
+msgid "Features Received"
+msgstr "受信した機能"
+
+#. module: seisei_entitlements
+#: view page title
+msgid "Changes"
+msgstr "変更"
+
+#. module: seisei_entitlements
+#: view page title
+msgid "Error"
+msgstr "エラー"
+
+#. module: seisei_entitlements
+#: view filter
+msgid "Active"
+msgstr "有効"
+
+#. module: seisei_entitlements
+#: view filter
+msgid "Inactive"
+msgstr "無効"
+
+#. module: seisei_entitlements
+#: view filter
+msgid "Success"
+msgstr "成功"
+
+#. module: seisei_entitlements
+#: view filter
+msgid "Failed"
+msgstr "失敗"
+
+#. module: seisei_entitlements
+#: view filter
+msgid "Today"
+msgstr "今日"
+
+#. module: seisei_entitlements
+#: view filter
+msgid "Group by Source"
+msgstr "ソースでグループ化"
+
+#. module: seisei_entitlements
+#: view filter
+msgid "Group by Date"
+msgstr "日付でグループ化"
+
+#. module: seisei_entitlements
+#: view filter
+msgid "Group by Status"
+msgstr "ステータスでグループ化"
+
+#. module: seisei_entitlements
+#: view help text
+msgid "No entitlements yet"
+msgstr "権限はまだありません"
+
+#. module: seisei_entitlements
+#: view help text
+msgid "Entitlements are automatically received from the billing system."
+msgstr "権限は課金システムから自動的に受信されます。"
+
+#. module: seisei_entitlements
+#: view help text
+msgid "No entitlement logs yet"
+msgstr "権限ログはまだありません"
+
+#. module: seisei_entitlements
+#: view help text
+msgid "Logs are created when entitlements are received from the billing system."
+msgstr "課金システムから権限を受信するとログが作成されます。"
+
+#. module: seisei_entitlements
+#: view help text
+msgid "Create your first API key"
+msgstr "最初のAPIキーを作成"
+
+#. module: seisei_entitlements
+#: view help text
+msgid "API keys are used to authenticate requests from the billing system."
+msgstr "APIキーは課金システムからのリクエストを認証するために使用されます。"
+
+#. module: seisei_entitlements
+#: view ribbon
+msgid "Inactive"
+msgstr "無効"
+
+#. module: seisei_entitlements
+#: view title
+msgid "Entitlements"
+msgstr "権限"
+
+#. module: seisei_entitlements
+#: view title
+msgid "Entitlement Logs"
+msgstr "権限ログ"
+
+#. module: seisei_entitlements
+#: view title
+msgid "Search Entitlements"
+msgstr "権限を検索"
+
+#. module: seisei_entitlements
+#: view title
+msgid "Search Logs"
+msgstr "ログを検索"
+
+#. module: seisei_entitlements
+#: view title
+msgid "Search API Keys"
+msgstr "APIキーを検索"
+
+#. module: seisei_entitlements
+#: notification
+msgid "New API Key Generated"
+msgstr "新しいAPIキーが生成されました"
+
+#. module: seisei_entitlements
+#: field help text
+msgid "Unique identifier of the feature (e.g., module_inventory)"
+msgstr "機能の一意の識別子（例: module_inventory）"
+
+#. module: seisei_entitlements
+#: field help text
+msgid "Human-readable name of the feature"
+msgstr "機能の表示名"
+
+#. module: seisei_entitlements
+#: field help text
+msgid "Whether this feature is currently active"
+msgstr "この機能が現在有効かどうか"
+
+#. module: seisei_entitlements
+#: field help text
+msgid "When this feature was granted"
+msgstr "この機能が付与された日時"
+
+#. module: seisei_entitlements
+#: field help text
+msgid "When this entitlement was last updated"
+msgstr "この権限が最後に更新された日時"
+
+#. module: seisei_entitlements
+#: field help text
+msgid "Source system that granted this entitlement"
+msgstr "この権限を付与したソースシステム"
+
+#. module: seisei_entitlements
+#: field help text
+msgid "Tenant code from billing system"
+msgstr "課金システムからのテナントコード"
+
+#. module: seisei_entitlements
+#: field help text
+msgid "Descriptive name for this API key"
+msgstr "このAPIキーの説明的な名前"
+
+#. module: seisei_entitlements
+#: field help text
+msgid "Hashed API key (original key is not stored)"
+msgstr "ハッシュ化されたAPIキー（元のキーは保存されません）"
+
+#. module: seisei_entitlements
+#: field help text
+msgid "First 8 characters of the key for identification"
+msgstr "識別用のキーの先頭8文字"
+
+#. module: seisei_entitlements
+#: constraint error
+msgid "Feature key must be unique!"
+msgstr "機能キーは一意である必要があります！"

@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { CreditCard, Blocks, ChevronRight, User, Palette, Users } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth';
-import { useIsNative } from '@/hooks/use-native';
+import { useIsIOSAppStoreBuild } from '@/lib/appChannel';
 
 const settingsItems = [
   {
@@ -36,13 +36,13 @@ const settingsItems = [
 export default function SettingsPage() {
   const t = useTranslations();
   const { user } = useAuthStore();
-  const isNative = useIsNative();
+  const isIOSAppStore = useIsIOSAppStoreBuild();
 
   const filteredItems = settingsItems.filter(
     (item) =>
       (!item.adminOnly || user?.isAdmin) &&
-      // App Store compliance: hide subscription in native apps
-      (!('hideInNative' in item) || !item.hideInNative || !isNative)
+      // App Store compliance: hide subscription in iOS App Store builds
+      (!('hideInNative' in item) || !item.hideInNative || !isIOSAppStore)
   );
 
   return (

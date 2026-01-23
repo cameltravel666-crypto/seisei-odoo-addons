@@ -25,8 +25,17 @@ import {
   Globe,
   Check,
   Boxes,
+  LineChart,
+  Contact,
+  QrCode,
+  ChevronDown,
+  ChevronRight,
+  Lock,
+  FileSpreadsheet,
+  Wallet,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { useIsIOSAppStoreBuild } from '@/lib/appChannel';
 
 const languages = [
   { code: 'ja', label: '日本語', flag: '🇯🇵' },
@@ -48,15 +57,50 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Wrench,
   FileText,
   Boxes,
+  LineChart,
+  Contact,
+  QrCode,
+  Wallet,
 };
+
+// POS sub-menu items
+// QR_ORDERING is now gated by entitlements (trial/subscription), not hidden
+const posSubItems = [
+  { path: '/pos/tables', icon: QrCode, labelKey: 'tables', moduleCode: 'QR_ORDERING' },
+];
 
 export function Navigation() {
   const t = useTranslations('nav');
   const pathname = usePathname();
   const { user, visibleModules } = useAuthStore();
+  const isIOSAppStore = useIsIOSAppStoreBuild();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [currentLocale, setCurrentLocale] = useState('ja');
   const [showLanguageMenu, setShowLanguageMenu] = useState(false);
+  const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set());
+
+  // Check if user has a specific module
+  const hasModule = (moduleCode: string) => visibleModules.some(m => m.code === moduleCode);
+
+  // Auto-expand POS menu when on a POS sub-page
+  useEffect(() => {
+    if (pathname.startsWith('/pos/')) {
+      setExpandedMenus(prev => new Set([...prev, 'POS']));
+    }
+  }, [pathname]);
+
+  // Toggle menu expansion
+  const toggleMenu = (menuCode: string) => {
+    setExpandedMenus(prev => {
+      const next = new Set(prev);
+      if (next.has(menuCode)) {
+        next.delete(menuCode);
+      } else {
+        next.add(menuCode);
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     // Read current locale from cookie
@@ -87,19 +131,32 @@ export function Navigation() {
     window.location.href = '/login';
   };
 
+  // Filter out QR_ORDERING as it's a POS sub-menu item, not a top-level menu
   const navItems = [
     { path: '/home', icon: Home, label: t('home') },
-    ...visibleModules.map((module) => ({
-      path: module.path,
-      icon: iconMap[module.icon] || Package,
-      label: t(module.code.toLowerCase()),
-    })),
+    ...visibleModules
+      .filter((module) => module.code !== 'QR_ORDERING')
+      .map((module) => ({
+        path: module.path,
+        icon: iconMap[module.icon] || Package,
+        label: t(module.code.toLowerCase()),
+      })),
+    // Product Management - unified product/category/BOM management
+    { path: '/products', icon: Boxes, label: t('products') },
+    // Document OCR - scan invoices/receipts and create documents
+    { path: '/ocr', icon: FileText, label: t('ocr') },
+    // Sheet Forge - standalone module for template-based OCR extraction
+    { path: '/sheetforge', icon: FileSpreadsheet, label: t('sheetforge') },
   ];
 
   return (
     <>
-      {/* Desktop Sidebar */}
-      <aside className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 bg-gray-900">
+      {/* 
+        Desktop Sidebar - Fixed positioning
+        - position: fixed ensures it doesn't move during scroll
+        - No transform on ancestors to prevent fixed positioning issues
+      */}
+      <aside data-app-header="desktop" className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 bg-gray-900" style={{ zIndex: 40 }}>
         <div className="flex flex-col flex-grow pt-5 overflow-y-auto">
           {/* Logo */}
           <Link href="/home" className="block px-4 mb-6">
@@ -113,13 +170,71 @@ export function Navigation() {
           <nav className="flex-1 px-2 space-y-1">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const isActive = pathname === item.path || pathname.startsWith(item.path + '/');
+              const isActive = pathname === item.path || (item.path !== '/home' && pathname.startsWith(item.path + '/'));
+              const isPOS = item.path === '/pos';
+              const isExpanded = expandedMenus.has('POS');
 
+              // POS item with sub-menu
+              if (isPOS) {
+                return (
+                  <div key={item.path}>
+                    <div
+                      className={`flex items-center rounded-lg overflow-hidden transition-colors ${
+                        isActive ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                      }`}
+                    >
+                      <Link
+                        href={item.path}
+                        className="flex-1 flex items-center px-3 py-2 text-sm font-medium"
+                      >
+                        <Icon className="w-5 h-5 mr-3" />
+                        {item.label}
+                      </Link>
+                      <button
+                        onClick={() => toggleMenu('POS')}
+                        className="px-2 py-2"
+                      >
+                        {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    {/* POS Sub-menu */}
+                    {isExpanded && (
+                      <div className="ml-4 mt-1 space-y-1">
+                        {posSubItems.map((subItem) => {
+                          const SubIcon = subItem.icon;
+                          const isSubActive = pathname === subItem.path || pathname.startsWith(subItem.path + '/');
+                          const hasAccess = hasModule(subItem.moduleCode);
+
+                          return (
+                            <Link
+                              key={subItem.path}
+                              href={hasAccess ? subItem.path : (isIOSAppStore ? '#' : '/settings/subscription')}
+                              className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition ${
+                                isSubActive
+                                  ? 'bg-blue-500 text-white'
+                                  : hasAccess
+                                    ? 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                                    : 'text-gray-500 hover:bg-gray-800'
+                              }`}
+                            >
+                              <SubIcon className="w-4 h-4 mr-3" />
+                              <span className="flex-1">{t(subItem.labelKey)}</span>
+                              {!hasAccess && <Lock className="w-3 h-3 text-gray-500" />}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              // Regular nav item
               return (
                 <Link
                   key={item.path}
                   href={item.path}
-                  className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition ${
+                  className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg overflow-hidden transition-colors ${
                     isActive
                       ? 'bg-blue-600 text-white'
                       : 'text-gray-300 hover:bg-gray-800 hover:text-white'
@@ -168,13 +283,16 @@ export function Navigation() {
                 </div>
               )}
             </div>
-            <Link
-              href="/settings"
-              className="flex items-center px-3 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg transition"
-            >
-              <Settings className="w-5 h-5 mr-3" />
-              {t('settings')}
-            </Link>
+            {/* Settings - hidden in native apps for App Store compliance */}
+            {!isIOSAppStore && (
+              <Link
+                href="/settings"
+                className="flex items-center px-3 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg transition"
+              >
+                <Settings className="w-5 h-5 mr-3" />
+                {t('settings')}
+              </Link>
+            )}
             <button
               onClick={handleLogout}
               className="w-full flex items-center px-3 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg transition"
@@ -191,42 +309,108 @@ export function Navigation() {
         </div>
       </aside>
 
-      {/* Mobile Header - Fixed Height with safe area */}
+      {/*
+        Mobile Header - 紧凑型顶栏
+        使用 CSS 变量 --app-header-h (44px) 和 --safe-top 确保高度统一
+        CSS 在 globals.css 中通过 [data-app-header="mobile"] 选择器控制
+      */}
       <div
-        className="md:hidden fixed top-0 left-0 right-0 z-50 bg-gray-900 text-white px-4 flex items-center justify-between"
-        style={{
-          paddingTop: 'env(safe-area-inset-top, 0px)',
-          height: 'calc(var(--height-header) + env(safe-area-inset-top, 0px))',
-          minHeight: 'calc(var(--height-header) + env(safe-area-inset-top, 0px))'
-        }}
+        data-app-header="mobile"
+        className="md:hidden bg-gray-900 text-white"
       >
-        <Link href="/home" className="text-heading font-bold truncate">Seisei BizNexus</Link>
-        <button
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="p-2 flex-shrink-0"
-          style={{ width: 'var(--height-icon-btn)', height: 'var(--height-icon-btn)' }}
-        >
-          {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-        </button>
+        <div className="flex items-center justify-between px-3" style={{ height: 'var(--app-header-h)' }}>
+          <Link href="/home" className="text-sm font-semibold truncate">
+            Seisei BizNexus
+          </Link>
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="flex items-center justify-center w-9 h-9 rounded-md active:bg-gray-800"
+          >
+            {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
       </div>
 
-      {/* Mobile Menu */}
+      {/* Mobile Menu - 从header下方开始，使用统一的 CSS 变量 */}
       {isMobileMenuOpen && (
         <div
-          className="md:hidden fixed inset-0 z-40 bg-gray-900"
-          style={{ paddingTop: 'var(--height-header)' }}
+          className="md:hidden fixed inset-0 z-[999] bg-gray-900"
+          style={{
+            top: 'var(--app-header-total-h)',
+            overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            overscrollBehavior: 'contain',
+          }}
         >
           <nav className="p-4 space-y-1">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.path;
+              const isPOS = item.path === '/pos';
+              const isExpanded = expandedMenus.has('POS');
+
+              // POS with sub-menu (mobile)
+              if (isPOS) {
+                return (
+                  <div key={item.path}>
+                    <div
+                      className={`flex items-center rounded-lg overflow-hidden transition-colors ${
+                        isActive ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                      }`}
+                    >
+                      <Link
+                        href={item.path}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="flex-1 flex items-center px-3 py-3 text-sm font-medium"
+                      >
+                        <Icon className="w-5 h-5 mr-3" />
+                        {item.label}
+                      </Link>
+                      <button
+                        onClick={() => toggleMenu('POS')}
+                        className="px-3 py-3"
+                      >
+                        {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    {isExpanded && (
+                      <div className="ml-4 mt-1 space-y-1">
+                        {posSubItems.map((subItem) => {
+                          const SubIcon = subItem.icon;
+                          const isSubActive = pathname === subItem.path || pathname.startsWith(subItem.path + '/');
+                          const hasAccess = hasModule(subItem.moduleCode);
+
+                          return (
+                            <Link
+                              key={subItem.path}
+                              href={hasAccess ? subItem.path : (isIOSAppStore ? '#' : '/settings/subscription')}
+                              onClick={() => setIsMobileMenuOpen(false)}
+                              className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg ${
+                                isSubActive
+                                  ? 'bg-blue-500 text-white'
+                                  : hasAccess
+                                    ? 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                                    : 'text-gray-500 hover:bg-gray-800'
+                              }`}
+                            >
+                              <SubIcon className="w-4 h-4 mr-3" />
+                              <span className="flex-1">{t(subItem.labelKey)}</span>
+                              {!hasAccess && <Lock className="w-3 h-3 text-gray-500" />}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
 
               return (
                 <Link
                   key={item.path}
                   href={item.path}
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className={`flex items-center px-3 py-3 text-sm font-medium rounded-lg ${
+                  className={`flex items-center px-3 py-3 text-sm font-medium rounded-lg overflow-hidden transition-colors ${
                     isActive
                       ? 'bg-blue-600 text-white'
                       : 'text-gray-300 hover:bg-gray-800'
@@ -274,14 +458,17 @@ export function Navigation() {
               )}
             </div>
 
-            <Link
-              href="/settings"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="flex items-center px-3 py-3 text-sm text-gray-300 hover:bg-gray-800 rounded-lg"
-            >
-              <Settings className="w-5 h-5 mr-3" />
-              {t('settings')}
-            </Link>
+            {/* Settings - hidden in native apps for App Store compliance */}
+            {!isIOSAppStore && (
+              <Link
+                href="/settings"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="flex items-center px-3 py-3 text-sm text-gray-300 hover:bg-gray-800 rounded-lg"
+              >
+                <Settings className="w-5 h-5 mr-3" />
+                {t('settings')}
+              </Link>
+            )}
             <button
               onClick={handleLogout}
               className="w-full flex items-center px-3 py-3 text-sm text-gray-300 hover:bg-gray-800 rounded-lg"

@@ -1,0 +1,76 @@
+# Japanese translation for seisei_ar_ap_netting
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo 18.0\n"
+"Language: ja\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. module: seisei_ar_ap_netting
+msgid "AR/AP Netting"
+msgstr "売掛買掛相殺"
+
+#. module: seisei_ar_ap_netting
+msgid "Partner"
+msgstr "取引先"
+
+#. module: seisei_ar_ap_netting
+msgid "Netting Journal"
+msgstr "相殺仕訳帳"
+
+#. module: seisei_ar_ap_netting
+msgid "Netting Date"
+msgstr "相殺日"
+
+#. module: seisei_ar_ap_netting
+msgid "Total Open Receivables"
+msgstr "未決済売掛金合計"
+
+#. module: seisei_ar_ap_netting
+msgid "Total Open Payables"
+msgstr "未決済買掛金合計"
+
+#. module: seisei_ar_ap_netting
+msgid "Maximum Nettable"
+msgstr "相殺可能最大額"
+
+#. module: seisei_ar_ap_netting
+msgid "Amount to Net"
+msgstr "相殺金額"
+
+#. module: seisei_ar_ap_netting
+msgid "Open Receivables"
+msgstr "未決済売掛金"
+
+#. module: seisei_ar_ap_netting
+msgid "Open Payables"
+msgstr "未決済買掛金"
+
+#. module: seisei_ar_ap_netting
+msgid "Execute Netting"
+msgstr "相殺実行"
+
+#. module: seisei_ar_ap_netting
+msgid "Netting Entry"
+msgstr "相殺仕訳"
+
+#. module: seisei_ar_ap_netting
+msgid "Netting - Reduce Payable"
+msgstr "相殺 - 買掛金減少"
+
+#. module: seisei_ar_ap_netting
+msgid "Netting - Reduce Receivable"
+msgstr "相殺 - 売掛金減少"
+
+#. module: seisei_ar_ap_netting
+msgid "Netting"
+msgstr "相殺"
+
+#. module: seisei_ar_ap_netting
+msgid "Netting Available"
+msgstr "相殺可能"
+
+#. module: seisei_ar_ap_netting
+msgid "Nettable Amount"
+msgstr "相殺可能額"

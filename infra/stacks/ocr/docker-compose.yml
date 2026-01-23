@@ -1,0 +1,54 @@
+services:
+  ocr-service:
+    image: ghcr.io/seisei/ocr-service:${VERSION:-latest}
+    container_name: ocr-service
+    restart: unless-stopped
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - OCR_DATABASE_URL=postgresql://ocr:${OCR_DB_PASSWORD}@ocr-db:5432/ocr_service
+      - OCR_SERVICE_KEY=${OCR_SERVICE_KEY}
+      - OCR_FREE_QUOTA=${OCR_FREE_QUOTA:-30}
+      - OCR_PRICE_PER_IMAGE=${OCR_PRICE_PER_IMAGE:-20}
+    depends_on:
+      ocr-db:
+        condition: service_healthy
+    networks:
+      - ocr-internal
+      - edge
+    labels:
+      # OCR service - default NOT exposed to public
+      # Uncomment to enable public access for debugging
+      # - "traefik.enable=true"
+      # - "traefik.http.routers.ocr.rule=Host(`ocr.seisei.tokyo`)"
+      # - "traefik.http.routers.ocr.entrypoints=websecure"
+      # - "traefik.http.routers.ocr.tls.certresolver=cloudflare"
+      # - "traefik.http.routers.ocr.middlewares=rate-limit@file"
+      # - "traefik.http.services.ocr.loadbalancer.server.port=8080"
+      - "traefik.enable=false"
+
+  ocr-db:
+    image: postgres:15-alpine
+    container_name: ocr-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ocr
+      POSTGRES_PASSWORD: ${OCR_DB_PASSWORD}
+      POSTGRES_DB: ocr_service
+    volumes:
+      - ocr-db-data:/var/lib/postgresql/data
+    networks:
+      - ocr-internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ocr"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  ocr-db-data:
+
+networks:
+  ocr-internal:
+    driver: bridge
+  edge:
+    external: true

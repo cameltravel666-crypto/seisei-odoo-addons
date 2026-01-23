@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
-import { createToken, setAuthCookie, encrypt } from '@/lib/auth';
+import { createToken, setAuthCookie } from '@/lib/auth';
 import { createOdooClient } from '@/lib/odoo';
 import { initializeTenantFeatures } from '@/lib/features';
+import { membershipService } from '@/lib/membership-service';
+import { entitlementsService } from '@/lib/entitlements-service';
+import { auditService } from '@/lib/audit-service';
 
 const loginSchema = z.object({
   tenantCode: z.string().min(1, 'Tenant code is required'),
@@ -11,10 +14,25 @@ const loginSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 
+/**
+ * Normalize tenant code to TEN-xxx format
+ * Accepts: TEN-ABC123, ABC123, ten-abc123
+ */
+function normalizeTenantCode(input: string): string {
+  const upper = input.toUpperCase().trim();
+  if (upper.startsWith('TEN-')) {
+    return upper;
+  }
+  return `TEN-${upper}`;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { tenantCode, username, password } = loginSchema.parse(body);
+    const { tenantCode: rawTenantCode, username, password } = loginSchema.parse(body);
+
+    // Normalize tenant code (support both TEN-xxx and xxx formats)
+    const tenantCode = normalizeTenantCode(rawTenantCode);
 
     // Find tenant
     const tenant = await prisma.tenant.findUnique({
@@ -92,18 +110,40 @@ export async function POST(request: NextRequest) {
       await initializeTenantFeatures(tenant.id, tenant.planCode);
     }
 
-    // Create JWT
+    // Ensure entitlements exist
+    const entitlements = await prisma.entitlements.findUnique({
+      where: { tenantId: tenant.id }
+    });
+    if (!entitlements) {
+      await entitlementsService.initialize(tenant.id, tenant.planCode);
+    }
+
+    // Ensure membership exists
+    const membership = await membershipService.ensureMembership(
+      user.id,
+      tenant.id,
+      user.isAdmin
+    );
+
+    // Create JWT with role info
     const token = await createToken({
       userId: user.id,
       tenantId: tenant.id,
       tenantCode: tenant.tenantCode,
       odooUserId: user.odooUserId,
-      isAdmin: user.isAdmin,
+      isAdmin: membership.role === 'ORG_ADMIN' || membership.role === 'BILLING_ADMIN',
       sessionId: session.id,
     });
 
     // Set cookie
     await setAuthCookie(token);
+
+    // Log successful login
+    await auditService.logLogin({
+      tenantId: tenant.id,
+      userId: user.id,
+      success: true
+    });
 
     return NextResponse.json({
       success: true,
@@ -112,12 +152,16 @@ export async function POST(request: NextRequest) {
           id: user.id,
           displayName: user.displayName,
           email: user.email,
-          isAdmin: user.isAdmin,
+          isAdmin: membership.role === 'ORG_ADMIN' || membership.role === 'BILLING_ADMIN',
         },
         tenant: {
           id: tenant.id,
           tenantCode: tenant.tenantCode,
           name: tenant.name,
+        },
+        membership: {
+          role: membership.role,
+          storeScope: membership.storeScope,
         },
       },
     });

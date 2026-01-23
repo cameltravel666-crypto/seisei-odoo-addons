@@ -38,7 +38,7 @@ const ODOO_ALLOWLIST: Record<string, string[]> = {
   'restaurant.floor': ['search_read', 'read', 'search_count'],
   'restaurant.table': ['search_read', 'read', 'write', 'search_count'],
   // Purchase
-  'purchase.order': ['search_read', 'read', 'write', 'create', 'button_approve', 'button_confirm', 'button_cancel', 'action_rfq_send', 'action_create_invoice', 'search_count', 'read_group'],
+  'purchase.order': ['search_read', 'read', 'write', 'create', 'button_approve', 'button_confirm', 'button_cancel', 'action_rfq_send', 'action_create_invoice', 'search_count', 'read_group', 'action_ocr_scan', 'action_ocr_reset', 'action_ocr_apply_lines'],
   // Mail
   'mail.compose.message': ['create', 'action_send_mail'],
   'mail.template': ['search_read', 'read'],
@@ -50,15 +50,27 @@ const ODOO_ALLOWLIST: Record<string, string[]> = {
   'hr.expense': ['search_read', 'read', 'write', 'action_submit_expenses', 'approve_expense_sheets', 'refuse_expense', 'search_count', 'read_group'],
   'hr.expense.sheet': ['search_read', 'read', 'write', 'action_submit_sheet', 'approve_expense_sheets', 'refuse_sheet', 'search_count'],
   // Accounting
-  'account.move': ['search_read', 'read', 'search_count', 'action_post', 'read_group', 'create'],
-  'account.move.line': ['search_read', 'read', 'read_group'],
+  'account.move': ['search_read', 'read', 'search_count', 'action_post', 'read_group', 'create', 'write', 'action_send_to_ocr', 'action_batch_send_to_ocr', 'action_reset_ocr', 'action_ocr_apply_lines'],
+  'account.move.line': ['search_read', 'read', 'read_group', 'search_count'],
   'account.journal': ['search_read', 'read', 'search_count'],
-  'account.account': ['search_read', 'read', 'search_count'],
+  'account.account': ['search_read', 'read', 'search_count', 'read_group'],
+  'account.payment': ['search_read', 'read', 'search_count', 'create', 'write', 'action_post', 'action_draft', 'action_cancel'],
+  'account.payment.register': ['create', 'action_create_payments'],
+  'account.bank.statement': ['search_read', 'read', 'search_count'],
+  'account.bank.statement.line': ['search_read', 'read', 'search_count', 'write', 'action_undo_reconciliation'],
+  'account.asset.asset': ['search_read', 'read', 'search_count', 'create', 'write', 'validate', 'set_to_close'],
+  'account.asset.depreciation.line': ['search_read', 'read', 'search_count', 'create_move'],
+  'account.financial.report': ['search_read', 'read', 'search_count'],
   // CRM
   'crm.lead': ['search_read', 'read', 'write', 'create', 'search_count', 'read_group'],
   'crm.stage': ['search_read', 'read', 'search_count'],
+  'crm.tag': ['search_read', 'read', 'create'],
   'mail.activity': ['search_read', 'read', 'search_count'],
   'mail.activity.type': ['search_read', 'read'],
+  // Quote Integration
+  'quote.request': ['search_read', 'read', 'write', 'create', 'search_count', 'action_mark_downloaded', 'action_mark_shared', 'action_mark_viewed'],
+  'utm.source': ['search_read', 'create'],
+  'utm.medium': ['search_read', 'create'],
   // Inventory
   'stock.picking': ['search_read', 'read', 'write', 'button_validate', 'search_count', 'read_group'],
   'stock.picking.type': ['search_read', 'read', 'search_count'],
@@ -90,9 +102,13 @@ const ODOO_ALLOWLIST: Record<string, string[]> = {
   // Product Management (PLM)
   'product.category': ['search_read', 'read', 'create', 'write', 'unlink', 'search_count'],
   // Common
-  'res.partner': ['search_read', 'read'],
+  'res.partner': ['search_read', 'read', 'search_count', 'write', 'create'],
   'res.users': ['search_read', 'read'],
   'res.company': ['search_read', 'read'],
+  // Sheet Forge (OCR File)
+  'ocr.file.task': ['search_read', 'read', 'create', 'write', 'unlink', 'search_count', 'action_start_ocr', 'action_fill_template', 'action_reset'],
+  'ocr.file.source': ['search_read', 'read', 'create', 'write', 'unlink', 'search_count'],
+  'ocr.file.usage': ['search_read', 'read', 'search_count'],
 };
 
 // Check if model/method is allowed
@@ -281,6 +297,43 @@ export class OdooRPC {
       lazy: options.lazy ?? true,
     });
   }
+
+  // Get PDF report from Odoo
+  async getReportPdf(reportName: string, ids: number[]): Promise<Buffer> {
+    if (!this.sessionId) {
+      throw new Error('No session available');
+    }
+
+    const idsStr = ids.join(',');
+    const reportUrl = `${this.config.baseUrl}/report/pdf/${reportName}/${idsStr}`;
+
+    const response = await fetch(reportUrl, {
+      method: 'GET',
+      headers: {
+        'Cookie': `session_id=${this.sessionId}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to generate PDF report: ${response.status} ${response.statusText}`);
+    }
+
+    const contentType = response.headers.get('content-type');
+    if (!contentType?.includes('application/pdf')) {
+      // Might be an error page or login redirect
+      const text = await response.text();
+      console.error('[OdooRPC] Report response is not PDF:', text.substring(0, 500));
+      throw new Error('Report generation failed - received non-PDF response');
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    return Buffer.from(arrayBuffer);
+  }
+
+  // Get base URL for building URLs
+  getBaseUrl(): string {
+    return this.config.baseUrl;
+  }
 }
 
 // Create Odoo client instance
@@ -291,6 +344,16 @@ export function createOdooClient(config: OdooConfig): OdooRPC {
 // Import prisma dynamically to avoid circular dependency
 import { prisma } from './db';
 import type { JWTPayload } from './auth';
+
+// Custom error for tenant provisioning state
+export class TenantProvisioningError extends Error {
+  code = 'TENANT_PROVISIONING';
+
+  constructor(message: string = 'Tenant is still being provisioned') {
+    super(message);
+    this.name = 'TenantProvisioningError';
+  }
+}
 
 // Get Odoo client for authenticated session
 export async function getOdooClientForSession(session: JWTPayload): Promise<OdooRPC> {
@@ -303,6 +366,16 @@ export async function getOdooClientForSession(session: JWTPayload): Promise<Odoo
     throw new Error('Tenant not found');
   }
 
+  // Check if tenant is still being provisioned
+  if (tenant.provisionStatus === 'provisioning' || tenant.provisionStatus === 'pending') {
+    throw new TenantProvisioningError('Your account is being set up. This usually takes 1-2 minutes.');
+  }
+
+  // Check if provisioning failed
+  if (tenant.provisionStatus === 'failed') {
+    throw new TenantProvisioningError('Account setup encountered an issue. Please contact support.');
+  }
+
   // Get session from database
   const dbSession = await prisma.session.findUnique({
     where: { id: session.sessionId },
@@ -310,6 +383,11 @@ export async function getOdooClientForSession(session: JWTPayload): Promise<Odoo
 
   if (!dbSession) {
     throw new Error('Session not found');
+  }
+
+  // Check for placeholder session ID (fallback check)
+  if (dbSession.odooSessionId === 'pending_provisioning') {
+    throw new TenantProvisioningError('Your account is being set up. Please wait a moment and refresh.');
   }
 
   // Create Odoo client and set session

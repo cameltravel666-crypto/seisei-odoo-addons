@@ -1,0 +1,40 @@
+services:
+  langbot:
+    image: langgenius/langbot:${VERSION:-latest}
+    container_name: langbot
+    restart: unless-stopped
+    environment:
+      - LANGBOT_CONFIG=/app/config/config.yaml
+    volumes:
+      - langbot-data:/app/data
+      - ./config:/app/config:ro
+    networks:
+      - langbot-internal
+      - edge
+    labels:
+      - "traefik.enable=true"
+      # Web UI
+      - "traefik.http.routers.langbot.rule=Host(`langbot.seisei.tokyo`)"
+      - "traefik.http.routers.langbot.entrypoints=websecure"
+      - "traefik.http.routers.langbot.tls.certresolver=cloudflare"
+      - "traefik.http.routers.langbot.middlewares=secure-headers@file"
+      - "traefik.http.services.langbot.loadbalancer.server.port=5300"
+
+  # Reverse proxy ports for messaging platforms (if needed)
+  # These are typically not exposed via Traefik but via direct ports
+  # langbot-reverse:
+  #   image: langgenius/langbot:${VERSION:-latest}
+  #   container_name: langbot-reverse
+  #   ports:
+  #     - "127.0.0.1:2280-2285:2280-2285"
+  #   networks:
+  #     - langbot-internal
+
+volumes:
+  langbot-data:
+
+networks:
+  langbot-internal:
+    driver: bridge
+  edge:
+    external: true

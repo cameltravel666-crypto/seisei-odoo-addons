@@ -11,38 +11,44 @@ interface SummaryBarProps {
 }
 
 export function SummaryBar({ count, amount, overdueCount = 0, queue, t }: SummaryBarProps) {
-  const getQueueColor = () => {
-    switch (queue) {
-      case 'to_confirm':
-        return 'bg-yellow-50 border-yellow-200';
-      case 'to_receive':
-        return 'bg-blue-50 border-blue-200';
-      case 'to_pay':
-        return overdueCount > 0 ? 'bg-red-50 border-red-200' : 'bg-orange-50 border-orange-200';
-      case 'completed':
-        return 'bg-green-50 border-green-200';
-      default:
-        return 'bg-gray-50 border-gray-200';
+  // Use unified muted background for consistency (per next.txt: avoid yellow that jumps from blue-white palette)
+  const getQueueStyle = (): React.CSSProperties => {
+    const base: React.CSSProperties = {
+      height: 'var(--height-summary-bar)',
+      minHeight: 'var(--height-summary-bar)',
+      backgroundColor: 'var(--color-bg-muted)',
+      borderColor: 'var(--color-border-light)',
+    };
+
+    // Only highlight danger state for overdue payments
+    if (queue === 'to_pay' && overdueCount > 0) {
+      return {
+        ...base,
+        backgroundColor: 'var(--color-danger-bg)',
+        borderColor: 'var(--color-danger-bg)',
+      };
     }
+
+    return base;
   };
 
   return (
     <div
-      className={`px-4 rounded-lg border flex items-center ${getQueueColor()}`}
-      style={{ height: 'var(--height-summary-bar)', minHeight: 'var(--height-summary-bar)' }}
+      className="px-[var(--space-4)] rounded-[var(--radius-md)] border flex items-center"
+      style={getQueueStyle()}
     >
-      <div className="flex items-center justify-between text-sm w-full">
-        <div className="flex items-center gap-2">
-          <span className="font-medium text-gray-900">
+      <div className="flex items-center justify-between text-body w-full">
+        <div className="flex items-center gap-[var(--space-2)]">
+          <span className="font-medium text-[var(--color-text-primary)] tabular-nums">
             {count} {t('purchase.orders')}
           </span>
-          <span className="text-gray-400">·</span>
-          <span className="text-gray-600">
+          <span className="text-[var(--color-text-tertiary)]">·</span>
+          <span className="text-[var(--color-text-secondary)] tabular-nums">
             {t('purchase.total')} {formatCompactAmount(amount)}
           </span>
         </div>
         {queue === 'to_pay' && overdueCount > 0 && (
-          <span className="text-red-600 font-medium">
+          <span className="text-[var(--color-danger)] font-medium tabular-nums">
             {t('purchase.overdue')} {overdueCount}
           </span>
         )}

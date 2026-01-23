@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Push Log List View -->
+    <record id="seisei_push_log_view_list" model="ir.ui.view">
+        <field name="name">seisei.push.log.list</field>
+        <field name="model">seisei.push.log</field>
+        <field name="arch" type="xml">
+            <list string="Push Logs" create="false" edit="false">
+                <field name="push_date"/>
+                <field name="tenant_id"/>
+                <field name="status" decoration-success="status == 'success'" decoration-danger="status == 'failed'" widget="badge"/>
+                <field name="response_code"/>
+                <field name="error_message" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Push Log Form View -->
+    <record id="seisei_push_log_view_form" model="ir.ui.view">
+        <field name="name">seisei.push.log.form</field>
+        <field name="model">seisei.push.log</field>
+        <field name="arch" type="xml">
+            <form string="Push Log" create="false" edit="false">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="tenant_id"/>
+                            <field name="push_date"/>
+                            <field name="status"/>
+                        </group>
+                        <group>
+                            <field name="endpoint"/>
+                            <field name="response_code"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Request" name="request">
+                            <field name="payload"/>
+                        </page>
+                        <page string="Response" name="response">
+                            <field name="response_body"/>
+                        </page>
+                        <page string="Error" name="error" invisible="not error_message">
+                            <field name="error_message"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Push Log Search View -->
+    <record id="seisei_push_log_view_search" model="ir.ui.view">
+        <field name="name">seisei.push.log.search</field>
+        <field name="model">seisei.push.log</field>
+        <field name="arch" type="xml">
+            <search string="Search Push Logs">
+                <field name="tenant_id"/>
+                <filter string="Success" name="success" domain="[('status', '=', 'success')]"/>
+                <filter string="Failed" name="failed" domain="[('status', '=', 'failed')]"/>
+                <separator/>
+                <filter string="Today" name="today" domain="[('push_date', '&gt;=', (context_today()).strftime('%Y-%m-%d'))]"/>
+                <separator/>
+                <filter string="Group by Tenant" name="group_tenant" context="{'group_by': 'tenant_id'}"/>
+                <filter string="Group by Status" name="group_status" context="{'group_by': 'status'}"/>
+                <filter string="Group by Date" name="group_date" context="{'group_by': 'push_date:day'}"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- Push Log Action -->
+    <record id="seisei_push_log_action" model="ir.actions.act_window">
+        <field name="name">Push Logs</field>
+        <field name="res_model">seisei.push.log</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="seisei_push_log_view_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No push logs yet
+            </p>
+            <p>
+                Push logs are created when entitlements are synchronized to business databases.
+            </p>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,69 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: seisei-erp-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-seisei}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-seisei_erp}
+    volumes:
+      - erp-db-data:/var/lib/postgresql/data
+    networks:
+      - erp-internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-seisei}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    image: ghcr.io/seisei/erp:${VERSION:-latest}
+    container_name: seisei-erp-app
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-seisei}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-seisei_erp}
+      - JWT_SECRET=${JWT_SECRET}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - NODE_ENV=production
+      - DEFAULT_ODOO_URL=${DEFAULT_ODOO_URL:-https://testodoo.seisei.tokyo}
+      - DEFAULT_ODOO_DB=${DEFAULT_ODOO_DB:-test001}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      - NEXT_PUBLIC_APP_URL=https://erp.seisei.tokyo
+      - CRON_SECRET=${CRON_SECRET}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - OCR_SERVICE_URL=${OCR_SERVICE_URL:-http://ocr-service:8080/api/v1}
+      - OCR_SERVICE_KEY=${OCR_SERVICE_KEY}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - erp-internal
+      - edge
+    labels:
+      - "traefik.enable=true"
+      # Main router - erp.seisei.tokyo, biznexus.seisei.tokyo, *.erp.seisei.tokyo
+      - "traefik.http.routers.erp.rule=Host(`erp.seisei.tokyo`) || Host(`biznexus.seisei.tokyo`) || HostRegexp(`{subdomain:[a-z0-9-]+}.erp.seisei.tokyo`)"
+      - "traefik.http.routers.erp.entrypoints=websecure"
+      - "traefik.http.routers.erp.tls.certresolver=cloudflare"
+      - "traefik.http.routers.erp.tls.domains[0].main=erp.seisei.tokyo"
+      - "traefik.http.routers.erp.tls.domains[0].sans=*.erp.seisei.tokyo,biznexus.seisei.tokyo"
+      - "traefik.http.routers.erp.middlewares=secure-headers@file,compress@file"
+      - "traefik.http.services.erp.loadbalancer.server.port=9527"
+      # Health check
+      - "traefik.http.services.erp.loadbalancer.healthcheck.path=/api/health"
+      - "traefik.http.services.erp.loadbalancer.healthcheck.interval=30s"
+      # Version labels
+      - "app.version=${VERSION:-latest}"
+      - "app.deployed_at=${DEPLOY_TIMESTAMP}"
+
+volumes:
+  erp-db-data:
+
+networks:
+  erp-internal:
+    driver: bridge
+  edge:
+    external: true

@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="res_config_settings_view_form_gdoc" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.gdoc</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="base_setup.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="inside">
+                <app data-string="Google Doc Import" string="Google Doc Import" name="gdoc_import" groups="base.group_system">
+                    <block title="Google Doc Import Configuration" name="gdoc_settings">
+                        <setting id="gdoc_status_display" string="Status"
+                                 help="Current status of Google Doc import configuration">
+                            <div class="content-group">
+                                <div class="row mt16">
+                                    <label for="gdoc_status" class="col-lg-3 o_light_label"/>
+                                    <field name="gdoc_status" class="fw-bold"/>
+                                </div>
+                                <div class="row">
+                                    <label for="gdoc_config_source" class="col-lg-3 o_light_label"/>
+                                    <field name="gdoc_config_source"/>
+                                </div>
+                            </div>
+                        </setting>
+
+                        <setting id="gdoc_enabled_setting" string="Enable Google Doc Import"
+                                 help="Enable importing data from Google Docs">
+                            <field name="gdoc_enabled"/>
+                        </setting>
+
+                        <setting id="gdoc_credentials" string="Service Account Credentials"
+                                 invisible="not gdoc_enabled"
+                                 help="Paste the JSON content of your Google service account key">
+                            <div class="content-group">
+                                <div class="row mt16">
+                                    <field name="gdoc_service_account_json" widget="ace" options="{'mode': 'json'}" class="col-12"/>
+                                </div>
+                                <div class="mt8 text-muted">
+                                    <small>
+                                        Create a service account in Google Cloud Console and download the JSON key.
+                                        Share your Google Docs with the service account email.
+                                    </small>
+                                </div>
+                            </div>
+                        </setting>
+
+                        <setting id="gdoc_actions" string="Actions"
+                                 invisible="not gdoc_enabled">
+                            <div class="content-group">
+                                <div class="mt16">
+                                    <button name="action_gdoc_test_connection"
+                                            type="object"
+                                            string="Test Connection"
+                                            class="btn-primary"/>
+                                    <button name="action_open_gdoc_templates"
+                                            type="object"
+                                            string="Manage Templates"
+                                            class="btn-secondary ms-2"/>
+                                </div>
+                            </div>
+                        </setting>
+                    </block>
+                </app>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

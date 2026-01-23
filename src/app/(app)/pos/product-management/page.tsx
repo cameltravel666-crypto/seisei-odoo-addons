@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { FolderTree, Package, FlaskConical, ArrowRight } from 'lucide-react';
+import { FolderTree, Package, FlaskConical, ArrowRight, ChevronLeft } from 'lucide-react';
 
 export default function ProductManagementPage() {
   const t = useTranslations();
@@ -33,7 +33,10 @@ export default function ProductManagementPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="page-title">{t('pos.productManagement')}</h1>
+      <Link href="/pos" className="page-title flex items-center gap-1 hover:text-[var(--color-primary)] transition-colors">
+        <ChevronLeft className="w-5 h-5" />
+        {t('pos.productManagement')}
+      </Link>
 
       <div className="grid sm:grid-cols-2 gap-4">
         {menuItems.map((item) => (

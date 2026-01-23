@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Template Tree View -->
+    <record id="view_gdoc_template_tree" model="ir.ui.view">
+        <field name="name">seisei.gdoc.template.tree</field>
+        <field name="model">seisei.gdoc.template</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+                <field name="doc_id"/>
+                <field name="last_fetch_date"/>
+                <field name="import_run_count"/>
+                <field name="active" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Template Form View -->
+    <record id="view_gdoc_template_form" model="ir.ui.view">
+        <field name="name">seisei.gdoc.template.form</field>
+        <field name="model">seisei.gdoc.template</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_fetch_preview"
+                            string="Fetch &amp; Preview"
+                            type="object"
+                            class="btn-primary"/>
+                    <button name="action_open_import_wizard"
+                            string="Import Data"
+                            type="object"
+                            class="btn-secondary"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_import_runs"
+                                type="object"
+                                class="oe_stat_button"
+                                icon="fa-history">
+                            <field name="import_run_count" widget="statinfo" string="Runs"/>
+                        </button>
+                    </div>
+                    <widget name="web_ribbon" title="Archived" bg_color="text-bg-danger" invisible="active"/>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" placeholder="Template Name"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="doc_id" placeholder="e.g., 1ABC123xyz..."/>
+                            <field name="active" invisible="1"/>
+                        </group>
+                        <group>
+                            <field name="last_fetch_date"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Sections Found" name="sections">
+                            <field name="last_fetch_sections" readonly="1" widget="text"/>
+                        </page>
+                        <page string="Section Configuration" name="config">
+                            <field name="section_config" widget="ace" options="{'mode': 'json'}"/>
+                        </page>
+                        <page string="Notes" name="notes">
+                            <field name="notes" placeholder="Notes about this template..."/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Template Action -->
+    <record id="action_gdoc_template" model="ir.actions.act_window">
+        <field name="name">Google Doc Templates</field>
+        <field name="res_model">seisei.gdoc.template</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first Google Doc template
+            </p>
+            <p>
+                Configure templates to import data from Google Docs into Odoo.
+                Each template specifies a Google Doc ID and mapping configuration.
+            </p>
+        </field>
+    </record>
+
+</odoo>

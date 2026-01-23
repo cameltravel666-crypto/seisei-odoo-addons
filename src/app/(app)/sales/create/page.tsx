@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { ArrowLeft, Plus, Minus, Search, Check } from 'lucide-react';
+import { ArrowLeft, Plus, Minus, Check } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Loading } from '@/components/ui/loading';
 import type { ApiResponse } from '@/types';
@@ -282,7 +282,6 @@ export default function CreateSalesOrderPage() {
         </label>
         <div className="relative">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
               value={customerSearch}
@@ -296,7 +295,7 @@ export default function CreateSalesOrderPage() {
                 fetchCustomers(customerSearch);
               }}
               placeholder={t('sales.searchCustomer')}
-              className="input w-full pl-9 py-2 text-sm"
+              className="input w-full py-2 text-sm"
             />
             {selectedCustomer && (
               <Check className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-600" />
@@ -342,7 +341,6 @@ export default function CreateSalesOrderPage() {
         {/* Compact Add Product Row */}
         <div className="p-3 border-b border-gray-100">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
               value={productSearch}
@@ -355,7 +353,7 @@ export default function CreateSalesOrderPage() {
                 fetchProducts(productSearch);
               }}
               placeholder={t('sales.addProduct')}
-              className="input w-full pl-9 pr-16 py-2 text-sm"
+              className="input w-full pr-16 py-2 text-sm"
             />
             <button
               onClick={() => fetchProducts(productSearch)}
@@ -458,13 +456,21 @@ export default function CreateSalesOrderPage() {
             <span className="text-xs text-gray-500">{t('order.total')}</span>
             <span className="text-lg font-bold text-gray-900">{formatJPY(totalAmount)}</span>
           </div>
-          <button
-            onClick={handleSubmit}
-            disabled={!selectedCustomer || orderLines.length === 0 || isSubmitting}
-            className="btn btn-primary px-5 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSubmitting ? <Loading text="" /> : t('sales.createOrder')}
-          </button>
+          <div className="flex flex-col items-end gap-1">
+            {!selectedCustomer && (
+              <span className="text-xs text-amber-600">{t('sales.selectCustomerFirst') || '请先选择客户'}</span>
+            )}
+            {selectedCustomer && orderLines.length === 0 && (
+              <span className="text-xs text-amber-600">{t('sales.addProductsFirst') || '请先添加商品'}</span>
+            )}
+            <button
+              onClick={handleSubmit}
+              disabled={!selectedCustomer || orderLines.length === 0 || isSubmitting}
+              className="btn btn-primary px-5 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSubmitting ? <Loading text="" /> : t('sales.createOrder')}
+            </button>
+          </div>
         </div>
       </div>
 

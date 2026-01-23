@@ -229,6 +229,11 @@ function logToConsole(options: EmailOptions): EmailResult {
   console.log('[Email] Would send:');
   console.log('  To:', options.to);
   console.log('  Subject:', options.subject);
+  // Extract verification code if present
+  const codeMatch = options.html.match(/letter-spacing:\s*8px[^>]*>[\s\n]*([0-9]{6})/);
+  if (codeMatch) {
+    console.log('  ** VERIFICATION CODE:', codeMatch[1], '**');
+  }
   console.log('  Body:', options.html.substring(0, 200) + '...');
   return { success: true, messageId: 'console-' + Date.now() };
 }
@@ -600,6 +605,101 @@ export function verificationCodeEmail(params: {
 
       <p style="font-size: 14px; color: #6b7280;">${t.expiry}</p>
       <p style="font-size: 12px; color: #9ca3af; margin-top: 20px;">${t.warning}</p>
+    `),
+  };
+}
+
+/**
+ * Credentials email - sent after provisioning completes with login details
+ */
+export function credentialsEmail(params: {
+  tenantName: string;
+  contactName: string;
+  tenantCode: string;
+  email: string;
+  password: string;
+  loginUrl: string;
+  locale?: string;
+}): { subject: string; html: string } {
+  const locale = params.locale || 'ja';
+
+  const texts = {
+    ja: {
+      subject: '【重要】Seisei BizNexus ログイン情報',
+      title: 'ログイン情報のお知らせ',
+      greeting: `${params.contactName} 様`,
+      ready: 'アカウントのセットアップが完了しました。以下の情報でログインできます。',
+      info: 'ログイン情報',
+      tenantLabel: '企業コード',
+      emailLabel: 'メールアドレス',
+      passwordLabel: 'パスワード',
+      oauthNote: 'Googleアカウントでもログインできます',
+      warning: '⚠️ このパスワードは安全な場所に保管し、初回ログイン後に変更することをお勧めします。',
+      button: 'ログインする',
+    },
+    zh: {
+      subject: '【重要】Seisei BizNexus 登录信息',
+      title: '登录信息通知',
+      greeting: `${params.contactName} 您好`,
+      ready: '您的账户已设置完成。请使用以下信息登录。',
+      info: '登录信息',
+      tenantLabel: '企业代码',
+      emailLabel: '邮箱',
+      passwordLabel: '密码',
+      oauthNote: '也可以使用 Google 账号登录',
+      warning: '⚠️ 请妥善保管此密码，建议首次登录后修改密码。',
+      button: '立即登录',
+    },
+    en: {
+      subject: '【Important】Seisei BizNexus Login Credentials',
+      title: 'Your Login Credentials',
+      greeting: `Dear ${params.contactName}`,
+      ready: 'Your account setup is complete. You can now login with the following credentials.',
+      info: 'Login Information',
+      tenantLabel: 'Enterprise Code',
+      emailLabel: 'Email',
+      passwordLabel: 'Password',
+      oauthNote: 'You can also login with your Google account',
+      warning: '⚠️ Please keep this password safe and change it after your first login.',
+      button: 'Login Now',
+    },
+  };
+
+  const t = texts[locale as keyof typeof texts] || texts.ja;
+
+  return {
+    subject: t.subject,
+    html: baseTemplate(`
+      <h2>${t.title}</h2>
+      <p>${t.greeting}</p>
+      <p>${t.ready}</p>
+
+      <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h3 style="margin-top: 0; font-size: 16px;">${t.info}</h3>
+        <table style="width: 100%;">
+          <tr>
+            <td style="padding: 8px 0; color: #6b7280;">${t.tenantLabel}:</td>
+            <td style="padding: 8px 0;"><code style="background: #e5e7eb; padding: 2px 8px; border-radius: 4px; font-family: monospace;">${params.tenantCode}</code></td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #6b7280;">${t.emailLabel}:</td>
+            <td style="padding: 8px 0;"><strong>${params.email}</strong></td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #6b7280;">${t.passwordLabel}:</td>
+            <td style="padding: 8px 0;"><code style="background: #fef3c7; padding: 4px 12px; border-radius: 4px; font-family: monospace; font-size: 16px; letter-spacing: 1px;">${params.password}</code></td>
+          </tr>
+        </table>
+        <p style="font-size: 12px; color: #6b7280; margin-bottom: 0;">${t.oauthNote}</p>
+      </div>
+
+      <div class="warning">
+        ${t.warning}
+      </div>
+
+      <a href="${params.loginUrl}" class="button">
+        ${t.button}
+      </a>
     `),
   };
 }

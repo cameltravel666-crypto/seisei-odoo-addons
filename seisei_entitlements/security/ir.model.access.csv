@@ -1,0 +1,6 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_seisei_entitlement_user,seisei.entitlement.user,model_seisei_entitlement,base.group_user,1,0,0,0
+access_seisei_entitlement_admin,seisei.entitlement.admin,model_seisei_entitlement,base.group_system,1,1,1,1
+access_seisei_api_key_admin,seisei.api.key.admin,model_seisei_api_key,base.group_system,1,1,1,1
+access_seisei_entitlement_log_user,seisei.entitlement.log.user,model_seisei_entitlement_log,base.group_user,1,0,0,0
+access_seisei_entitlement_log_admin,seisei.entitlement.log.admin,model_seisei_entitlement_log,base.group_system,1,1,1,1

@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle, Clock, CreditCard, X } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
+import { useIsIOSAppStoreBuild } from '@/lib/appChannel';
 
 interface SubscriptionHealth {
   status: 'healthy' | 'warning' | 'critical' | 'none';
@@ -18,6 +19,7 @@ interface SubscriptionHealth {
 
 export function SubscriptionBanner() {
   const [dismissed, setDismissed] = useState(false);
+  const isIOSAppStore = useIsIOSAppStoreBuild();
 
   const { data: health } = useQuery<SubscriptionHealth>({
     queryKey: ['subscription-health'],
@@ -31,8 +33,9 @@ export function SubscriptionBanner() {
     staleTime: 60 * 1000, // Consider data stale after 1 minute
   });
 
-  // Don't show banner if dismissed, healthy, or no subscription
-  if (dismissed || !health || health.status === 'healthy' || health.status === 'none') {
+  // Don't show banner if dismissed, healthy, no subscription, or in iOS App Store build
+  // App Store compliance (3.1.1, 3.1.3): Hide subscription CTAs in iOS App Store builds
+  if (dismissed || !health || health.status === 'healthy' || health.status === 'none' || isIOSAppStore) {
     return null;
   }
 

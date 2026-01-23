@@ -49,13 +49,14 @@ interface ModeState {
   shipping: { search: string; tab: PickingTab; page: number };
 }
 
+// Business professional color scheme - no red/green
 const stateColors: Record<string, string> = {
-  draft: 'bg-gray-100 text-gray-800',
-  waiting: 'bg-yellow-100 text-yellow-800',
-  confirmed: 'bg-blue-100 text-blue-800',
-  assigned: 'bg-indigo-100 text-indigo-800',
-  done: 'bg-green-100 text-green-800',
-  cancel: 'bg-red-100 text-red-800',
+  draft: 'bg-slate-100 text-slate-700',
+  waiting: 'bg-amber-50 text-amber-700',
+  confirmed: 'bg-blue-50 text-blue-700',
+  assigned: 'bg-indigo-50 text-indigo-700',
+  done: 'bg-slate-100 text-slate-600',
+  cancel: 'bg-slate-100 text-slate-500',
 };
 
 // App-configurable low stock threshold (not written to ERP)
@@ -227,9 +228,9 @@ export default function InventoryPage() {
       </div>
       <div className="text-right">
         <p className={`font-bold text-lg tabular-nums ${
-          item.availableQuantity <= 0 ? 'text-red-500' :
-          item.availableQuantity <= LOW_STOCK_THRESHOLD ? 'text-orange-500' :
-          'text-green-600'
+          item.availableQuantity <= 0 ? 'text-slate-400' :
+          item.availableQuantity <= LOW_STOCK_THRESHOLD ? 'text-amber-600' :
+          'text-slate-800'
         }`}>
           {item.availableQuantity}
         </p>
@@ -247,15 +248,15 @@ export default function InventoryPage() {
       style={{ minHeight: 'var(--height-list-item-normal)' }}
     >
       <div className={`p-2 rounded-lg ${
-        item.state === 'done' ? 'bg-green-50' :
+        item.state === 'done' ? 'bg-slate-100' :
         item.state === 'assigned' ? 'bg-indigo-50' :
-        'bg-yellow-50'
+        'bg-amber-50'
       }`}>
         {item.state === 'done' ? (
-          <CheckCircle2 className="w-5 h-5 text-green-600" />
+          <CheckCircle2 className="w-5 h-5 text-slate-600" />
         ) : (
           <Truck className={`w-5 h-5 ${
-            item.state === 'assigned' ? 'text-indigo-600' : 'text-yellow-600'
+            item.state === 'assigned' ? 'text-indigo-600' : 'text-amber-600'
           }`} />
         )}
       </div>

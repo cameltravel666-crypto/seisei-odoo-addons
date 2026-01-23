@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FlaskConical, Plus, Edit2, Trash2, Search, ChevronDown, ChevronUp, Package, Loader2 } from 'lucide-react';
+import { FlaskConical, Plus, Edit2, Trash2, Search, ChevronDown, ChevronUp, ChevronLeft, Package, Loader2 } from 'lucide-react';
 import { Loading } from '@/components/ui/loading';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Pagination } from '@/components/ui/pagination';
@@ -262,7 +263,10 @@ export default function BomPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="page-title">{t('products.bom')}</h1>
+        <Link href="/pos" className="page-title flex items-center gap-1 hover:text-[var(--color-primary)] transition-colors">
+          <ChevronLeft className="w-5 h-5" />
+          {t('products.bom')}
+        </Link>
         <button onClick={openCreateModal} className="btn btn-primary flex items-center gap-2">
           <Plus className="w-4 h-4" />
           {t('products.addBom')}
@@ -386,7 +390,11 @@ export default function BomPage() {
         title={editingBom ? t('products.editBom') : t('products.addBom')}
         footer={
           <ModalFooter
-            error={!isFormValid && formData.productTemplateId !== null ? t('common.error') : undefined}
+            error={
+              !isFormValid && formData.productTemplateId !== null
+                ? (t('products.bomRequiresAtLeastOneComponent') || '请至少添加一个组件')
+                : undefined
+            }
             left={
               <button
                 type="button"

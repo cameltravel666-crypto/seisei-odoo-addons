@@ -1,0 +1,294 @@
+"""
+OCR Processing Module - Central OCR Service Only
+All OCR processing is handled by the central OCR service.
+API keys and technical details are not exposed to Odoo instances.
+"""
+import base64
+import json
+import logging
+import os
+import re
+import requests
+from typing import Dict, Any, List
+
+_logger = logging.getLogger(__name__)
+
+# Central OCR Service configuration
+# All OCR processing is handled by the central service - no direct API calls
+OCR_SERVICE_URL = os.getenv('OCR_SERVICE_URL', 'http://172.17.0.1:8180/api/v1')
+OCR_SERVICE_KEY = os.getenv('OCR_SERVICE_KEY', '')
+
+# Pricing configuration
+PRICING = {
+    'model': 'gemini-2.0-flash-exp',
+    'free_quota': 50,
+    'price_per_image': 20,
+}
+
+# Template fields for invoice OCR extraction
+INVOICE_TEMPLATE_FIELDS = [
+    'vendor_name/仕入先名',
+    'vendor_address/住所',
+    'tax_id/登録番号',
+    'date/日付',
+    'invoice_number/請求書番号',
+    'subtotal/小計',
+    'tax/消費税',
+    'total/合計金額',
+    'is_tax_inclusive/税込み',
+]
+
+# Template fields for expense/receipt OCR extraction
+EXPENSE_TEMPLATE_FIELDS = [
+    'store_name/店舗名',
+    'vendor_name/仕入先名',
+    'date/日付',
+    'receipt_number/レシート番号',
+    'description/摘要',
+    'category/カテゴリ',
+    'subtotal/小計',
+    'tax/消費税',
+    'total_amount/合計金額',
+]
+
+# OCR Prompt for invoice/purchase orders
+# Important: Default tax_rate to 8% when uncertain (most items in Japan supermarkets are food = 8%)
+INVOICE_OCR_PROMPT = '''あなたは請求書・納品書・レシートのOCR専門家です。
+この画像から以下の情報を抽出してJSON形式で返してください：
+
+{
+  "vendor_name": "仕入先名/店舗名",
+  "vendor_address": "住所（あれば）",
+  "tax_id": "登録番号/インボイス番号（T+13桁、あれば）",
+  "date": "YYYY-MM-DD形式の日付",
+  "invoice_number": "請求書番号/レシート番号",
+  "is_tax_inclusive": true,
+  "line_items": [
+    {
+      "product_name": "商品名（日本語のまま）",
+      "quantity": 数量（数値）,
+      "unit": "単位",
+      "unit_price": 単価（数値）,
+      "amount": 金額（数値）,
+      "tax_rate": 税率（8 または 10）
+    }
+  ],
+  "subtotal": 税抜小計,
+  "tax_8_amount": 8%対象の税額,
+  "tax_10_amount": 10%対象の税額,
+  "tax": 消費税合計,
+  "total": 合計金額（税込総額）
+}
+
+重要な税率判定ルール：
+- 「外8」「軽8」「*」「※」マークがある商品 → tax_rate: 8
+- 「外10」「標10」マークがある商品 → tax_rate: 10
+- 食品・飲料（酒類を除く）→ tax_rate: 8
+- 日用品・雑貨・酒類 → tax_rate: 10
+- 判別できない場合は tax_rate: 8 をデフォルトとする（日本のスーパーは食品が多いため）
+
+税額の検証：
+- tax_8_amount と tax_10_amount を正確に抽出
+- tax = tax_8_amount + tax_10_amount であること
+- スーパーのレシートは基本的に is_tax_inclusive: true（税込表示）
+
+JSONのみを返す（説明文不要）'''
+
+# OCR Prompt for expense receipts
+EXPENSE_OCR_PROMPT = '''あなたはレシート・領収書のOCR専門家です。
+この画像から以下の情報を抽出してJSON形式で返してください：
+
+{
+  "store_name": "店舗名/仕入先名",
+  "vendor_name": "会社名（あれば）",
+  "date": "YYYY-MM-DD形式の日付",
+  "receipt_number": "レシート番号/領収書番号（あれば）",
+  "description": "購入内容の要約（例：コーヒー、文房具、交通費など）",
+  "category": "経費カテゴリ（交通費、飲食費、消耗品費など）",
+  "subtotal": 税抜金額,
+  "tax": 消費税額,
+  "total_amount": 合計金額（税込総額/領収金額）
+}
+
+JSONのみを返す（説明文不要）'''
+
+
+def pdf_to_images(pdf_data: bytes, dpi: int = 150) -> List[bytes]:
+    """Convert PDF to images using PyMuPDF"""
+    try:
+        import fitz  # PyMuPDF
+    except ImportError:
+        _logger.error('[OCR] PyMuPDF not installed')
+        raise ImportError('PyMuPDF required. Install: pip install PyMuPDF')
+
+    images = []
+
+    try:
+        pdf_doc = fitz.open(stream=pdf_data, filetype='pdf')
+
+        for page_num in range(len(pdf_doc)):
+            page = pdf_doc[page_num]
+            mat = fitz.Matrix(dpi / 72, dpi / 72)
+            pix = page.get_pixmap(matrix=mat)
+            img_data = pix.tobytes('jpeg')
+            images.append(img_data)
+            _logger.info(f'[OCR] PDF page {page_num + 1}/{len(pdf_doc)} converted')
+
+        pdf_doc.close()
+
+    except Exception as e:
+        _logger.exception(f'[OCR] PDF conversion error: {e}')
+        raise
+
+    return images
+
+
+def process_document(file_data: bytes, mimetype: str, tenant_id: str = 'default') -> Dict[str, Any]:
+    """Process invoice document (image or PDF)"""
+    return _process_with_template(file_data, mimetype, tenant_id, 'invoice')
+
+
+def process_expense_document(file_data: bytes, mimetype: str, tenant_id: str = 'default') -> Dict[str, Any]:
+    """Process expense/receipt document (image or PDF)"""
+    return _process_with_template(file_data, mimetype, tenant_id, 'expense')
+
+
+def _process_with_template(file_data: bytes, mimetype: str, tenant_id: str, doc_type: str) -> Dict[str, Any]:
+    """Process document with specific document type
+
+    All OCR processing is handled by the central OCR service.
+    No direct API calls are made from this module.
+    """
+    if not OCR_SERVICE_URL:
+        _logger.error('[OCR] OCR_SERVICE_URL not configured')
+        return {'success': False, 'error': 'OCRサービスが利用できません。システム管理者にお問い合わせください。'}
+
+    template_fields = EXPENSE_TEMPLATE_FIELDS if doc_type == 'expense' else INVOICE_TEMPLATE_FIELDS
+    result = _call_ocr_service(file_data, mimetype, tenant_id, template_fields)
+
+    if result.get('success'):
+        return result
+
+    # Return user-friendly error without exposing technical details
+    error_code = result.get('error', '')
+    _logger.error(f'[OCR] Service error: {error_code}')
+
+    # Map technical errors to user-friendly messages
+    if 'timeout' in error_code.lower():
+        return {'success': False, 'error': 'OCR処理がタイムアウトしました。しばらくしてから再度お試しください。'}
+    elif '503' in error_code or '502' in error_code:
+        return {'success': False, 'error': 'OCRサービスが一時的に利用できません。しばらくしてから再度お試しください。'}
+    elif '401' in error_code or '403' in error_code:
+        return {'success': False, 'error': 'OCRサービスの認証に失敗しました。システム管理者にお問い合わせください。'}
+    else:
+        return {'success': False, 'error': 'OCR処理に失敗しました。しばらくしてから再度お試しください。'}
+
+
+def _call_ocr_service(file_data: bytes, mimetype: str, tenant_id: str,
+                      template_fields: List[str]) -> Dict[str, Any]:
+    """Call central OCR service"""
+    try:
+        b64_data = base64.standard_b64encode(file_data).decode('utf-8')
+
+        headers = {'Content-Type': 'application/json'}
+        if OCR_SERVICE_KEY:
+            headers['X-Service-Key'] = OCR_SERVICE_KEY
+
+        payload = {
+            'image_data': b64_data,
+            'mime_type': mimetype,
+            'template_fields': template_fields,
+            'tenant_id': tenant_id,
+        }
+
+        response = requests.post(
+            f'{OCR_SERVICE_URL}/ocr/process',
+            json=payload,
+            headers=headers,
+            timeout=120
+        )
+
+        if response.status_code != 200:
+            return {'success': False, 'error': f'OCR service error: {response.status_code}'}
+
+        result = response.json()
+
+        if result.get('success'):
+            extracted = result.get('extracted', {})
+            normalized = _normalize_extracted(extracted)
+
+            return {
+                'success': True,
+                'extracted': normalized,
+                'line_items': extracted.get('line_items', []),
+                'raw_response': result.get('raw_response', ''),
+                'pages': 1,
+            }
+        else:
+            return {'success': False, 'error': result.get('error_code', 'Unknown error')}
+
+    except requests.exceptions.Timeout:
+        return {'success': False, 'error': 'OCR service timeout'}
+    except Exception as e:
+        _logger.exception(f'[OCR] Service call error: {e}')
+        return {'success': False, 'error': str(e)}
+
+
+def _normalize_extracted(extracted: dict) -> dict:
+    """Normalize extracted data from OCR"""
+    key_mapping = {
+        'vendor_name': ['vendor_name_仕入先名', 'vendor_name', '仕入先名', 'vendor', 'store_name_店舗名', 'store_name', '店舗名'],
+        'vendor_address': ['vendor_address_住所', 'vendor_address', '住所', 'address'],
+        'tax_id': ['tax_id_登録番号', 'tax_id', '登録番号', 'registration_number'],
+        'date': ['date_日付', 'date', '日付'],
+        'invoice_number': ['invoice_number_請求書番号', 'invoice_number', '請求書番号', 'receipt_number_レシート番号', 'receipt_number', 'レシート番号'],
+        'subtotal': ['subtotal_小計', 'subtotal', '小計'],
+        'tax': ['tax_消費税', 'tax', '消費税', '内消費税'],
+        'total': ['total_合計金額', 'total', '合計金額', '領収金額', 'total_amount_合計金額', 'total_amount'],
+        'total_amount': ['total_amount_合計金額', 'total_amount', 'total_合計金額', 'total', '合計金額'],
+        'is_tax_inclusive': ['is_tax_inclusive_税込み', 'is_tax_inclusive', '税込み'],
+        'description': ['description_摘要', 'description', '摘要', 'memo'],
+        'category': ['category_カテゴリ', 'category', 'カテゴリ'],
+        'store_name': ['store_name_店舗名', 'store_name', '店舗名'],
+    }
+
+    normalized = {}
+    for target_key, source_keys in key_mapping.items():
+        for source_key in source_keys:
+            if source_key in extracted and extracted[source_key]:
+                normalized[target_key] = extracted[source_key]
+                break
+
+    # Copy remaining fields
+    for key, value in extracted.items():
+        if key not in normalized and not any(key in sources for sources in key_mapping.values()):
+            normalized[key] = value
+
+    return normalized
+
+
+def _extract_json(text: str) -> dict:
+    """Extract JSON from text response"""
+    # Try code block first
+    json_match = re.search(r'```(?:json)?\s*([\s\S]*?)```', text)
+    if json_match:
+        try:
+            return json.loads(json_match.group(1))
+        except json.JSONDecodeError:
+            pass
+
+    # Try raw JSON
+    try:
+        start = text.find('{')
+        end = text.rfind('}') + 1
+        if start != -1 and end > start:
+            return json.loads(text[start:end])
+    except json.JSONDecodeError:
+        pass
+
+    return {'raw_text': text}
+
+
+def get_pricing():
+    """Get pricing information"""
+    return PRICING.copy()

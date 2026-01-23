@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Batch OCR Server Action for Vendor Bills -->
+    <record id="action_batch_ocr_vendor_bills" model="ir.actions.server">
+        <field name="name">Batch OCR</field>
+        <field name="model_id" ref="account.model_account_move"/>
+        <field name="binding_model_id" ref="account.model_account_move"/>
+        <field name="binding_view_types">list</field>
+        <field name="state">code</field>
+        <field name="code">
+if records:
+    action = records.action_batch_send_to_ocr()
+        </field>
+    </record>
+
+    <!-- Batch Reset OCR Server Action -->
+    <record id="action_batch_reset_ocr" model="ir.actions.server">
+        <field name="name">Reset OCR Status</field>
+        <field name="model_id" ref="account.model_account_move"/>
+        <field name="binding_model_id" ref="account.model_account_move"/>
+        <field name="binding_view_types">list</field>
+        <field name="state">code</field>
+        <field name="code">
+if records:
+    records.action_reset_ocr()
+        </field>
+    </record>
+</odoo>

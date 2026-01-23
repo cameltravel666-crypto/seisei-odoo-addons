@@ -1,0 +1,1353 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# * bi_hr_payroll
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 18.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-01-17 00:00+0000\n"
+"PO-Revision-Date: 2026-01-17 00:00+0000\n"
+"Last-Translator: \n"
+"Language-Team: Chinese (Simplified)\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#. module: bi_hr_payroll
+#: model:ir.ui.menu,name:bi_hr_payroll.menu_japan_payroll_config
+msgid "Japan"
+msgstr "日本"
+
+#. module: bi_hr_payroll
+#: model:ir.ui.menu,name:bi_hr_payroll.menu_insurance_prefecture
+#: model:ir.actions.act_window,name:bi_hr_payroll.hr_insurance_prefecture_action
+msgid "Insurance Prefectures"
+msgstr "保险分支"
+
+#. module: bi_hr_payroll
+#: model:ir.ui.menu,name:bi_hr_payroll.menu_insurance_rate
+#: model:ir.actions.act_window,name:bi_hr_payroll.hr_insurance_rate_action
+msgid "Insurance Rates"
+msgstr "保险费率"
+
+#. module: bi_hr_payroll
+#: model:ir.ui.menu,name:bi_hr_payroll.menu_insurance_grade
+#: model:ir.actions.act_window,name:bi_hr_payroll.hr_insurance_grade_action
+msgid "Insurance Grades"
+msgstr "标准报酬等级"
+
+#. module: bi_hr_payroll
+#: model:ir.ui.menu,name:bi_hr_payroll.menu_withholding_tax
+#: model:ir.actions.act_window,name:bi_hr_payroll.hr_withholding_tax_action
+msgid "Withholding Tax"
+msgstr "预扣税额"
+
+#. module: bi_hr_payroll
+#: model:ir.model,name:bi_hr_payroll.model_hr_insurance_prefecture
+msgid "Insurance Prefecture"
+msgstr "保险分支"
+
+#. module: bi_hr_payroll
+#: model:ir.model,name:bi_hr_payroll.model_hr_insurance_rate
+msgid "Insurance Rate"
+msgstr "保险费率"
+
+#. module: bi_hr_payroll
+#: model:ir.model,name:bi_hr_payroll.model_hr_insurance_grade
+msgid "Standard Monthly Remuneration Grade"
+msgstr "标准月薪等级"
+
+#. module: bi_hr_payroll
+#: model:ir.model,name:bi_hr_payroll.model_hr_withholding_tax
+msgid "Withholding Tax Table"
+msgstr "预扣税额表"
+
+#. module: bi_hr_payroll
+#: model:ir.model,name:bi_hr_payroll.model_hr_employee_dependant
+msgid "Employee Dependant"
+msgstr "被抚养人"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_insurance_prefecture__name
+msgid "Prefecture Name"
+msgstr "分支名称"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_insurance_prefecture__code
+msgid "Code"
+msgstr "代码"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_insurance_prefecture__active
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_insurance_rate__active
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_insurance_grade__active
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_withholding_tax__active
+msgid "Active"
+msgstr "有效"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_insurance_rate__prefecture_id
+msgid "Prefecture"
+msgstr "分支"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_insurance_rate__fiscal_year
+msgid "Fiscal Year"
+msgstr "年度"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_insurance_rate__effective_date
+msgid "Effective Date"
+msgstr "生效日期"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_insurance_rate__expiry_date
+msgid "Expiry Date"
+msgstr "失效日期"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_insurance_rate__health_rate
+msgid "Health Insurance Rate"
+msgstr "健康保险率"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_insurance_rate__health_rate_with_care
+msgid "Health + Care Rate"
+msgstr "含护理保险率"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_insurance_rate__care_rate_diff
+msgid "Care Insurance Diff"
+msgstr "护理保险差额"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_insurance_rate__pension_rate
+msgid "Pension Rate"
+msgstr "养老金率"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_insurance_rate__employment_rate
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_res_company__employment_insurance_rate
+msgid "Employment Insurance Rate"
+msgstr "雇佣保险率"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_insurance_rate__note
+msgid "Note"
+msgstr "备注"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_insurance_grade__grade
+msgid "Grade"
+msgstr "等级"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_insurance_grade__grade_display
+msgid "Grade Display"
+msgstr "等级显示"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_insurance_grade__standard_monthly
+msgid "Standard Monthly"
+msgstr "标准月薪"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_insurance_grade__wage_min
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_withholding_tax__wage_min
+msgid "Wage Min"
+msgstr "工资下限"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_insurance_grade__wage_max
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_withholding_tax__wage_max
+msgid "Wage Max"
+msgstr "工资上限"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_insurance_grade__has_pension
+msgid "Has Pension"
+msgstr "有养老金"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_insurance_grade__pension_grade
+msgid "Pension Grade"
+msgstr "养老金等级"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_withholding_tax__tax_dep_0
+msgid "Tax (0 dependents)"
+msgstr "税额(0人)"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_withholding_tax__tax_dep_1
+msgid "Tax (1 dependent)"
+msgstr "税额(1人)"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_withholding_tax__tax_dep_2
+msgid "Tax (2 dependents)"
+msgstr "税额(2人)"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_withholding_tax__tax_dep_3
+msgid "Tax (3 dependents)"
+msgstr "税额(3人)"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_withholding_tax__tax_dep_4
+msgid "Tax (4 dependents)"
+msgstr "税额(4人)"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_withholding_tax__tax_dep_5
+msgid "Tax (5 dependents)"
+msgstr "税额(5人)"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_withholding_tax__tax_dep_6
+msgid "Tax (6 dependents)"
+msgstr "税额(6人)"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_withholding_tax__tax_dep_7
+msgid "Tax (7 dependents)"
+msgstr "税额(7人)"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_withholding_tax__tax_column_b
+msgid "Tax Column B"
+msgstr "乙栏"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_employee__my_number
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_employee_dependant__my_number
+msgid "My Number"
+msgstr "个人编号"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_employee__nationality
+msgid "Nationality"
+msgstr "国籍"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_employee__insurance_prefecture_id
+msgid "Insurance Prefecture"
+msgstr "健康保险分支"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_employee__effective_insurance_prefecture_id
+msgid "Effective Insurance Prefecture"
+msgstr "有效保险分支"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_employee__resident_tax_amount
+msgid "Resident Tax"
+msgstr "住民税"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_employee__dependants_count
+msgid "Dependants Count"
+msgstr "被抚养人数"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_employee__tax_column
+msgid "Tax Column"
+msgstr "税额栏"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields.selection,name:bi_hr_payroll.selection__hr_employee__tax_column__a
+msgid "Column A (Primary job)"
+msgstr "甲栏（主要工作）"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields.selection,name:bi_hr_payroll.selection__hr_employee__tax_column__b
+msgid "Column B (Secondary job)"
+msgstr "乙栏（次要工作）"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_employee__health_insurance_grade_id
+msgid "Health Insurance Grade"
+msgstr "健康保险等级"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_employee__age
+msgid "Age"
+msgstr "年龄"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_employee__is_care_insurance_applicable
+msgid "Care Insurance Applicable"
+msgstr "护理保险适用"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_employee_dependant__name
+msgid "Name"
+msgstr "姓名"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_employee_dependant__relationship
+msgid "Relationship"
+msgstr "关系"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields.selection,name:bi_hr_payroll.selection__hr_employee_dependant__relationship__spouse
+msgid "Spouse"
+msgstr "配偶"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields.selection,name:bi_hr_payroll.selection__hr_employee_dependant__relationship__child
+msgid "Child"
+msgstr "子女"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields.selection,name:bi_hr_payroll.selection__hr_employee_dependant__relationship__parent
+msgid "Parent"
+msgstr "父母"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields.selection,name:bi_hr_payroll.selection__hr_employee_dependant__relationship__grandparent
+msgid "Grandparent"
+msgstr "祖父母"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields.selection,name:bi_hr_payroll.selection__hr_employee_dependant__relationship__sibling
+msgid "Sibling"
+msgstr "兄弟姐妹"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields.selection,name:bi_hr_payroll.selection__hr_employee_dependant__relationship__other
+msgid "Other"
+msgstr "其他"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_employee_dependant__birth_date
+msgid "Birth Date"
+msgstr "出生日期"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_employee_dependant__gender
+msgid "Gender"
+msgstr "性别"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields.selection,name:bi_hr_payroll.selection__hr_employee_dependant__gender__male
+msgid "Male"
+msgstr "男"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields.selection,name:bi_hr_payroll.selection__hr_employee_dependant__gender__female
+msgid "Female"
+msgstr "女"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_employee_dependant__address
+msgid "Address"
+msgstr "地址"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_employee_dependant__annual_income
+msgid "Annual Income"
+msgstr "年收入"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_employee_dependant__is_eligible
+msgid "Eligible"
+msgstr "符合条件"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_res_company__default_insurance_prefecture_id
+msgid "Default Insurance Prefecture"
+msgstr "默认保险分支"
+
+#. module: bi_hr_payroll
+#: view string
+msgid "Japan Payroll"
+msgstr "日本工资"
+
+#. module: bi_hr_payroll
+#: view string
+msgid "Personal Information"
+msgstr "个人信息"
+
+#. module: bi_hr_payroll
+#: view string
+msgid "Insurance Settings"
+msgstr "保险设置"
+
+#. module: bi_hr_payroll
+#: view string
+msgid "Tax Settings"
+msgstr "税务设置"
+
+#. module: bi_hr_payroll
+#: view string
+msgid "Basic Info"
+msgstr "基本信息"
+
+#. module: bi_hr_payroll
+#: view string
+msgid "Rates"
+msgstr "费率"
+
+#. module: bi_hr_payroll
+#: view string
+msgid "Notes"
+msgstr "备注"
+
+#. module: bi_hr_payroll
+#: view string
+msgid "Wage Range"
+msgstr "工资范围"
+
+#. module: bi_hr_payroll
+#: view string
+msgid "Tax Column A (Primary Job)"
+msgstr "甲栏（主要工作）"
+
+#. module: bi_hr_payroll
+#: view string
+msgid "Tax Column B (Secondary Job)"
+msgstr "乙栏（次要工作）"
+
+#. module: bi_hr_payroll
+#: view string
+msgid "0 Dependents"
+msgstr "0人"
+
+#. module: bi_hr_payroll
+#: view string
+msgid "1 Dependent"
+msgstr "1人"
+
+#. module: bi_hr_payroll
+#: view string
+msgid "2 Dependents"
+msgstr "2人"
+
+#. module: bi_hr_payroll
+#: view string
+msgid "3 Dependents"
+msgstr "3人"
+
+#. module: bi_hr_payroll
+#: view string
+msgid "4 Dependents"
+msgstr "4人"
+
+#. module: bi_hr_payroll
+#: view string
+msgid "5 Dependents"
+msgstr "5人"
+
+#. module: bi_hr_payroll
+#: view string
+msgid "6 Dependents"
+msgstr "6人"
+
+#. module: bi_hr_payroll
+#: view string
+msgid "7 Dependents"
+msgstr "7人"
+
+#. module: bi_hr_payroll
+#: view string
+msgid "Column B"
+msgstr "乙栏"
+
+#. module: bi_hr_payroll
+#: view string
+msgid "0 Dep"
+msgstr "0人"
+
+#. module: bi_hr_payroll
+#: view string
+msgid "1 Dep"
+msgstr "1人"
+
+#. module: bi_hr_payroll
+#: view string
+msgid "2 Dep"
+msgstr "2人"
+
+#. module: bi_hr_payroll
+#: view string
+msgid "3 Dep"
+msgstr "3人"
+
+#. module: bi_hr_payroll
+#: view string
+msgid "4 Dep"
+msgstr "4人"
+
+#. module: bi_hr_payroll
+#: view string
+msgid "5 Dep"
+msgstr "5人"
+
+#. module: bi_hr_payroll
+#: view string
+msgid "6 Dep"
+msgstr "6人"
+
+#. module: bi_hr_payroll
+#: view string
+msgid "7 Dep"
+msgstr "7人"
+
+#. module: bi_hr_payroll
+#: Core Payroll - Menus
+msgid "Payroll"
+msgstr "工资"
+
+#. module: bi_hr_payroll
+msgid "Payslips"
+msgstr "工资单"
+
+#. module: bi_hr_payroll
+msgid "All Payslips"
+msgstr "全部工资单"
+
+#. module: bi_hr_payroll
+msgid "Payslips To Pay"
+msgstr "待支付工资单"
+
+#. module: bi_hr_payroll
+msgid "Batches"
+msgstr "批次"
+
+#. module: bi_hr_payroll
+msgid "Configuration"
+msgstr "配置"
+
+#. module: bi_hr_payroll
+msgid "Structures"
+msgstr "工资结构"
+
+#. module: bi_hr_payroll
+msgid "Salary Rules"
+msgstr "工资规则"
+
+#. module: bi_hr_payroll
+msgid "Rule Categories"
+msgstr "规则类别"
+
+#. module: bi_hr_payroll
+msgid "Salary Rule Categories"
+msgstr "工资规则类别"
+
+#. module: bi_hr_payroll
+msgid "Other Input Types"
+msgstr "其他输入类型"
+
+#. module: bi_hr_payroll
+msgid "Work Entry Types"
+msgstr "工作条目类型"
+
+#. module: bi_hr_payroll
+msgid "Contribution Registers"
+msgstr "缴款登记"
+
+#. module: bi_hr_payroll
+#: Core Payroll - Models
+msgid "Payslip"
+msgstr "工资单"
+
+#. module: bi_hr_payroll
+msgid "Pay Slip"
+msgstr "工资单"
+
+#. module: bi_hr_payroll
+msgid "Pay Slips"
+msgstr "工资单"
+
+#. module: bi_hr_payroll
+msgid "Payslip Line"
+msgstr "工资单明细"
+
+#. module: bi_hr_payroll
+msgid "Payslip Lines"
+msgstr "工资单明细"
+
+#. module: bi_hr_payroll
+msgid "Payslip Worked Days"
+msgstr "工资单工作日"
+
+#. module: bi_hr_payroll
+msgid "Payslip Input"
+msgstr "工资单输入"
+
+#. module: bi_hr_payroll
+msgid "Payslip Input Type"
+msgstr "工资单输入类型"
+
+#. module: bi_hr_payroll
+msgid "Payslip Run"
+msgstr "批量工资单"
+
+#. module: bi_hr_payroll
+msgid "Payslip Batch"
+msgstr "工资单批次"
+
+#. module: bi_hr_payroll
+msgid "Payslip Batches"
+msgstr "工资单批次"
+
+#. module: bi_hr_payroll
+msgid "Salary Structure"
+msgstr "工资结构"
+
+#. module: bi_hr_payroll
+msgid "Salary Rule"
+msgstr "工资规则"
+
+#. module: bi_hr_payroll
+msgid "Salary Rule Category"
+msgstr "工资规则类别"
+
+#. module: bi_hr_payroll
+msgid "Contribution Register"
+msgstr "缴款登记"
+
+#. module: bi_hr_payroll
+#: Core Payroll - Buttons
+msgid "Confirm"
+msgstr "确认"
+
+#. module: bi_hr_payroll
+msgid "Compute Sheet"
+msgstr "计算工资单"
+
+#. module: bi_hr_payroll
+msgid "Compute"
+msgstr "计算"
+
+#. module: bi_hr_payroll
+msgid "Cancel"
+msgstr "取消"
+
+#. module: bi_hr_payroll
+msgid "Refund"
+msgstr "退款"
+
+#. module: bi_hr_payroll
+msgid "Set to Draft"
+msgstr "设为草稿"
+
+#. module: bi_hr_payroll
+msgid "Mark as Paid"
+msgstr "标记为已支付"
+
+#. module: bi_hr_payroll
+msgid "Print"
+msgstr "打印"
+
+#. module: bi_hr_payroll
+msgid "Generate Payslips"
+msgstr "生成工资单"
+
+#. module: bi_hr_payroll
+msgid "Create Draft Entry"
+msgstr "创建草稿分录"
+
+#. module: bi_hr_payroll
+msgid "Close"
+msgstr "关闭"
+
+#. module: bi_hr_payroll
+#: Core Payroll - Status
+msgid "Draft"
+msgstr "草稿"
+
+#. module: bi_hr_payroll
+msgid "Waiting"
+msgstr "等待中"
+
+#. module: bi_hr_payroll
+msgid "Verify"
+msgstr "验证"
+
+#. module: bi_hr_payroll
+msgid "Done"
+msgstr "完成"
+
+#. module: bi_hr_payroll
+msgid "Cancelled"
+msgstr "已取消"
+
+#. module: bi_hr_payroll
+msgid "Paid"
+msgstr "已支付"
+
+#. module: bi_hr_payroll
+msgid "Status"
+msgstr "状态"
+
+#. module: bi_hr_payroll
+msgid "State"
+msgstr "状态"
+
+#. module: bi_hr_payroll
+#: Core Payroll - Payslip Form Sections
+msgid "Worked Days & Inputs"
+msgstr "工作天数与输入"
+
+#. module: bi_hr_payroll
+msgid "Worked Days and Inputs"
+msgstr "工作天数和输入"
+
+#. module: bi_hr_payroll
+msgid "Salary Computation"
+msgstr "工资计算"
+
+#. module: bi_hr_payroll
+msgid "Details By Salary Rule Category"
+msgstr "按工资规则类别详情"
+
+#. module: bi_hr_payroll
+msgid "Details by Salary Rule Category"
+msgstr "按工资规则类别详情"
+
+#. module: bi_hr_payroll
+msgid "Accounting Information"
+msgstr "会计信息"
+
+#. module: bi_hr_payroll
+msgid "Accounting"
+msgstr "会计"
+
+#. module: bi_hr_payroll
+msgid "Other Information"
+msgstr "其他信息"
+
+#. module: bi_hr_payroll
+#: Core Payroll - Worked Days Section
+msgid "WORKED DAYS"
+msgstr "工作天数"
+
+#. module: bi_hr_payroll
+msgid "Worked Days"
+msgstr "工作天数"
+
+#. module: bi_hr_payroll
+msgid "Days"
+msgstr "天数"
+
+#. module: bi_hr_payroll
+msgid "Number of Days"
+msgstr "天数"
+
+#. module: bi_hr_payroll
+msgid "Hours"
+msgstr "小时数"
+
+#. module: bi_hr_payroll
+msgid "Number of Hours"
+msgstr "小时数"
+
+#. module: bi_hr_payroll
+msgid "INPUTS"
+msgstr "输入"
+
+#. module: bi_hr_payroll
+msgid "Inputs"
+msgstr "输入"
+
+#. module: bi_hr_payroll
+msgid "Other Inputs"
+msgstr "其他输入"
+
+#. module: bi_hr_payroll
+msgid "Amount"
+msgstr "金额"
+
+#. module: bi_hr_payroll
+msgid "Count"
+msgstr "数量"
+
+#. module: bi_hr_payroll
+msgid "Description"
+msgstr "描述"
+
+#. module: bi_hr_payroll
+#: Core Payroll - Basic Fields
+msgid "Employee"
+msgstr "员工"
+
+#. module: bi_hr_payroll
+msgid "Period"
+msgstr "期间"
+
+#. module: bi_hr_payroll
+msgid "Contract"
+msgstr "合同"
+
+#. module: bi_hr_payroll
+msgid "Reference"
+msgstr "参考编号"
+
+#. module: bi_hr_payroll
+msgid "Number"
+msgstr "编号"
+
+#. module: bi_hr_payroll
+msgid "Date From"
+msgstr "开始日期"
+
+#. module: bi_hr_payroll
+msgid "Date To"
+msgstr "结束日期"
+
+#. module: bi_hr_payroll
+msgid "Start Date"
+msgstr "开始日期"
+
+#. module: bi_hr_payroll
+msgid "End Date"
+msgstr "结束日期"
+
+#. module: bi_hr_payroll
+msgid "Date"
+msgstr "日期"
+
+#. module: bi_hr_payroll
+msgid "Structure"
+msgstr "结构"
+
+#. module: bi_hr_payroll
+msgid "Payslip Name"
+msgstr "工资单名称"
+
+#. module: bi_hr_payroll
+msgid "Company"
+msgstr "公司"
+
+#. module: bi_hr_payroll
+msgid "Department"
+msgstr "部门"
+
+#. module: bi_hr_payroll
+msgid "Job Position"
+msgstr "职位"
+
+#. module: bi_hr_payroll
+msgid "Credit Note"
+msgstr "贷项通知单"
+
+#. module: bi_hr_payroll
+msgid "Payslip Count"
+msgstr "工资单数"
+
+#. module: bi_hr_payroll
+#: Core Payroll - Salary Lines
+msgid "Salary Lines"
+msgstr "工资明细"
+
+#. module: bi_hr_payroll
+msgid "Lines"
+msgstr "明细"
+
+#. module: bi_hr_payroll
+msgid "Sequence"
+msgstr "序列"
+
+#. module: bi_hr_payroll
+msgid "Category"
+msgstr "类别"
+
+#. module: bi_hr_payroll
+msgid "Total"
+msgstr "合计"
+
+#. module: bi_hr_payroll
+msgid "Rate (%)"
+msgstr "比例(%)"
+
+#. module: bi_hr_payroll
+msgid "Rate"
+msgstr "比例"
+
+#. module: bi_hr_payroll
+msgid "Quantity"
+msgstr "数量"
+
+#. module: bi_hr_payroll
+msgid "Appears on Payslip"
+msgstr "显示在工资单上"
+
+#. module: bi_hr_payroll
+#: Core Payroll - Salary Rules
+msgid "Python Code"
+msgstr "Python代码"
+
+#. module: bi_hr_payroll
+msgid "Condition Based on"
+msgstr "条件基于"
+
+#. module: bi_hr_payroll
+msgid "Amount Type"
+msgstr "金额类型"
+
+#. module: bi_hr_payroll
+msgid "Fixed Amount"
+msgstr "固定金额"
+
+#. module: bi_hr_payroll
+msgid "Percentage (%)"
+msgstr "百分比(%)"
+
+#. module: bi_hr_payroll
+msgid "Percentage based on"
+msgstr "百分比基于"
+
+#. module: bi_hr_payroll
+msgid "Python Expression"
+msgstr "Python表达式"
+
+#. module: bi_hr_payroll
+msgid "Percentage"
+msgstr "百分比"
+
+#. module: bi_hr_payroll
+msgid "Always True"
+msgstr "始终为真"
+
+#. module: bi_hr_payroll
+msgid "Range"
+msgstr "范围"
+
+#. module: bi_hr_payroll
+msgid "Range Based on"
+msgstr "范围基于"
+
+#. module: bi_hr_payroll
+msgid "Minimum"
+msgstr "最小值"
+
+#. module: bi_hr_payroll
+msgid "Maximum"
+msgstr "最大值"
+
+#. module: bi_hr_payroll
+msgid "Python Condition"
+msgstr "Python条件"
+
+#. module: bi_hr_payroll
+msgid "Parent Rule"
+msgstr "父级规则"
+
+#. module: bi_hr_payroll
+msgid "Child Rules"
+msgstr "子级规则"
+
+#. module: bi_hr_payroll
+#: Core Payroll - Accounting
+msgid "Journal"
+msgstr "日记账"
+
+#. module: bi_hr_payroll
+msgid "Journal Entry"
+msgstr "日记账分录"
+
+#. module: bi_hr_payroll
+msgid "Move"
+msgstr "分录"
+
+#. module: bi_hr_payroll
+msgid "Debit Account"
+msgstr "借方科目"
+
+#. module: bi_hr_payroll
+msgid "Credit Account"
+msgstr "贷方科目"
+
+#. module: bi_hr_payroll
+msgid "Analytic Account"
+msgstr "分析科目"
+
+#. module: bi_hr_payroll
+#: Core Payroll - Batch/Run
+msgid "Batch Name"
+msgstr "批次名称"
+
+#. module: bi_hr_payroll
+msgid "New Batch"
+msgstr "新批次"
+
+#. module: bi_hr_payroll
+msgid "Open"
+msgstr "打开"
+
+#. module: bi_hr_payroll
+msgid "Payslips Count"
+msgstr "工资单数量"
+
+#. module: bi_hr_payroll
+#: Core Payroll - Misc
+msgid "Wage"
+msgstr "工资"
+
+#. module: bi_hr_payroll
+msgid "Basic Salary"
+msgstr "基本工资"
+
+#. module: bi_hr_payroll
+msgid "BASIC"
+msgstr "基本工资"
+
+#. module: bi_hr_payroll
+msgid "Basic"
+msgstr "基本"
+
+#. module: bi_hr_payroll
+msgid "Gross"
+msgstr "应发"
+
+#. module: bi_hr_payroll
+msgid "GROSS"
+msgstr "应发"
+
+#. module: bi_hr_payroll
+msgid "Net"
+msgstr "实发"
+
+#. module: bi_hr_payroll
+msgid "NET"
+msgstr "实发"
+
+#. module: bi_hr_payroll
+msgid "Deduction"
+msgstr "扣除"
+
+#. module: bi_hr_payroll
+msgid "Deductions"
+msgstr "扣除项"
+
+#. module: bi_hr_payroll
+msgid "DED"
+msgstr "扣除"
+
+#. module: bi_hr_payroll
+msgid "Allowance"
+msgstr "津贴"
+
+#. module: bi_hr_payroll
+msgid "Allowances"
+msgstr "津贴"
+
+#. module: bi_hr_payroll
+msgid "ALW"
+msgstr "津贴"
+
+#. module: bi_hr_payroll
+msgid "Contribution"
+msgstr "缴费"
+
+#. module: bi_hr_payroll
+msgid "Contributions"
+msgstr "缴费"
+
+#. module: bi_hr_payroll
+msgid "Company Contribution"
+msgstr "公司缴费"
+
+#. module: bi_hr_payroll
+msgid "Bonus"
+msgstr "奖金"
+
+#. module: bi_hr_payroll
+msgid "Commission"
+msgstr "提成"
+
+#. module: bi_hr_payroll
+msgid "Reimbursement"
+msgstr "报销"
+
+#. module: bi_hr_payroll
+msgid "Net Salary"
+msgstr "实发工资"
+
+#. module: bi_hr_payroll
+msgid "Gross Salary"
+msgstr "应发工资"
+
+#. module: bi_hr_payroll
+msgid "Tax"
+msgstr "税"
+
+#. module: bi_hr_payroll
+#: Core Payroll - Wizard
+msgid "Generate Payslips by Employees"
+msgstr "按员工生成工资单"
+
+#. module: bi_hr_payroll
+msgid "Employees"
+msgstr "员工"
+
+#. module: bi_hr_payroll
+msgid "Select Employees"
+msgstr "选择员工"
+
+#. module: bi_hr_payroll
+#: Core Payroll - Reports
+msgid "Payslip Details"
+msgstr "工资单详情"
+
+#. module: bi_hr_payroll
+msgid "Payslip Summary"
+msgstr "工资单汇总"
+
+#. module: bi_hr_payroll
+msgid "Contribution Report"
+msgstr "缴费报表"
+
+#. module: bi_hr_payroll
+#: Core Payroll - Help texts
+msgid "Payslip of %s"
+msgstr "%s的工资单"
+
+#. module: bi_hr_payroll
+msgid "Salary slip"
+msgstr "工资单"
+
+#. module: bi_hr_payroll
+msgid "This is a refund payslip"
+msgstr "这是退款工资单"
+
+#. module: bi_hr_payroll
+#: Employee fields
+msgid "Dependants"
+msgstr "被抚养人"
+
+#. module: bi_hr_payroll
+msgid "Pension Grade"
+msgstr "养老金等级"
+
+#. module: bi_hr_payroll
+#: Additional common terms
+msgid "Type"
+msgstr "类型"
+
+#. module: bi_hr_payroll
+msgid "Sequence"
+msgstr "序号"
+
+#. module: bi_hr_payroll
+msgid "Rule"
+msgstr "规则"
+
+#. module: bi_hr_payroll
+msgid "Register"
+msgstr "登记"
+
+#. module: bi_hr_payroll
+msgid "Note"
+msgstr "备注"
+
+#. module: bi_hr_payroll
+msgid "Notes"
+msgstr "备注"
+
+#. module: bi_hr_payroll
+msgid "Create"
+msgstr "创建"
+
+#. module: bi_hr_payroll
+msgid "Save"
+msgstr "保存"
+
+#. module: bi_hr_payroll
+msgid "Edit"
+msgstr "编辑"
+
+#. module: bi_hr_payroll
+msgid "Delete"
+msgstr "删除"
+
+#. module: bi_hr_payroll
+msgid "Search"
+msgstr "搜索"
+
+#. module: bi_hr_payroll
+msgid "Filter"
+msgstr "筛选"
+
+#. module: bi_hr_payroll
+msgid "Group By"
+msgstr "分组"
+
+#. module: bi_hr_payroll
+msgid "Year"
+msgstr "年"
+
+#. module: bi_hr_payroll
+msgid "Month"
+msgstr "月"
+
+#. module: bi_hr_payroll
+msgid "Payslip Report"
+msgstr "工资单报表"
+
+#. module: bi_hr_payroll
+#: Worked day types
+msgid "Normal Working Days paid at 100%"
+msgstr "正常工作日(100%计薪)"
+
+#. module: bi_hr_payroll
+msgid "Work100"
+msgstr "正常工作"
+
+#. module: bi_hr_payroll
+msgid "WORK100"
+msgstr "正常工作"
+
+#. module: bi_hr_payroll
+msgid "Paid Time Off"
+msgstr "带薪休假"
+
+#. module: bi_hr_payroll
+msgid "Unpaid"
+msgstr "无薪"
+
+#. module: bi_hr_payroll
+msgid "Sick Time Off"
+msgstr "病假"
+
+#. module: bi_hr_payroll
+msgid "Overtime"
+msgstr "加班"
+
+#. module: bi_hr_payroll
+msgid "Worked Days Input"
+msgstr "工作天数输入"
+
+#. module: bi_hr_payroll
+#: Input types
+msgid "Input Type"
+msgstr "输入类型"
+
+#. module: bi_hr_payroll
+msgid "Attendance"
+msgstr "出勤"
+
+#. module: bi_hr_payroll
+msgid "Leaves"
+msgstr "休假"
+
+#. module: bi_hr_payroll
+msgid "Leave"
+msgstr "休假"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_payslip__paid
+msgid "Made Payment Order ? "
+msgstr "已付款？"
+
+#. module: bi_hr_payroll
+#: view:hr.payslip:0
+msgid "Miscellaneous"
+msgstr "其他信息"
+
+#. module: bi_hr_payroll
+#: view:hr.payslip:0
+msgid "Cancel Payslip"
+msgstr "取消工资单"
+
+#. module: bi_hr_payroll
+msgid "Payslip Batch"
+msgstr "工资单批次"
+
+#. module: bi_hr_payroll
+msgid "Batch"
+msgstr "批次"
+
+#. module: bi_hr_payroll
+msgid "Batch Name"
+msgstr "批次名称"
+
+#. module: bi_hr_payroll
+msgid "Payslips Batches"
+msgstr "工资单批次"
+
+#. module: bi_hr_payroll
+msgid "Search Payslip Batches"
+msgstr "搜索工资单批次"
+
+#. module: bi_hr_payroll
+msgid "Search Payslips"
+msgstr "搜索工资单"
+
+#. module: bi_hr_payroll
+msgid "Search Payslip Lines"
+msgstr "搜索工资单明细"
+
+#. module: bi_hr_payroll
+msgid "Calculations"
+msgstr "计算"
+
+#. module: bi_hr_payroll
+msgid "Group By"
+msgstr "分组"
+
+#. module: bi_hr_payroll
+msgid "Companies"
+msgstr "公司"
+
+#. module: bi_hr_payroll
+msgid "States"
+msgstr "状态"
+
+#. module: bi_hr_payroll
+msgid "PaySlip Batch"
+msgstr "工资单批次"
+
+#. module: bi_hr_payroll
+msgid "Worked Day"
+msgstr "工作日"
+
+#. module: bi_hr_payroll
+msgid "Input Data"
+msgstr "输入数据"
+
+#. module: bi_hr_payroll
+msgid "Total Working Days"
+msgstr "总工作天数"
+
+#. module: bi_hr_payroll
+msgid "Draft Slip"
+msgstr "草稿工资单"
+
+#. module: bi_hr_payroll
+msgid "Done Slip"
+msgstr "已完成工资单"
+
+#. module: bi_hr_payroll
+msgid "Draft Payslip Batches"
+msgstr "草稿批次"
+
+#. module: bi_hr_payroll
+msgid "Done Payslip Batches"
+msgstr "已完成批次"
+
+#. module: bi_hr_payroll
+msgid "Is a Blocking Reason?"
+msgstr "是否阻塞原因？"
+
+#. module: bi_hr_payroll
+msgid "Payslip Computation Details"
+msgstr "工资单计算详情"
+
+#. module: bi_hr_payroll
+msgid "Add an internal note..."
+msgstr "添加内部备注..."
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_employee__base_wage
+msgid "Base Wage"
+msgstr "基本工资"
+
+#. module: bi_hr_payroll
+msgid "Monthly base wage for insurance grade calculation"
+msgstr "用于计算保险等级的月基本工资"

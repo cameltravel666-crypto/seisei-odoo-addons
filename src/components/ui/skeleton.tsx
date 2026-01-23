@@ -186,13 +186,13 @@ export function SearchBarSkeleton() {
 
 /**
  * PageHeaderSkeleton - Skeleton for page header
- * Height: 48px (--height-summary-bar)
+ * Height: 48px (--height-page-header)
  */
 export function PageHeaderSkeleton() {
   return (
     <div
       className="flex items-center justify-between"
-      style={{ height: 'var(--height-summary-bar)' }}
+      style={{ height: 'var(--height-page-header)', minHeight: 'var(--height-page-header)' }}
     >
       <Skeleton className="h-6 w-24" />
       <Skeleton
@@ -203,5 +203,41 @@ export function PageHeaderSkeleton() {
         }}
       />
     </div>
+  );
+}
+
+/**
+ * StatusTabsSkeleton - Skeleton for status tabs
+ * Height: 44px (--height-tab)
+ */
+export function StatusTabsSkeleton({ tabCount = 4 }: { tabCount?: number }) {
+  return (
+    <div
+      className="flex gap-[var(--space-1)] border-b border-[var(--color-border-light)]"
+      style={{ height: 'var(--height-tab)', minHeight: 'var(--height-tab)' }}
+    >
+      {Array.from({ length: tabCount }).map((_, i) => (
+        <div key={i} className="flex items-center gap-[var(--space-2)] px-[var(--space-4)]">
+          <Skeleton className="h-4 w-12" />
+          <Skeleton className="h-5 w-6" style={{ borderRadius: 'var(--radius-full)' }} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * DateRangeFilterSkeleton - Skeleton for date range filter
+ * Height: 40px (--height-segment)
+ */
+export function DateRangeFilterSkeleton() {
+  return (
+    <Skeleton
+      className="w-full"
+      style={{
+        height: 'var(--height-segment)',
+        borderRadius: 'var(--radius-md)',
+      }}
+    />
   );
 }

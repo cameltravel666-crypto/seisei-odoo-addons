@@ -1,0 +1,445 @@
+# Japanese translation for bi_hr_payroll module
+# Copyright (C) 2024
+# This file is distributed under the same license as the bi_hr_payroll module.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: bi_hr_payroll 18.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2024-01-01 00:00+0000\n"
+"PO-Revision-Date: 2024-01-01 00:00+0000\n"
+"Last-Translator: \n"
+"Language-Team: Japanese\n"
+"Language: ja_JP\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#. module: bi_hr_payroll
+#: model:ir.ui.menu,name:bi_hr_payroll.menu_hr_payroll_root
+msgid "Payroll"
+msgstr "給与管理"
+
+#. module: bi_hr_payroll
+#: model:ir.ui.menu,name:bi_hr_payroll.menu_hr_payslip
+msgid "Employee Payslips"
+msgstr "従業員給与明細"
+
+#. module: bi_hr_payroll
+#: model:ir.ui.menu,name:bi_hr_payroll.menu_hr_payslip_run
+msgid "Payslips Batches"
+msgstr "給与明細バッチ"
+
+#. module: bi_hr_payroll
+#: model:ir.ui.menu,name:bi_hr_payroll.menu_hr_payroll_configuration
+msgid "Configuration"
+msgstr "設定"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_payslip__number
+msgid "Reference"
+msgstr "参照番号"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_payslip__employee_id
+msgid "Employee"
+msgstr "従業員"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_payslip__name
+msgid "Payslip Name"
+msgstr "給与明細名"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_payslip__payslip_run_id
+msgid "Batch Name"
+msgstr "バッチ名"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_payslip__company_id
+msgid "Company"
+msgstr "会社"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_payslip__date_from
+msgid "Date From"
+msgstr "開始日"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_payslip__date_to
+msgid "Date To"
+msgstr "終了日"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_payslip__state
+msgid "Status"
+msgstr "ステータス"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields.selection,name:bi_hr_payroll.selection__hr_payslip__state__draft
+msgid "Draft"
+msgstr "下書き"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields.selection,name:bi_hr_payroll.selection__hr_payslip__state__verify
+msgid "Waiting"
+msgstr "処理待ち"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields.selection,name:bi_hr_payroll.selection__hr_payslip__state__done
+msgid "Done"
+msgstr "完了"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields.selection,name:bi_hr_payroll.selection__hr_payslip__state__cancel
+msgid "Cancelled"
+msgstr "キャンセル済"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_payslip__contract_id
+msgid "Contract"
+msgstr "契約"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_payslip__struct_id
+msgid "Structure"
+msgstr "給与構造"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_payslip__worked_days_line_ids
+msgid "Worked Days Lines"
+msgstr "勤務日数明細"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_payslip__input_line_ids
+msgid "Input Lines"
+msgstr "入力明細"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_payslip__line_ids
+msgid "Payslip Lines"
+msgstr "給与明細行"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_payslip__note
+msgid "Note"
+msgstr "備考"
+
+#. module: bi_hr_payroll
+#: model:ir.actions.act_window,name:bi_hr_payroll.action_compute_sheet
+msgid "Compute Sheet"
+msgstr "給与計算"
+
+#. module: bi_hr_payroll
+#: model:ir.actions.act_window,name:bi_hr_payroll.action_hr_payslip_confirm
+msgid "Confirm"
+msgstr "確認"
+
+#. module: bi_hr_payroll
+#: model:ir.actions.act_window,name:bi_hr_payroll.action_hr_payslip_cancel
+msgid "Cancel"
+msgstr "キャンセル"
+
+#. module: bi_hr_payroll
+#: model:ir.actions.act_window,name:bi_hr_payroll.action_set_to_draft
+msgid "Set to Draft"
+msgstr "下書きに戻す"
+
+#. module: bi_hr_payroll
+#: model:ir.actions.report,name:bi_hr_payroll.action_report_payslip
+msgid "Print Payslip"
+msgstr "給与明細印刷"
+
+#. module: bi_hr_payroll
+#: model:ir.model,name:bi_hr_payroll.model_hr_payroll_structure
+msgid "Salary Structure"
+msgstr "給与構造"
+
+#. module: bi_hr_payroll
+#: model:ir.ui.menu,name:bi_hr_payroll.menu_hr_payroll_structure
+msgid "Salary Structures"
+msgstr "給与構造"
+
+#. module: bi_hr_payroll
+#: model:ir.model,name:bi_hr_payroll.model_hr_salary_rule
+msgid "Salary Rule"
+msgstr "給与ルール"
+
+#. module: bi_hr_payroll
+#: model:ir.ui.menu,name:bi_hr_payroll.menu_hr_salary_rule
+msgid "Salary Rules"
+msgstr "給与ルール"
+
+#. module: bi_hr_payroll
+#: model:ir.model,name:bi_hr_payroll.model_hr_salary_rule_category
+msgid "Salary Rule Category"
+msgstr "給与ルールカテゴリ"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_salary_rule__name
+msgid "Name"
+msgstr "名前"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_salary_rule__sequence
+msgid "Sequence"
+msgstr "順序"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_salary_rule__code
+msgid "Code"
+msgstr "コード"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_salary_rule__category_id
+msgid "Category"
+msgstr "カテゴリ"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_salary_rule__active
+msgid "Active"
+msgstr "有効"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_salary_rule__appears_on_payslip
+msgid "Appears on Payslip"
+msgstr "給与明細に表示"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_salary_rule__condition_select
+msgid "Condition Based on"
+msgstr "条件基準"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields.selection,name:bi_hr_payroll.selection__hr_salary_rule__condition_select__none
+msgid "Always True"
+msgstr "常に真"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields.selection,name:bi_hr_payroll.selection__hr_salary_rule__condition_select__range
+msgid "Range"
+msgstr "範囲"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields.selection,name:bi_hr_payroll.selection__hr_salary_rule__condition_select__python
+msgid "Python Expression"
+msgstr "Python式"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_salary_rule__amount_select
+msgid "Amount Type"
+msgstr "金額タイプ"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields.selection,name:bi_hr_payroll.selection__hr_salary_rule__amount_select__fix
+msgid "Fixed Amount"
+msgstr "固定金額"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields.selection,name:bi_hr_payroll.selection__hr_salary_rule__amount_select__percentage
+msgid "Percentage (%)"
+msgstr "パーセンテージ (%)"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields.selection,name:bi_hr_payroll.selection__hr_salary_rule__amount_select__code
+msgid "Python Code"
+msgstr "Pythonコード"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_salary_rule__amount_percentage_base
+msgid "Percentage based on"
+msgstr "パーセンテージ基準"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_salary_rule__quantity
+msgid "Quantity"
+msgstr "数量"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_salary_rule__amount_fix
+msgid "Fixed"
+msgstr "固定"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_salary_rule__amount_percentage
+msgid "Percentage"
+msgstr "パーセンテージ"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_payslip_line__amount
+msgid "Amount"
+msgstr "金額"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_payslip_line__total
+msgid "Total"
+msgstr "合計"
+
+#. module: bi_hr_payroll
+#: model:hr.salary.rule.category,name:bi_hr_payroll.hr_salary_rule_category_basic
+msgid "Basic"
+msgstr "基本"
+
+#. module: bi_hr_payroll
+#: model:hr.salary.rule.category,name:bi_hr_payroll.hr_salary_rule_category_allowance
+msgid "Allowance"
+msgstr "手当"
+
+#. module: bi_hr_payroll
+#: model:hr.salary.rule.category,name:bi_hr_payroll.hr_salary_rule_category_deduction
+msgid "Deduction"
+msgstr "控除"
+
+#. module: bi_hr_payroll
+#: model:hr.salary.rule.category,name:bi_hr_payroll.hr_salary_rule_category_gross
+msgid "Gross"
+msgstr "総支給額"
+
+#. module: bi_hr_payroll
+#: model:hr.salary.rule.category,name:bi_hr_payroll.hr_salary_rule_category_net
+msgid "Net"
+msgstr "手取り"
+
+#. module: bi_hr_payroll
+#: model:hr.salary.rule.category,name:bi_hr_payroll.hr_salary_rule_category_company_contribution
+msgid "Company Contribution"
+msgstr "会社負担"
+
+#. module: bi_hr_payroll
+#: model:hr.salary.rule,name:bi_hr_payroll.hr_salary_rule_basic
+msgid "Basic Salary"
+msgstr "基本給"
+
+#. module: bi_hr_payroll
+#: model:hr.salary.rule,name:bi_hr_payroll.hr_salary_rule_hra
+msgid "House Rent Allowance"
+msgstr "住宅手当"
+
+#. module: bi_hr_payroll
+#: model:hr.salary.rule,name:bi_hr_payroll.hr_salary_rule_conveyance
+msgid "Conveyance Allowance"
+msgstr "通勤手当"
+
+#. module: bi_hr_payroll
+#: model:hr.salary.rule,name:bi_hr_payroll.hr_salary_rule_gross
+msgid "Gross Salary"
+msgstr "総支給額"
+
+#. module: bi_hr_payroll
+#: model:hr.salary.rule,name:bi_hr_payroll.hr_salary_rule_pf
+msgid "Provident Fund"
+msgstr "積立金"
+
+#. module: bi_hr_payroll
+#: model:hr.salary.rule,name:bi_hr_payroll.hr_salary_rule_pt
+msgid "Professional Tax"
+msgstr "専門税"
+
+#. module: bi_hr_payroll
+#: model:hr.salary.rule,name:bi_hr_payroll.hr_salary_rule_net
+msgid "Net Salary"
+msgstr "手取り給与"
+
+#. module: bi_hr_payroll
+#: model:ir.model,name:bi_hr_payroll.model_hr_payslip_run
+msgid "Payslip Batches"
+msgstr "給与明細バッチ"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_payslip_run__slip_ids
+msgid "Payslips"
+msgstr "給与明細"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_payslip_run__date_start
+msgid "Start Date"
+msgstr "開始日"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_payslip_run__date_end
+msgid "End Date"
+msgstr "終了日"
+
+#. module: bi_hr_payroll
+#: model:ir.actions.act_window,name:bi_hr_payroll.action_generate_payslips
+msgid "Generate Payslips"
+msgstr "給与明細生成"
+
+#. module: bi_hr_payroll
+#: model:ir.actions.act_window,name:bi_hr_payroll.action_close_batch
+msgid "Close"
+msgstr "閉じる"
+
+#. module: bi_hr_payroll
+#: model:ir.model,name:bi_hr_payroll.model_hr_payslip_worked_days
+msgid "Worked Days Lines"
+msgstr "勤務日数明細"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_payslip_worked_days__number_of_days
+msgid "Number of Days"
+msgstr "日数"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_payslip_worked_days__number_of_hours
+msgid "Number of Hours"
+msgstr "時間数"
+
+#. module: bi_hr_payroll
+#: model:ir.model,name:bi_hr_payroll.model_hr_payslip_input
+msgid "Other Inputs"
+msgstr "その他入力"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_payslip_input__description
+msgid "Description"
+msgstr "説明"
+
+#. module: bi_hr_payroll
+#: model:ir.model,name:bi_hr_payroll.model_hr_contribution_register
+msgid "Contribution Register"
+msgstr "拠出金登録"
+
+#. module: bi_hr_payroll
+#: model:ir.ui.menu,name:bi_hr_payroll.menu_hr_contribution_register
+msgid "Contribution Registers"
+msgstr "拠出金登録"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_salary_rule__register_id
+msgid "Partner"
+msgstr "取引先"
+
+#. module: bi_hr_payroll
+#: model:ir.actions.report,name:bi_hr_payroll.action_report_contribution_register
+msgid "Contribution Register Report"
+msgstr "拠出金登録レポート"
+
+#. module: bi_hr_payroll
+#: view:hr.payslip:bi_hr_payroll.view_hr_payslip_form
+msgid "Worked Days & Inputs"
+msgstr "勤務日数と入力"
+
+#. module: bi_hr_payroll
+#: view:hr.payslip:bi_hr_payroll.view_hr_payslip_form
+msgid "Salary Computation"
+msgstr "給与計算"
+
+#. module: bi_hr_payroll
+#: view:hr.payslip:bi_hr_payroll.view_hr_payslip_form
+msgid "Accounting Information"
+msgstr "会計情報"
+
+#. module: bi_hr_payroll
+#: model_terms:ir.ui.view,arch_db:bi_hr_payroll.view_hr_payslip_form
+msgid "Period"
+msgstr "期間"
+
+#. module: bi_hr_payroll
+msgid "Create"
+msgstr "作成"
+
+#. module: bi_hr_payroll
+msgid "Salary Slip of"
+msgstr "給与明細 -"

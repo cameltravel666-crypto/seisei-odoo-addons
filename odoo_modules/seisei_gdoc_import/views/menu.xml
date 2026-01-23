@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Main menu under Settings -->
+    <menuitem id="menu_gdoc_import_root"
+              name="Google Doc Import"
+              parent="base.menu_administration"
+              sequence="50"
+              groups="base.group_system"/>
+
+    <menuitem id="menu_gdoc_template"
+              name="Templates"
+              parent="menu_gdoc_import_root"
+              action="action_gdoc_template"
+              sequence="10"/>
+
+    <menuitem id="menu_gdoc_import_run"
+              name="Import Runs"
+              parent="menu_gdoc_import_root"
+              action="action_gdoc_import_run"
+              sequence="20"/>
+
+</odoo>

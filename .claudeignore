@@ -1,0 +1,54 @@
+# Seisei Claude Code Ignore Rules
+# Claude Code 不应扫描这些文件/目录
+
+# 大型目录
+node_modules/
+.next/
+dist/
+build/
+out/
+
+# 数据库和备份
+*.dump
+*.sql
+*.sql.gz
+backups/
+filestore/
+
+# 部署包
+*.tar.gz
+
+# 敏感信息
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+secrets/
+
+# 归档文档
+docs/_archive/
+
+# 杂项
+Backup/
+temp/
+Pem/
+__pycache__/
+
+# Odoo Enterprise 源码 (太大)
+odoo-*+e.*/
+odoo19-enterprise/odoo-*/
+
+# 锁文件
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# 日志
+*.log
+logs/
+
+# 移动端
+android/
+ios/

@@ -2,11 +2,98 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { User, Mail, Phone, Briefcase, Calendar, Wallet, FileText } from 'lucide-react';
+import { User, Mail, Phone, Briefcase, Calendar, Wallet, FileText, UserCog, Calculator, Clock, Shield, BarChart3, FileCheck, Users } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Loading } from '@/components/ui/loading';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Pagination } from '@/components/ui/pagination';
+import { ModuleGate } from '@/components/module-gate';
+
+// HR Module Features for upgrade page
+const HR_FEATURES = [
+  {
+    icon: Users,
+    titleZh: '员工档案',
+    titleJa: '従業員情報',
+    titleEn: 'Employee Records',
+    descZh: '完整的员工信息管理，包括个人资料、合同、证件',
+    descJa: '個人情報、契約、資格を含む完全な従業員情報管理',
+    descEn: 'Complete employee information including personal data, contracts, and credentials',
+  },
+  {
+    icon: Calculator,
+    titleZh: '工资计算',
+    titleJa: '給与計算',
+    titleEn: 'Payroll Calculation',
+    descZh: '自动计算工资，支持多种薪资结构和税务规则',
+    descJa: '複数の給与体系と税規則に対応した自動給与計算',
+    descEn: 'Automatic payroll with multiple pay structures and tax rules',
+  },
+  {
+    icon: FileText,
+    titleZh: '工资单管理',
+    titleJa: '給与明細管理',
+    titleEn: 'Payslip Management',
+    descZh: '生成和管理工资单，支持在线查看和下载',
+    descJa: '給与明細の作成・管理、オンライン閲覧とダウンロード対応',
+    descEn: 'Generate and manage payslips with online viewing and download',
+  },
+  {
+    icon: Clock,
+    titleZh: '考勤管理',
+    titleJa: '勤怠管理',
+    titleEn: 'Attendance Tracking',
+    descZh: '追踪员工出勤、加班、请假记录',
+    descJa: '出勤、残業、休暇記録を追跡',
+    descEn: 'Track attendance, overtime, and leave records',
+  },
+  {
+    icon: Calendar,
+    titleZh: '假期管理',
+    titleJa: '休暇管理',
+    titleEn: 'Leave Management',
+    descZh: '管理年假、病假、特殊假期申请和审批',
+    descJa: '年次休暇、病気休暇、特別休暇の申請と承認を管理',
+    descEn: 'Manage annual, sick, and special leave requests and approvals',
+  },
+  {
+    icon: Shield,
+    titleZh: '社保管理',
+    titleJa: '社会保険管理',
+    titleEn: 'Benefits Management',
+    descZh: '管理社保、公积金等员工福利',
+    descJa: '社会保険、積立金などの従業員福利厚生を管理',
+    descEn: 'Manage social insurance and employee benefits',
+  },
+  {
+    icon: BarChart3,
+    titleZh: '人事报表',
+    titleJa: 'HRレポート',
+    titleEn: 'HR Reports',
+    descZh: '生成人事分析报表，了解人力资源状况',
+    descJa: '人事分析レポートを生成し、人材リソースの状況を把握',
+    descEn: 'Generate HR analytics reports for workforce insights',
+  },
+  {
+    icon: FileCheck,
+    titleZh: '合规管理',
+    titleJa: 'コンプライアンス',
+    titleEn: 'Compliance',
+    descZh: '确保薪资发放符合当地法规要求',
+    descJa: '給与支払いが現地の法規制に準拠していることを確認',
+    descEn: 'Ensure payroll complies with local regulations',
+  },
+];
+
+const HR_COMPARISON = [
+  { feature: '员工信息管理', basic: '-', premium: '✓' },
+  { feature: '工资单生成', basic: '-', premium: '✓' },
+  { feature: '自动工资计算', basic: '-', premium: '✓' },
+  { feature: '考勤记录', basic: '-', premium: '✓' },
+  { feature: '假期管理', basic: '-', premium: '✓' },
+  { feature: '社保管理', basic: '-', premium: '✓' },
+  { feature: '人事报表', basic: '-', premium: '✓' },
+];
 
 type ViewType = 'employees' | 'payslips';
 
@@ -81,6 +168,18 @@ export default function HrPage() {
   };
 
   return (
+    <ModuleGate
+      moduleCode="HR"
+      moduleNameZh="工资与人事管理"
+      moduleNameJa="給与・人事管理"
+      descriptionZh="全面的员工管理和薪资计算系统，简化人事工作流程。"
+      descriptionJa="包括従業員管理と給与計算を簡素化する包括的なHRシステム。"
+      priceMonthly={6800}
+      features={HR_FEATURES}
+      comparisonItems={HR_COMPARISON}
+      heroGradient="from-purple-600 via-pink-600 to-rose-600"
+      moduleIcon={UserCog}
+    >
     <div className="space-y-4">
       <h1 className="page-title">{t('nav.hr')}</h1>
 
@@ -224,5 +323,6 @@ export default function HrPage() {
         </>
       )}
     </div>
+    </ModuleGate>
   );
 }

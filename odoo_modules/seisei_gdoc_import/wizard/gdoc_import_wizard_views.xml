@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_gdoc_import_wizard_form" model="ir.ui.view">
+        <field name="name">seisei.gdoc.import.wizard.form</field>
+        <field name="model">seisei.gdoc.import.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Import from Google Doc">
+                <group>
+                    <!-- Step 1: Select Template -->
+                    <group string="1. Select Template" invisible="state != 'select'">
+                        <field name="template_id" options="{'no_create': True}"/>
+                    </group>
+
+                    <!-- Step 2: Preview -->
+                    <group string="2. Data Preview" invisible="state == 'select'" colspan="2">
+                        <field name="preview_html" nolabel="1" colspan="2"/>
+                    </group>
+
+                    <!-- Step 3: Validation -->
+                    <group string="3. Validation" invisible="state in ('select', 'preview')" colspan="2">
+                        <field name="validation_html" nolabel="1" colspan="2"/>
+                    </group>
+
+                    <!-- Step 4: Import Results -->
+                    <group string="4. Import Results" invisible="state != 'done'" colspan="2">
+                        <field name="stats_html" nolabel="1" colspan="2"/>
+                    </group>
+                </group>
+
+                <field name="state" invisible="1"/>
+                <field name="run_id" invisible="1"/>
+
+                <footer>
+                    <!-- Step 1 buttons -->
+                    <button string="Fetch Data"
+                            name="action_fetch"
+                            type="object"
+                            class="btn-primary"
+                            invisible="state != 'select'"/>
+
+                    <!-- Step 2 buttons -->
+                    <button string="Validate"
+                            name="action_validate"
+                            type="object"
+                            class="btn-primary"
+                            invisible="state != 'preview'"/>
+
+                    <!-- Step 3 buttons -->
+                    <button string="Execute Import"
+                            name="action_import"
+                            type="object"
+                            class="btn-primary"
+                            invisible="state != 'validate'"/>
+
+                    <!-- View logs button -->
+                    <button string="View Logs"
+                            name="action_view_logs"
+                            type="object"
+                            class="btn-secondary"
+                            invisible="not run_id"/>
+
+                    <button string="Close" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_gdoc_import_wizard" model="ir.actions.act_window">
+        <field name="name">Import from Google Doc</field>
+        <field name="res_model">seisei.gdoc.import.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+</odoo>

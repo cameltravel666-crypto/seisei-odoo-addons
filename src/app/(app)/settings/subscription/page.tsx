@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
 import { Loading } from '@/components/ui/loading';
+import { useIsIOSAppStoreBuild } from '@/lib/appChannel';
 import {
   Package,
   Plus,
@@ -126,10 +128,19 @@ interface CartItem {
 export default function SubscriptionPage() {
   const t = useTranslations();
   const locale = useLocale();
+  const router = useRouter();
   const queryClient = useQueryClient();
+  const isIOSAppStore = useIsIOSAppStoreBuild();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showCart, setShowCart] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string>('PLAN');
+
+  // App Store compliance (3.1.1, 3.1.3): Redirect away from subscription page in iOS App Store builds
+  useEffect(() => {
+    if (isIOSAppStore) {
+      router.replace('/settings');
+    }
+  }, [isIOSAppStore, router]);
 
   // Note: Subscription management is restricted to BILLING_ADMIN role on the server.
   // Read-only viewing is allowed for all authenticated users.

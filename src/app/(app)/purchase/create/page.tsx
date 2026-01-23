@@ -458,13 +458,21 @@ export default function CreatePurchaseOrderPage() {
             <span className="text-xs text-gray-500">{t('order.total')}</span>
             <span className="text-lg font-bold text-gray-900">{formatJPY(totalAmount)}</span>
           </div>
-          <button
-            onClick={handleSubmit}
-            disabled={!selectedSupplier || orderLines.length === 0 || isSubmitting}
-            className="btn btn-primary px-5 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSubmitting ? <Loading text="" /> : t('purchase.createOrder')}
-          </button>
+          <div className="flex flex-col items-end gap-1">
+            {!selectedSupplier && (
+              <span className="text-xs text-amber-600">{t('purchase.selectSupplierFirst') || '请先选择供应商'}</span>
+            )}
+            {selectedSupplier && orderLines.length === 0 && (
+              <span className="text-xs text-amber-600">{t('purchase.addProductsFirst') || '请先添加商品'}</span>
+            )}
+            <button
+              onClick={handleSubmit}
+              disabled={!selectedSupplier || orderLines.length === 0 || isSubmitting}
+              className="btn btn-primary px-5 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSubmitting ? <Loading text="" /> : t('purchase.createOrder')}
+            </button>
+          </div>
         </div>
       </div>
 

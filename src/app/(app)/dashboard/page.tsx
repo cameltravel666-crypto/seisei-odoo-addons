@@ -30,14 +30,17 @@ import {
   Legend,
 } from 'recharts';
 import { useDashboard, type DateRangeType } from '@/hooks/use-dashboard';
+import { useFeatureGate } from '@/hooks/use-feature-gate';
 import { Loading } from '@/components/ui/loading';
 import { StatCard } from '@/components/ui/stat-card';
 import { DateRangeFilter, type PeriodType } from '@/components/ui/date-range-filter';
+import { UpgradeFeatureList } from '@/components/ui/upgrade-prompt';
 
 // Tab types for sub-navigation
 type DashboardTab = 'overview' | 'sales' | 'products' | 'orders' | 'payments';
 
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
+// Business professional chart colors - no red/green
+const COLORS = ['#3b82f6', '#6366f1', '#8b5cf6', '#64748b', '#0ea5e9', '#0891b2', '#475569', '#334155'];
 
 // Map PeriodType to DateRangeType
 const periodToDateRange: Record<PeriodType, DateRangeType> = {
@@ -57,6 +60,9 @@ export default function DashboardPage() {
     return d.toISOString().split('T')[0];
   });
   const [customTo, setCustomTo] = useState(() => new Date().toISOString().split('T')[0]);
+
+  // Feature gate for BI module
+  const featureGate = useFeatureGate();
 
   const dateRange = periodToDateRange[period];
 
@@ -148,6 +154,8 @@ export default function DashboardPage() {
         customTo={customTo}
         onCustomFromChange={setCustomFrom}
         onCustomToChange={setCustomTo}
+        maxCustomDays={featureGate.hasBI ? 0 : 30}
+        showUpgradeOnLimit={!featureGate.hasBI}
       />
 
       {/* Sub-navigation Tabs */}
@@ -271,6 +279,19 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
+
+          {/* Upgrade Prompt - Only show for non-BI users */}
+          {!featureGate.hasBI && (
+            <UpgradeFeatureList
+              features={[
+                { name: '多维度分析', description: '按类目、员工、门店深度钻取' },
+                { name: '同比分析', description: '与去年同期对比' },
+                { name: '销售预测', description: '基于历史数据智能预测' },
+                { name: 'Excel/PDF 导出', description: '一键导出报表' },
+                { name: '数据大屏', description: '大屏展示模式' },
+              ]}
+            />
+          )}
         </div>
       )}
 
@@ -320,7 +341,7 @@ export default function DashboardPage() {
                     <XAxis dataKey="date" tick={{ fontSize: 11 }} />
                     <YAxis tick={{ fontSize: 11 }} />
                     <Tooltip formatter={(value) => [value, t('dashboard.orders')]} />
-                    <Bar dataKey="orderCount" fill="#10b981" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="orderCount" fill="#6366f1" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
@@ -415,7 +436,7 @@ export default function DashboardPage() {
                     <XAxis dataKey="label" tick={{ fontSize: 11 }} />
                     <YAxis tick={{ fontSize: 11 }} />
                     <Tooltip formatter={(value, name) => [value, name === 'orderCount' ? t('dashboard.orders') : t('dashboard.sales')]} />
-                    <Bar dataKey="orderCount" fill="#10b981" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="orderCount" fill="#6366f1" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
@@ -507,7 +528,7 @@ export default function DashboardPage() {
   );
 }
 
-// KPI Card with change indicator - unified style
+// KPI Card with change indicator - business professional style
 function KpiCard({
   title,
   value,
@@ -523,20 +544,22 @@ function KpiCard({
   icon: React.ComponentType<{ className?: string }>;
   color: 'blue' | 'green' | 'purple' | 'red' | 'yellow';
 }) {
+  // Business professional color scheme - no red/green for values
   const iconColorClasses = {
     blue: 'bg-blue-50 text-blue-600',
-    green: 'bg-green-50 text-green-600',
-    purple: 'bg-purple-50 text-purple-600',
-    red: 'bg-red-50 text-red-600',
-    yellow: 'bg-yellow-50 text-yellow-600',
+    green: 'bg-blue-50 text-blue-600',
+    purple: 'bg-indigo-50 text-indigo-600',
+    red: 'bg-slate-100 text-slate-600',
+    yellow: 'bg-amber-50 text-amber-600',
   };
 
+  // All values use slate-800 for consistency
   const valueColorClasses = {
-    blue: 'text-blue-600',
-    green: 'text-green-600',
-    purple: 'text-blue-600',
-    red: 'text-red-500',
-    yellow: 'text-gray-900',
+    blue: 'text-slate-800',
+    green: 'text-slate-800',
+    purple: 'text-slate-800',
+    red: 'text-slate-600',
+    yellow: 'text-slate-800',
   };
 
   return (
@@ -549,7 +572,7 @@ function KpiCard({
       <div className={`text-2xl font-bold ${valueColorClasses[color]}`}>{value}</div>
       <div className="text-xs text-gray-500 mt-1">{title}</div>
       {change !== undefined && (
-        <div className={`flex items-center justify-center gap-1 mt-1 text-xs ${change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+        <div className={`flex items-center justify-center gap-1 mt-1 text-xs ${change >= 0 ? 'text-blue-600' : 'text-slate-500'}`}>
           {change >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
           <span>{change >= 0 ? '+' : ''}{change.toFixed(1)}%</span>
         </div>
@@ -559,7 +582,7 @@ function KpiCard({
   );
 }
 
-// Simple Summary Card - unified style
+// Simple Summary Card - business professional style
 function SummaryCard({
   label,
   value,
@@ -569,7 +592,8 @@ function SummaryCard({
   value: string;
   highlight?: 'green' | 'red';
 }) {
-  const valueClass = highlight === 'green' ? 'text-green-600' : highlight === 'red' ? 'text-red-500' : 'text-gray-900';
+  // No red/green - use slate tones
+  const valueClass = highlight === 'green' ? 'text-slate-800' : highlight === 'red' ? 'text-slate-600' : 'text-slate-800';
   return (
     <div className="card p-3 text-center">
       <div className={`text-2xl font-bold ${valueClass}`}>{value}</div>

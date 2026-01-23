@@ -1,0 +1,93 @@
+services:
+  db:
+    image: postgres:15
+    container_name: seisei-test-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-odoo}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - odoo18-test-db:/var/lib/postgresql/data
+    networks:
+      - odoo18-test-internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-odoo}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    image: odoo:18.0
+    container_name: seisei-test-web
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      - HOST=db
+      - USER=${DB_USER:-odoo}
+      - PASSWORD=${DB_PASSWORD}
+    volumes:
+      - odoo18-test-data:/var/lib/odoo
+      - ./config:/etc/odoo:ro
+      - ./addons:/mnt/extra-addons:ro
+    networks:
+      - odoo18-test-internal
+      - edge
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8069/web/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    labels:
+      - "traefik.enable=true"
+      # Main router
+      - "traefik.http.routers.odoo18-test.rule=Host(`testodoo.seisei.tokyo`)"
+      - "traefik.http.routers.odoo18-test.entrypoints=websecure"
+      - "traefik.http.routers.odoo18-test.tls.certresolver=cloudflare"
+      - "traefik.http.routers.odoo18-test.middlewares=secure-headers@file"
+      - "traefik.http.services.odoo18-test.loadbalancer.server.port=8069"
+      # Longpolling/WebSocket router
+      - "traefik.http.routers.odoo18-test-lp.rule=Host(`testodoo.seisei.tokyo`) && (PathPrefix(`/longpolling`) || PathPrefix(`/websocket`))"
+      - "traefik.http.routers.odoo18-test-lp.entrypoints=websecure"
+      - "traefik.http.routers.odoo18-test-lp.tls.certresolver=cloudflare"
+      - "traefik.http.routers.odoo18-test-lp.middlewares=odoo-websocket@file"
+      - "traefik.http.services.odoo18-test-lp.loadbalancer.server.port=8072"
+      # Priority
+      - "traefik.http.routers.odoo18-test-lp.priority=100"
+
+  redis:
+    image: redis:7-alpine
+    container_name: seisei-test-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD}
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --save 60 1000
+      --appendonly yes
+    volumes:
+      - odoo18-test-redis:/data
+    networks:
+      - odoo18-test-internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  odoo18-test-db:
+  odoo18-test-data:
+  odoo18-test-redis:
+
+networks:
+  odoo18-test-internal:
+    driver: bridge
+  edge:
+    external: true

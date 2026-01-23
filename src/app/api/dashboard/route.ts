@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
-import { getOdooClientForSession } from '@/lib/odoo';
+import { getOdooClientForSession, TenantProvisioningError } from '@/lib/odoo';
 import { isModuleAccessible } from '@/lib/features';
 
 interface PosOrderData {
@@ -265,6 +265,15 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('[Dashboard Error]', error);
+
+    // Handle tenant provisioning state
+    if (error instanceof TenantProvisioningError) {
+      return NextResponse.json(
+        { success: false, error: { code: error.code, message: error.message } },
+        { status: 503 } // Service Unavailable - temporary state
+      );
+    }
+
     return NextResponse.json(
       { success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch dashboard data' } },
       { status: 500 }

@@ -295,9 +295,12 @@ export default function AccountingPage() {
           </div>
         </Link>
 
-        {/* Reconciliation Pending Info - Display only, no link */}
+        {/* Reconciliation Pending - Clickable link to pending page */}
         {draftCount > 0 && (
-          <div className="card p-3 border-amber-200 bg-amber-50">
+          <Link
+            href="/accounting/cash-ledger/pending"
+            className="block card p-3 border-amber-200 bg-amber-50 hover:border-amber-300 hover:shadow-md transition-all"
+          >
             <div className="flex items-center gap-3">
               <FileText className="w-5 h-5 text-amber-600 flex-shrink-0" />
               <div className="flex-1 min-w-0">
@@ -307,8 +310,9 @@ export default function AccountingPage() {
                 </div>
                 <p className="text-xs text-amber-700 mt-0.5">{t('expenses.reconciliationPendingDesc')}</p>
               </div>
+              <ChevronRight className="w-5 h-5 text-amber-400" />
             </div>
-          </div>
+          </Link>
         )}
       </div>
     </div>

@@ -22,6 +22,11 @@ export interface Invoice {
   currency: string;
   isOverdue: boolean;
   overdueDays: number;
+  // OCR fields
+  ocrStatus?: 'pending' | 'processing' | 'done' | 'failed';
+  ocrConfidence?: number;
+  ocrPages?: number;
+  hasAttachment?: boolean;
 }
 
 export interface InvoiceKPIs {

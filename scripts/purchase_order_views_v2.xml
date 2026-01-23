@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Inherit Purchase Order Form View -->
+    <record id="view_purchase_order_form_ocr" model="ir.ui.view">
+        <field name="name">purchase.order.form.ocr</field>
+        <field name="model">purchase.order</field>
+        <field name="inherit_id" ref="purchase.purchase_order_form"/>
+        <field name="arch" type="xml">
+            <!-- Add OCR buttons in header -->
+            <xpath expr="//header" position="inside">
+                <!-- Quick OCR - GPT-4o-mini (¥0.5) -->
+                <button name="action_send_to_ocr_quick"
+                        string="Quick OCR ¥0.5"
+                        type="object"
+                        class="btn-secondary"
+                        invisible="ocr_status == 'processing' or state not in ('draft', 'sent')"
+                        icon="fa-bolt"
+                        title="GPT-4o-mini - Fast &amp; Cheap"/>
+
+                <!-- Standard OCR - Claude Haiku (¥3) -->
+                <button name="action_send_to_ocr"
+                        string="OCR Scan ¥3"
+                        type="object"
+                        class="btn-primary"
+                        invisible="ocr_status == 'processing' or state not in ('draft', 'sent')"
+                        icon="fa-eye"
+                        title="Claude Haiku 3.5 - Recommended"/>
+
+                <!-- Premium OCR - Claude Sonnet (¥12) -->
+                <button name="action_send_to_ocr_premium"
+                        string="Premium ¥12"
+                        type="object"
+                        class="btn-warning"
+                        invisible="ocr_status == 'processing' or state not in ('draft', 'sent')"
+                        icon="fa-star"
+                        title="Claude Sonnet 4 - Best Quality"/>
+
+                <button name="action_apply_ocr_lines"
+                        string="Apply Lines"
+                        type="object"
+                        class="btn-info"
+                        invisible="not ocr_line_items or state not in ('draft', 'sent')"
+                        icon="fa-check"/>
+                <button name="action_reset_ocr"
+                        string="Reset"
+                        type="object"
+                        class="btn-secondary"
+                        invisible="ocr_status == 'pending'"
+                        icon="fa-refresh"/>
+                <button name="%(custom_ocr_finance.action_ocr_data_wizard)d"
+                        string="View Data"
+                        type="action"
+                        class="btn-secondary"
+                        invisible="ocr_status == 'pending'"
+                        icon="fa-file-text-o"/>
+            </xpath>
+
+            <!-- Add OCR status badge and info -->
+            <xpath expr="//field[@name='partner_id']" position="before">
+                <field name="ocr_status" widget="badge" readonly="1"
+                       decoration-info="ocr_status == 'pending'"
+                       decoration-warning="ocr_status == 'processing'"
+                       decoration-success="ocr_status == 'done'"
+                       decoration-danger="ocr_status == 'failed'"/>
+                <field name="ocr_matched_count" invisible="ocr_matched_count == 0" readonly="1" string="Matched"/>
+                <field name="ocr_model_used" invisible="not ocr_model_used" readonly="1" string="Model"/>
+                <field name="ocr_pages" invisible="ocr_pages == 0" readonly="1" string="Pages"/>
+                <field name="ocr_cost" invisible="ocr_cost == 0" readonly="1" string="Cost ¥"/>
+            </xpath>
+
+            <!-- Add OCR tab in notebook -->
+            <xpath expr="//notebook" position="inside">
+                <page string="OCR Data" name="ocr_data">
+                    <group col="2">
+                        <group string="OCR Status">
+                            <field name="ocr_status" readonly="1"/>
+                            <field name="ocr_processed_at" readonly="1"/>
+                            <field name="ocr_confidence" readonly="1" widget="percentage"/>
+                            <field name="ocr_matched_count" readonly="1"/>
+                        </group>
+                        <group string="Model &amp; Cost">
+                            <field name="ocr_model_used" readonly="1"/>
+                            <field name="ocr_pages" readonly="1"/>
+                            <field name="ocr_cost" readonly="1"/>
+                        </group>
+                    </group>
+                    <group invisible="not ocr_error_message">
+                        <field name="ocr_error_message" readonly="1" string="Error"/>
+                    </group>
+                    <group col="2">
+                        <group string="Extracted Items (JSON)">
+                            <field name="ocr_line_items" readonly="1" widget="text" nolabel="1"
+                                   style="font-family: monospace; white-space: pre; min-height: 300px;"/>
+                        </group>
+                        <group string="Raw OCR Text">
+                            <field name="ocr_extracted_texts" readonly="1" widget="text" nolabel="1"
+                                   style="font-family: monospace; white-space: pre; min-height: 300px;"/>
+                        </group>
+                    </group>
+                </page>
+            </xpath>
+
+        </field>
+    </record>
+</odoo>

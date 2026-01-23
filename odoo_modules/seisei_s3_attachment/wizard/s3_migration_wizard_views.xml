@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="s3_migration_wizard_view_form" model="ir.ui.view">
+        <field name="name">s3.migration.wizard.form</field>
+        <field name="model">s3.migration.wizard</field>
+        <field name="arch" type="xml">
+            <form string="S3 Migration">
+                <group>
+                    <!-- Preview State -->
+                    <group string="Current Attachment Statistics" invisible="state != 'preview'">
+                        <field name="total_filestore_count" string="In Filestore"/>
+                        <field name="total_filestore_size"/>
+                        <field name="total_s3_count" string="In S3"/>
+                        <field name="total_url_count" string="URL References"/>
+                    </group>
+
+                    <group string="Migration Options" invisible="state != 'preview'">
+                        <field name="batch_size"/>
+                        <field name="migrate_from_date"/>
+                    </group>
+
+                    <!-- Progress State -->
+                    <group string="Migration Progress" invisible="state == 'preview'">
+                        <field name="state" invisible="1"/>
+                        <field name="migrated_count"/>
+                        <field name="failed_count"/>
+                        <field name="progress_message" widget="text" readonly="1"/>
+                    </group>
+                </group>
+
+                <footer>
+                    <button string="Start Migration"
+                            name="action_migrate"
+                            type="object"
+                            class="btn-primary"
+                            invisible="state != 'preview'"/>
+                    <button string="Continue"
+                            name="action_continue_migration"
+                            type="object"
+                            class="btn-primary"
+                            invisible="state != 'migrating'"/>
+                    <button string="Refresh"
+                            name="action_preview"
+                            type="object"
+                            class="btn-secondary"
+                            invisible="state != 'preview'"/>
+                    <button string="Rollback Info"
+                            name="action_rollback_info"
+                            type="object"
+                            class="btn-secondary"/>
+                    <button string="Close" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_s3_migration_wizard" model="ir.actions.act_window">
+        <field name="name">S3 Migration</field>
+        <field name="res_model">s3.migration.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+</odoo>

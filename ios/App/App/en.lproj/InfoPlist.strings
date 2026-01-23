@@ -1,0 +1,13 @@
+/* English localization for Info.plist */
+
+/* App Display Name */
+"CFBundleDisplayName" = "Seisei";
+"CFBundleName" = "Seisei";
+
+/* Permission Usage Descriptions */
+"NSCameraUsageDescription" = "Used to take product photos and scan barcodes";
+"NSPhotoLibraryUsageDescription" = "Used to save product images and receipts";
+"NSPhotoLibraryAddUsageDescription" = "Used to save reports and receipts to your photo library";
+"NSLocationWhenInUseUsageDescription" = "Used to get your store location";
+"NSMicrophoneUsageDescription" = "Used to record voice memos";
+"NSFaceIDUsageDescription" = "Used for secure login with Face ID";

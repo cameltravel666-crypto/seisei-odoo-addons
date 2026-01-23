@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="res_config_settings_view_form_s3" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.s3</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="base_setup.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="inside">
+                <app data-string="S3 Storage" string="S3 Storage" name="s3_storage" groups="base.group_system">
+                    <block title="S3 Attachment Storage" name="s3_settings">
+                        <setting id="s3_status_display" string="Storage Status"
+                                 help="S3 configuration is managed via environment variables by system administrator">
+                            <div class="content-group">
+                                <div class="row mt16">
+                                    <label for="s3_status" class="col-lg-3 o_light_label"/>
+                                    <field name="s3_status" class="fw-bold"/>
+                                </div>
+                                <div class="row">
+                                    <label for="s3_config_source" class="col-lg-3 o_light_label"/>
+                                    <field name="s3_config_source"/>
+                                </div>
+                            </div>
+                        </setting>
+
+                        <setting id="s3_config_display" string="Current Configuration"
+                                 help="Read-only display of current S3 settings">
+                            <div class="content-group">
+                                <div class="row mt16">
+                                    <label for="s3_bucket_display" class="col-lg-3 o_light_label"/>
+                                    <field name="s3_bucket_display"/>
+                                </div>
+                                <div class="row">
+                                    <label for="s3_region_display" class="col-lg-3 o_light_label"/>
+                                    <field name="s3_region_display"/>
+                                </div>
+                                <div class="row">
+                                    <label for="s3_prefix_display" class="col-lg-3 o_light_label"/>
+                                    <field name="s3_prefix_display"/>
+                                </div>
+                            </div>
+                        </setting>
+
+                        <setting id="s3_actions" string="Actions"
+                                 help="Test connection or migrate existing attachments to S3">
+                            <div class="content-group">
+                                <div class="mt16">
+                                    <button name="action_s3_test_connection"
+                                            type="object"
+                                            string="Test Connection"
+                                            class="btn-primary"/>
+                                    <button name="action_open_s3_migration_wizard"
+                                            type="object"
+                                            string="Migrate Existing Attachments"
+                                            class="btn-secondary ms-2"/>
+                                </div>
+                                <div class="mt8 text-muted">
+                                    <small>
+                                        To configure S3, set these environment variables on the server:<br/>
+                                        SEISEI_S3_BUCKET, SEISEI_S3_REGION, SEISEI_S3_ACCESS_KEY, SEISEI_S3_SECRET_KEY
+                                    </small>
+                                </div>
+                            </div>
+                        </setting>
+                    </block>
+                </app>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

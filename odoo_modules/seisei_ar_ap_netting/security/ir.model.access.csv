@@ -1,0 +1,3 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_ar_ap_netting_wizard_accountant,ar.ap.netting.wizard.accountant,model_ar_ap_netting_wizard,account.group_account_user,1,1,1,1
+access_ar_ap_netting_wizard_manager,ar.ap.netting.wizard.manager,model_ar_ap_netting_wizard,account.group_account_manager,1,1,1,1

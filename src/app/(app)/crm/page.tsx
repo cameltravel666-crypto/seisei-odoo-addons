@@ -3,13 +3,100 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, Users, Target, Mail, Phone, Calendar, BarChart3, Workflow, Bell } from 'lucide-react';
 import { EmptyState, Pagination, SummaryBarSkeleton, ListSkeleton } from '@/components/ui';
 import { CrmSummaryBar } from '@/components/crm/summary-bar';
 import { PipelineChips } from '@/components/crm/pipeline-chips';
 import { CrmFilterBar, type SortOption } from '@/components/crm/filter-bar';
 import { OpportunityListItem } from '@/components/crm/opportunity-list-item';
+import { ModuleGate } from '@/components/module-gate';
 import type { ApiResponse } from '@/types';
+
+// CRM Module Features for upgrade page
+const CRM_FEATURES = [
+  {
+    icon: Users,
+    titleZh: '客户管理',
+    titleJa: '顧客管理',
+    titleEn: 'Customer Management',
+    descZh: '完整的客户信息管理，包括联系人、交易历史、沟通记录',
+    descJa: '連絡先、取引履歴、コミュニケーション履歴を含む完全な顧客情報管理',
+    descEn: 'Complete customer information including contacts, transactions, and communications',
+  },
+  {
+    icon: Target,
+    titleZh: '销售漏斗',
+    titleJa: 'セールスファネル',
+    titleEn: 'Sales Pipeline',
+    descZh: '可视化销售流程，追踪商机从线索到成交的全过程',
+    descJa: '見込み客から成約までの全プロセスを可視化し追跡',
+    descEn: 'Visualize and track opportunities from lead to close',
+  },
+  {
+    icon: Mail,
+    titleZh: '邮件集成',
+    titleJa: 'メール連携',
+    titleEn: 'Email Integration',
+    descZh: '自动同步客户邮件，追踪沟通历史',
+    descJa: 'メールを自動同期し、コミュニケーション履歴を追跡',
+    descEn: 'Automatically sync emails and track communication history',
+  },
+  {
+    icon: Calendar,
+    titleZh: '活动管理',
+    titleJa: 'アクティビティ管理',
+    titleEn: 'Activity Management',
+    descZh: '计划和追踪销售活动，包括电话、会议、任务',
+    descJa: '電話、会議、タスクを含む販売活動を計画・追跡',
+    descEn: 'Plan and track sales activities including calls, meetings, and tasks',
+  },
+  {
+    icon: BarChart3,
+    titleZh: '销售分析',
+    titleJa: '販売分析',
+    titleEn: 'Sales Analytics',
+    descZh: '深入分析销售数据，预测收入趋势',
+    descJa: '販売データを詳細分析し、収益トレンドを予測',
+    descEn: 'In-depth sales analysis and revenue forecasting',
+  },
+  {
+    icon: Workflow,
+    titleZh: '自动化工作流',
+    titleJa: '自動化ワークフロー',
+    titleEn: 'Automation',
+    descZh: '自动分配线索、发送提醒、更新状态',
+    descJa: 'リードの自動割当、リマインダー送信、ステータス更新',
+    descEn: 'Automatically assign leads, send reminders, update status',
+  },
+  {
+    icon: Phone,
+    titleZh: '通话记录',
+    titleJa: '通話記録',
+    titleEn: 'Call Logging',
+    descZh: '记录和追踪所有客户通话',
+    descJa: 'すべての顧客通話を記録・追跡',
+    descEn: 'Log and track all customer calls',
+  },
+  {
+    icon: Bell,
+    titleZh: '智能提醒',
+    titleJa: 'スマートリマインダー',
+    titleEn: 'Smart Reminders',
+    descZh: '不错过任何跟进机会，智能提醒即将到期的商机',
+    descJa: 'フォローアップを逃さない、期限が近い商談をスマートにリマインド',
+    descEn: 'Never miss follow-ups with smart deadline reminders',
+  },
+];
+
+const CRM_COMPARISON = [
+  { feature: '客户联系人管理', basic: '-', premium: '✓' },
+  { feature: '销售漏斗追踪', basic: '-', premium: '✓' },
+  { feature: '商机管理', basic: '-', premium: '✓' },
+  { feature: '活动日程', basic: '-', premium: '✓' },
+  { feature: '邮件集成', basic: '-', premium: '✓' },
+  { feature: '销售报表', basic: '-', premium: '✓' },
+  { feature: '自动化工作流', basic: '-', premium: '✓' },
+];
 
 // Types
 interface StageStats {
@@ -127,6 +214,18 @@ export default function CrmPage() {
   const hasFilters = activeStage !== null || search !== '';
 
   return (
+    <ModuleGate
+      moduleCode="CRM"
+      moduleNameZh="CRM 客户关系管理"
+      moduleNameJa="CRM 顧客関係管理"
+      descriptionZh="全面管理客户关系，追踪销售机会，提升转化率和客户满意度。"
+      descriptionJa="顧客関係を包括的に管理し、販売機会を追跡、コンバージョン率と顧客満足度を向上。"
+      priceMonthly={9800}
+      features={CRM_FEATURES}
+      comparisonItems={CRM_COMPARISON}
+      heroGradient="from-sky-600 via-blue-600 to-indigo-700"
+      moduleIcon={Users}
+    >
     <div className="space-y-3">
       {/* Header - Title + Search + New Button */}
       <div className="flex items-center gap-3">
@@ -248,5 +347,6 @@ export default function CrmPage() {
         </>
       )}
     </div>
+    </ModuleGate>
   );
 }

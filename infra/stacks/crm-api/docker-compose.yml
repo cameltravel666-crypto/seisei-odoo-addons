@@ -1,0 +1,24 @@
+services:
+  crm-api:
+    image: ghcr.io/seisei/crm-api:${VERSION:-latest}
+    container_name: seisei-crm-api
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - API_KEY=${API_KEY}
+    networks:
+      - crm-internal
+      - edge
+    labels:
+      # CRM API - default NOT exposed to public
+      # Internal service only, accessed via edge network
+      - "traefik.enable=false"
+
+volumes: {}
+
+networks:
+  crm-internal:
+    driver: bridge
+  edge:
+    external: true

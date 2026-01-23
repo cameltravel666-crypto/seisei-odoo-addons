@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ============================================== -->
+    <!-- Hide/Restrict Legacy HR Root Menu -->
+    <!-- The old "员工" top-level menu becomes admin-only -->
+    <!-- ============================================== -->
+
+    <!-- Hide the old HR root menu for non-admin users -->
+    <record id="hr.menu_hr_root" model="ir.ui.menu">
+        <field name="groups_id" eval="[(6, 0, [ref('base.group_no_one')])]"/>
+    </record>
+
+    <!-- ============================================== -->
+    <!-- Alternative: If you want legacy menus visible -->
+    <!-- to admin only, use group_seisei_hr_admin -->
+    <!-- ============================================== -->
+
+    <!-- Hide old Payroll submenu under HR (now we have top-level Payroll) -->
+    <record id="bi_hr_payroll.menu_hr_payroll_root" model="ir.ui.menu">
+        <field name="groups_id" eval="[(6, 0, [ref('base.group_no_one')])]"/>
+    </record>
+
+    <!-- Hide old Payroll Configuration menu -->
+    <record id="bi_hr_payroll.menu_hr_payroll_configuration" model="ir.ui.menu">
+        <field name="groups_id" eval="[(6, 0, [ref('base.group_no_one')])]"/>
+    </record>
+
+    <!-- Hide old Japan menu under Payroll Config -->
+    <record id="bi_hr_payroll.menu_japan_payroll_config" model="ir.ui.menu">
+        <field name="groups_id" eval="[(6, 0, [ref('base.group_no_one')])]"/>
+    </record>
+
+    <!-- Hide old Payroll Settings menu (配置 > 设置) -->
+    <record id="bi_hr_payroll.menu_hr_payroll_global_settings" model="ir.ui.menu">
+        <field name="groups_id" eval="[(6, 0, [ref('base.group_no_one')])]"/>
+    </record>
+
+</odoo>

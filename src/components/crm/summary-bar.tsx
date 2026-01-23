@@ -43,7 +43,7 @@ export function CrmSummaryBar({
         {/* Won Revenue - highlighted if > 0 */}
         <div className="flex items-center gap-1.5 whitespace-nowrap">
           <span className="text-gray-500">{t('crm.wonRevenue')}</span>
-          <span className={`font-semibold tabular-nums ${wonRevenue > 0 ? 'text-green-600' : 'text-gray-900'}`}>
+          <span className={`font-semibold tabular-nums ${wonRevenue > 0 ? 'text-blue-600' : 'text-gray-900'}`}>
             {formatCompactAmount(wonRevenue)}
           </span>
         </div>

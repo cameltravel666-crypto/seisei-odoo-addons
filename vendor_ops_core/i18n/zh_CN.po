@@ -1,0 +1,701 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* vendor_ops_core
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 19.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-01-12 00:00+0000\n"
+"PO-Revision-Date: 2026-01-12 00:00+0000\n"
+"Last-Translator: \n"
+"Language-Team: Chinese (Simplified)\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#. module: vendor_ops_core
+#: model:ir.model,name:vendor_ops_core.model_vendor_ops_tenant
+msgid "Vendor Ops Tenant"
+msgstr "租户"
+
+#. module: vendor_ops_core
+#: model:ir.model,name:vendor_ops_core.model_seisei_feature
+msgid "Seisei Feature"
+msgstr "功能"
+
+#. module: vendor_ops_core
+#: model:ir.model,name:vendor_ops_core.model_seisei_product_feature_map
+msgid "Product Feature Mapping"
+msgstr "产品功能映射"
+
+#. module: vendor_ops_core
+#: model:ir.model,name:vendor_ops_core.model_seisei_push_log
+msgid "Seisei Entitlement Push Log"
+msgstr "权益推送日志"
+
+#. module: vendor_ops_core
+#: model:ir.actions.act_window,name:vendor_ops_core.action_vendor_ops_tenant
+#: model:ir.ui.menu,name:vendor_ops_core.menu_vendor_ops_tenants
+msgid "Tenants"
+msgstr "租户"
+
+#. module: vendor_ops_core
+#: model:ir.ui.menu,name:vendor_ops_core.menu_vendor_ops_root
+msgid "Vendor Ops"
+msgstr "运营管理"
+
+#. module: vendor_ops_core
+#: model:ir.ui.menu,name:vendor_ops_core.menu_vendor_ops_intake_root
+msgid "Intake"
+msgstr "数据采集"
+
+#. module: vendor_ops_core
+#: model:ir.ui.menu,name:vendor_ops_core.menu_vendor_ops_start_intake
+msgid "Start Intake"
+msgstr "开始采集"
+
+#. module: vendor_ops_core
+#: model:ir.ui.menu,name:vendor_ops_core.menu_vendor_ops_intake_batches
+msgid "Intake Batches"
+msgstr "采集批次"
+
+#. module: vendor_ops_core
+#: model:ir.ui.menu,name:vendor_ops_core.menu_vendor_ops_entitlement_root
+msgid "Entitlements"
+msgstr "权益管理"
+
+#. module: vendor_ops_core
+#: model:ir.actions.act_window,name:vendor_ops_core.seisei_feature_action
+#: model:ir.ui.menu,name:vendor_ops_core.menu_seisei_features
+msgid "Features"
+msgstr "功能"
+
+#. module: vendor_ops_core
+#: model:ir.ui.menu,name:vendor_ops_core.menu_seisei_product_feature_map
+msgid "Product Mappings"
+msgstr "产品映射"
+
+#. module: vendor_ops_core
+#: model:ir.actions.act_window,name:vendor_ops_core.seisei_push_log_action
+#: model:ir.ui.menu,name:vendor_ops_core.menu_seisei_push_logs
+msgid "Push Logs"
+msgstr "推送日志"
+
+#. module: vendor_ops_core
+#: model:ir.model.fields,field_description:vendor_ops_core.field_vendor_ops_tenant__name
+msgid "Name"
+msgstr "名称"
+
+#. module: vendor_ops_core
+#: model:ir.model.fields,field_description:vendor_ops_core.field_vendor_ops_tenant__code
+msgid "Code"
+msgstr "编码"
+
+#. module: vendor_ops_core
+#: model:ir.model.fields,field_description:vendor_ops_core.field_vendor_ops_tenant__partner_id
+msgid "Partner"
+msgstr "业务伙伴"
+
+#. module: vendor_ops_core
+#: model:ir.model.fields,field_description:vendor_ops_core.field_vendor_ops_tenant__active
+msgid "Active"
+msgstr "启用"
+
+#. module: vendor_ops_core
+#: model:ir.model.fields,field_description:vendor_ops_core.field_vendor_ops_tenant__plan
+msgid "Plan"
+msgstr "套餐"
+
+#. module: vendor_ops_core
+#: model:ir.model.fields.selection,name:vendor_ops_core.selection__vendor_ops_tenant__plan__starter
+msgid "Starter"
+msgstr "入门版"
+
+#. module: vendor_ops_core
+#: model:ir.model.fields.selection,name:vendor_ops_core.selection__vendor_ops_tenant__plan__pro
+msgid "Pro"
+msgstr "专业版"
+
+#. module: vendor_ops_core
+#: model:ir.model.fields.selection,name:vendor_ops_core.selection__vendor_ops_tenant__plan__enterprise
+msgid "Enterprise"
+msgstr "企业版"
+
+#. module: vendor_ops_core
+#: model:ir.model.fields,field_description:vendor_ops_core.field_vendor_ops_tenant__notes
+msgid "Notes"
+msgstr "备注"
+
+#. module: vendor_ops_core
+#: model:ir.model.fields,field_description:vendor_ops_core.field_vendor_ops_tenant__subdomain
+msgid "Subdomain"
+msgstr "子域名"
+
+#. module: vendor_ops_core
+#: model:ir.model.fields,field_description:vendor_ops_core.field_vendor_ops_tenant__domain_primary
+msgid "Primary Domain"
+msgstr "主域名"
+
+#. module: vendor_ops_core
+#: model:ir.model.fields,field_description:vendor_ops_core.field_vendor_ops_tenant__customer_db_name
+msgid "Customer DB Name"
+msgstr "客户数据库名"
+
+#. module: vendor_ops_core
+#: model:ir.model.fields,field_description:vendor_ops_core.field_vendor_ops_tenant__bridge_sync_status
+msgid "Bridge Sync Status"
+msgstr "Bridge同步状态"
+
+#. module: vendor_ops_core
+#: model:ir.model.fields.selection,name:vendor_ops_core.selection__vendor_ops_tenant__bridge_sync_status__pending
+msgid "Pending"
+msgstr "待处理"
+
+#. module: vendor_ops_core
+#: model:ir.model.fields.selection,name:vendor_ops_core.selection__vendor_ops_tenant__bridge_sync_status__ok
+msgid "Synced"
+msgstr "已同步"
+
+#. module: vendor_ops_core
+#: model:ir.model.fields.selection,name:vendor_ops_core.selection__vendor_ops_tenant__bridge_sync_status__failed
+msgid "Failed"
+msgstr "失败"
+
+#. module: vendor_ops_core
+#: model:ir.model.fields,field_description:vendor_ops_core.field_vendor_ops_tenant__bridge_sync_error
+msgid "Bridge Sync Error"
+msgstr "Bridge同步错误"
+
+#. module: vendor_ops_core
+#: model:ir.model.fields,field_description:vendor_ops_core.field_vendor_ops_tenant__bridge_synced_at
+msgid "Bridge Synced At"
+msgstr "Bridge同步时间"
+
+#. module: vendor_ops_core
+#: model:ir.model.fields,field_description:vendor_ops_core.field_vendor_ops_tenant__intake_batch_ids
+msgid "Intake Batches"
+msgstr "采集批次"
+
+#. module: vendor_ops_core
+#: model:ir.model.fields,field_description:vendor_ops_core.field_vendor_ops_tenant__business_base_url
+msgid "Business Database URL"
+msgstr "业务库URL"
+
+#. module: vendor_ops_core
+#: model:ir.model.fields,field_description:vendor_ops_core.field_vendor_ops_tenant__business_api_key
+msgid "Business API Key"
+msgstr "业务库API密钥"
+
+#. module: vendor_ops_core
+#: model:ir.model.fields,field_description:vendor_ops_core.field_vendor_ops_tenant__subscription_ids
+msgid "Subscriptions"
+msgstr "订阅"
+
+#. module: vendor_ops_core
+#: model:ir.model.fields,field_description:vendor_ops_core.field_vendor_ops_tenant__current_features
+msgid "Current Features"
+msgstr "当前功能"
+
+#. module: vendor_ops_core
+#: model:ir.model.fields,field_description:vendor_ops_core.field_vendor_ops_tenant__entitlement_push_date
+msgid "Last Entitlement Push"
+msgstr "最后推送时间"
+
+#. module: vendor_ops_core
+#: model:ir.model.fields,field_description:vendor_ops_core.field_vendor_ops_tenant__entitlement_push_status
+msgid "Entitlement Push Status"
+msgstr "权益推送状态"
+
+#. module: vendor_ops_core
+#: model:ir.model.fields,field_description:vendor_ops_core.field_vendor_ops_tenant__entitlement_push_error
+msgid "Entitlement Push Error"
+msgstr "权益推送错误"
+
+#. module: vendor_ops_core
+#: model:ir.model.fields,field_description:vendor_ops_core.field_vendor_ops_tenant__entitlement_push_log_ids
+msgid "Entitlement Push Logs"
+msgstr "权益推送日志"
+
+#. module: vendor_ops_core
+#: model:ir.model.fields.selection,name:vendor_ops_core.selection__vendor_ops_tenant__entitlement_push_status__success
+#: model:ir.model.fields.selection,name:vendor_ops_core.selection__seisei_push_log__status__success
+msgid "Success"
+msgstr "成功"
+
+#. module: vendor_ops_core
+#: model:ir.model.fields,field_description:vendor_ops_core.field_seisei_feature__name
+msgid "Feature Name"
+msgstr "功能名称"
+
+#. module: vendor_ops_core
+#: model:ir.model.fields,field_description:vendor_ops_core.field_seisei_feature__key
+msgid "Feature Key"
+msgstr "功能标识"
+
+#. module: vendor_ops_core
+#: model:ir.model.fields,field_description:vendor_ops_core.field_seisei_feature__description
+msgid "Description"
+msgstr "描述"
+
+#. module: vendor_ops_core
+#: model:ir.model.fields,field_description:vendor_ops_core.field_seisei_feature__sequence
+msgid "Sequence"
+msgstr "排序"
+
+#. module: vendor_ops_core
+#: model:ir.model.fields,field_description:vendor_ops_core.field_seisei_feature__product_feature_map_ids
+msgid "Product Mappings"
+msgstr "产品映射"
+
+#. module: vendor_ops_core
+#: model:ir.model.fields,field_description:vendor_ops_core.field_seisei_product_feature_map__product_id
+msgid "Product"
+msgstr "产品"
+
+#. module: vendor_ops_core
+#: model:ir.model.fields,field_description:vendor_ops_core.field_seisei_product_feature_map__feature_id
+msgid "Feature"
+msgstr "功能"
+
+#. module: vendor_ops_core
+#: model:ir.model.fields,field_description:vendor_ops_core.field_seisei_product_feature_map__quantity_dependent
+msgid "Quantity Dependent"
+msgstr "数量相关"
+
+#. module: vendor_ops_core
+#: model:ir.model.fields,field_description:vendor_ops_core.field_seisei_product_feature_map__note
+msgid "Note"
+msgstr "备注"
+
+#. module: vendor_ops_core
+#: model:ir.model.fields,field_description:vendor_ops_core.field_seisei_push_log__tenant_id
+msgid "Tenant"
+msgstr "租户"
+
+#. module: vendor_ops_core
+#: model:ir.model.fields,field_description:vendor_ops_core.field_seisei_push_log__push_date
+msgid "Push Date"
+msgstr "推送日期"
+
+#. module: vendor_ops_core
+#: model:ir.model.fields,field_description:vendor_ops_core.field_seisei_push_log__status
+msgid "Status"
+msgstr "状态"
+
+#. module: vendor_ops_core
+#: model:ir.model.fields,field_description:vendor_ops_core.field_seisei_push_log__endpoint
+msgid "Endpoint URL"
+msgstr "接口URL"
+
+#. module: vendor_ops_core
+#: model:ir.model.fields,field_description:vendor_ops_core.field_seisei_push_log__payload
+msgid "Request Payload"
+msgstr "请求内容"
+
+#. module: vendor_ops_core
+#: model:ir.model.fields,field_description:vendor_ops_core.field_seisei_push_log__response_code
+msgid "Response Code"
+msgstr "响应代码"
+
+#. module: vendor_ops_core
+#: model:ir.model.fields,field_description:vendor_ops_core.field_seisei_push_log__response_body
+msgid "Response Body"
+msgstr "响应内容"
+
+#. module: vendor_ops_core
+#: model:ir.model.fields,field_description:vendor_ops_core.field_seisei_push_log__error_message
+msgid "Error Message"
+msgstr "错误信息"
+
+#. module: vendor_ops_core
+#: view button
+msgid "Push Entitlements"
+msgstr "推送权益"
+
+#. module: vendor_ops_core
+#: view button
+msgid "Start Intake (Notion)"
+msgstr "开始采集 (Notion)"
+
+#. module: vendor_ops_core
+#: view button
+msgid "Sync to Bridge"
+msgstr "同步到Bridge"
+
+#. module: vendor_ops_core
+#: view group title
+msgid "Basic Info"
+msgstr "基本信息"
+
+#. module: vendor_ops_core
+#: view group title
+msgid "Auto-Generated Fields (Read-only)"
+msgstr "自动生成字段（只读）"
+
+#. module: vendor_ops_core
+#: view group title
+msgid "Bridge Sync Status"
+msgstr "Bridge同步状态"
+
+#. module: vendor_ops_core
+#: view group title
+msgid "Entitlement Status"
+msgstr "权益状态"
+
+#. module: vendor_ops_core
+#: view group title
+msgid "Business Database Connection"
+msgstr "业务库连接"
+
+#. module: vendor_ops_core
+#: view page title
+msgid "Subscriptions"
+msgstr "订阅"
+
+#. module: vendor_ops_core
+#: view page title
+msgid "Intake Batches"
+msgstr "采集批次"
+
+#. module: vendor_ops_core
+#: view page title
+msgid "Notes"
+msgstr "备注"
+
+#. module: vendor_ops_core
+#: view page title
+msgid "Product Mappings"
+msgstr "产品映射"
+
+#. module: vendor_ops_core
+#: view page title
+msgid "Request"
+msgstr "请求"
+
+#. module: vendor_ops_core
+#: view page title
+msgid "Response"
+msgstr "响应"
+
+#. module: vendor_ops_core
+#: view page title
+msgid "Error"
+msgstr "错误"
+
+#. module: vendor_ops_core
+#: view filter
+msgid "Active"
+msgstr "启用"
+
+#. module: vendor_ops_core
+#: view filter
+msgid "Archived"
+msgstr "已归档"
+
+#. module: vendor_ops_core
+#: view filter
+msgid "Synced"
+msgstr "已同步"
+
+#. module: vendor_ops_core
+#: view filter
+msgid "Sync Failed"
+msgstr "同步失败"
+
+#. module: vendor_ops_core
+#: view filter
+msgid "Push Success"
+msgstr "推送成功"
+
+#. module: vendor_ops_core
+#: view filter
+msgid "Push Failed"
+msgstr "推送失败"
+
+#. module: vendor_ops_core
+#: view filter
+msgid "Today"
+msgstr "今天"
+
+#. module: vendor_ops_core
+#: view filter
+msgid "Group by Tenant"
+msgstr "按租户分组"
+
+#. module: vendor_ops_core
+#: view filter
+msgid "Group by Status"
+msgstr "按状态分组"
+
+#. module: vendor_ops_core
+#: view filter
+msgid "Group by Date"
+msgstr "按日期分组"
+
+#. module: vendor_ops_core
+#: view filter
+msgid "Plan"
+msgstr "套餐"
+
+#. module: vendor_ops_core
+#: view filter
+msgid "Sync Status"
+msgstr "同步状态"
+
+#. module: vendor_ops_core
+#: view filter
+msgid "Push Status"
+msgstr "推送状态"
+
+#. module: vendor_ops_core
+#: view help text
+msgid "Create your first tenant"
+msgstr "创建您的第一个租户"
+
+#. module: vendor_ops_core
+#: view help text
+msgid "Tenants represent customer organizations. Each tenant gets an auto-generated code, subdomain, and database name."
+msgstr "租户代表客户组织。每个租户都会自动生成编码、子域名和数据库名。"
+
+#. module: vendor_ops_core
+#: view help text
+msgid "Create your first feature"
+msgstr "创建您的第一个功能"
+
+#. module: vendor_ops_core
+#: view help text
+msgid "Features represent capabilities or modules that can be granted to tenants through subscriptions."
+msgstr "功能代表可以通过订阅授予租户的能力或模块。"
+
+#. module: vendor_ops_core
+#: view help text
+msgid "No push logs yet"
+msgstr "暂无推送日志"
+
+#. module: vendor_ops_core
+#: view help text
+msgid "Push logs are created when entitlements are synchronized to business databases."
+msgstr "当权益同步到业务库时会创建推送日志。"
+
+#. module: vendor_ops_core
+#: view help text
+msgid "Create your first product-feature mapping"
+msgstr "创建您的第一个产品功能映射"
+
+#. module: vendor_ops_core
+#: view help text
+msgid "Map subscription products to features they grant access to."
+msgstr "将订阅产品映射到它们所授予的功能。"
+
+#. module: vendor_ops_core
+#: view ribbon
+msgid "Archived"
+msgstr "已归档"
+
+#. module: vendor_ops_core
+#: view title
+msgid "Product Feature Mappings"
+msgstr "产品功能映射"
+
+#. module: vendor_ops_core
+#: view title
+msgid "Search Tenants"
+msgstr "搜索租户"
+
+#. module: vendor_ops_core
+#: view title
+msgid "Search Features"
+msgstr "搜索功能"
+
+#. module: vendor_ops_core
+#: view title
+msgid "Search Push Logs"
+msgstr "搜索推送日志"
+
+#. module: vendor_ops_core
+#: view title
+msgid "Search Mappings"
+msgstr "搜索映射"
+
+#. module: vendor_ops_core
+#: model:ir.cron,name:vendor_ops_core.ir_cron_entitlement_reconciliation
+msgid "Seisei: Reconcile Entitlements"
+msgstr "Seisei: 对账权益"
+
+#. module: vendor_ops_core
+#: code error message
+msgid "Tenant Code must be generated (non-empty)."
+msgstr "租户编码必须生成（不能为空）。"
+
+#. module: vendor_ops_core
+#: code error message
+msgid "Subdomain must be generated (non-empty)."
+msgstr "子域名必须生成（不能为空）。"
+
+#. module: vendor_ops_core
+#: code error message
+msgid "Primary Domain must be generated (non-empty)."
+msgstr "主域名必须生成（不能为空）。"
+
+#. module: vendor_ops_core
+#: code error message
+msgid "Customer DB Name must be generated (non-empty)."
+msgstr "客户数据库名必须生成（不能为空）。"
+
+#. module: vendor_ops_core
+#: code error message
+msgid "Tenant code must be unique."
+msgstr "租户编码必须唯一。"
+
+#. module: vendor_ops_core
+#: code error message
+msgid "Subdomain must be unique."
+msgstr "子域名必须唯一。"
+
+#. module: vendor_ops_core
+#: code error message
+msgid "Primary domain must be unique."
+msgstr "主域名必须唯一。"
+
+#. module: vendor_ops_core
+#: code error message
+msgid "Customer DB name must be unique."
+msgstr "客户数据库名必须唯一。"
+
+#. module: vendor_ops_core
+#: code error message
+msgid "Feature key must be unique!"
+msgstr "功能标识必须唯一！"
+
+#. module: vendor_ops_core
+#: code error message
+msgid "A product can only be mapped to each feature once!"
+msgstr "一个产品只能映射到每个功能一次！"
+
+#. module: vendor_ops_core
+#: code notification
+msgid "Bridge Sync"
+msgstr "Bridge同步"
+
+#. module: vendor_ops_core
+#: code notification
+msgid "Entitlements pushed successfully for %s"
+msgstr "%s 的权益推送成功"
+
+#. module: vendor_ops_core
+#: code notification
+msgid "Failed to push entitlements: %s"
+msgstr "推送权益失败: %s"
+
+#. module: vendor_ops_core
+#: field help text
+msgid "Numeric subdomain extracted from tenant_code (e.g., 00000001)"
+msgstr "从租户编码中提取的数字子域名（例如 00000001）"
+
+#. module: vendor_ops_core
+#: field help text
+msgid "Primary domain for the tenant (e.g., 00000001.erp.seisei.tokyo)"
+msgstr "租户的主域名（例如 00000001.erp.seisei.tokyo）"
+
+#. module: vendor_ops_core
+#: field help text
+msgid "Customer database name (e.g., cust_ten_00000001)"
+msgstr "客户数据库名（例如 cust_ten_00000001）"
+
+#. module: vendor_ops_core
+#: field help text
+msgid "Status of synchronization with Bridge API"
+msgstr "与Bridge API的同步状态"
+
+#. module: vendor_ops_core
+#: field help text
+msgid "Error message if Bridge sync failed"
+msgstr "Bridge同步失败时的错误信息"
+
+#. module: vendor_ops_core
+#: field help text
+msgid "Last successful sync timestamp with Bridge"
+msgstr "最后一次与Bridge成功同步的时间戳"
+
+#. module: vendor_ops_core
+#: field help text
+msgid "Base URL of the business Odoo instance for entitlement push"
+msgstr "用于推送权益的业务Odoo实例的基础URL"
+
+#. module: vendor_ops_core
+#: field help text
+msgid "API key for authenticating with the business database"
+msgstr "用于业务库认证的API密钥"
+
+#. module: vendor_ops_core
+#: field help text
+msgid "Currently active features based on valid subscriptions"
+msgstr "基于有效订阅的当前活跃功能"
+
+#. module: vendor_ops_core
+#: field help text
+msgid "Human-readable name of the feature"
+msgstr "功能的可读名称"
+
+#. module: vendor_ops_core
+#: field help text
+msgid "Unique identifier used in API calls (e.g., module_inventory)"
+msgstr "API调用中使用的唯一标识符（例如 module_inventory）"
+
+#. module: vendor_ops_core
+#: field help text
+msgid "Detailed description of what this feature provides"
+msgstr "该功能提供内容的详细描述"
+
+#. module: vendor_ops_core
+#: field help text
+msgid "Display order"
+msgstr "显示顺序"
+
+#. module: vendor_ops_core
+#: field help text
+msgid "Subscription product that grants access to features"
+msgstr "授予功能访问权限的订阅产品"
+
+#. module: vendor_ops_core
+#: field help text
+msgid "Feature granted by this product"
+msgstr "此产品授予的功能"
+
+#. module: vendor_ops_core
+#: field help text
+msgid "If checked, feature value depends on subscription quantity"
+msgstr "如果勾选，功能值取决于订阅数量"
+
+#. module: vendor_ops_core
+#: field help text
+msgid "Additional notes about this mapping"
+msgstr "关于此映射的附加说明"
+
+#. module: vendor_ops_core
+#: field help text
+msgid "JSON payload sent to the business database"
+msgstr "发送到业务库的JSON数据"
+
+#. module: vendor_ops_core
+#: field help text
+msgid "HTTP status code from the response"
+msgstr "响应的HTTP状态码"
+
+#. module: vendor_ops_core
+#: field help text
+msgid "Response body from the business database"
+msgstr "业务库的响应内容"
+
+#. module: vendor_ops_core
+#: field help text
+msgid "Error details if the push failed"
+msgstr "推送失败时的错误详情"
+
+#. module: vendor_ops_core
+#: view title
+msgid "Batches"
+msgstr "批次"

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Company Form View Extension -->
+    <record id="res_company_view_form_japan" model="ir.ui.view">
+        <field name="name">res.company.form.japan</field>
+        <field name="model">res.company</field>
+        <field name="inherit_id" ref="base.view_company_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page string="Japan Payroll / 日本給与" name="japan_payroll">
+                    <group string="Default Insurance Settings / デフォルト保険設定">
+                        <group>
+                            <field name="default_insurance_prefecture_id"/>
+                        </group>
+                        <group>
+                            <field name="employment_insurance_rate"/>
+                        </group>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>

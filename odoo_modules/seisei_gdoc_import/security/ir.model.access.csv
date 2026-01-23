@@ -1,0 +1,5 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_gdoc_template_system,seisei.gdoc.template.system,model_seisei_gdoc_template,base.group_system,1,1,1,1
+access_gdoc_import_run_system,seisei.gdoc.import.run.system,model_seisei_gdoc_import_run,base.group_system,1,1,1,1
+access_gdoc_import_log_system,seisei.gdoc.import.log.system,model_seisei_gdoc_import_log,base.group_system,1,1,1,0
+access_gdoc_import_wizard_system,seisei.gdoc.import.wizard.system,model_seisei_gdoc_import_wizard,base.group_system,1,1,1,1

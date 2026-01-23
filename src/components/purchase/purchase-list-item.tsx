@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { ChevronRight, FileText } from 'lucide-react';
 import { formatCompactAmount, formatDate, getQueueBadgeStyle } from '@/lib/purchase-format';
+import { OcrStatusBadge, OcrCheckbox } from '@/components/ocr';
 
 // PO item type
 interface POItem {
@@ -29,15 +30,32 @@ interface BillItem {
   isOverdue: boolean;
   overdueDays: number;
   invoiceOrigin: string | null;
+  // OCR fields
+  ocrStatus?: 'pending' | 'processing' | 'done' | 'failed';
+  ocrConfidence?: number;
+  ocrPages?: number;
+  hasAttachment?: boolean;
 }
 
 interface PurchaseListItemProps {
   item: POItem | BillItem;
   itemType: 'po' | 'bill';
-  t: (key: string, values?: Record<string, string | number | Date>) => string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  t: (key: string, values?: any) => string;
+  // OCR selection mode props
+  selectionMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: (id: number) => void;
 }
 
-export function PurchaseListItem({ item, itemType, t }: PurchaseListItemProps) {
+export function PurchaseListItem({
+  item,
+  itemType,
+  t,
+  selectionMode = false,
+  isSelected = false,
+  onToggleSelect,
+}: PurchaseListItemProps) {
   const isPO = itemType === 'po';
   const poItem = item as POItem;
   const billItem = item as BillItem;
@@ -102,11 +120,17 @@ export function PurchaseListItem({ item, itemType, t }: PurchaseListItemProps) {
   }
 
   // Bill item (to_pay queue)
-  return (
-    <div
-      className="flex items-start gap-3 p-3 hover:bg-gray-50 transition-colors cursor-pointer"
-      style={{ minHeight: 'var(--height-list-item-normal)' }}
-    >
+  const billContent = (
+    <>
+      {/* Selection checkbox */}
+      {selectionMode && (
+        <OcrCheckbox
+          checked={isSelected}
+          onChange={() => onToggleSelect?.(billItem.id)}
+          disabled={!billItem.hasAttachment}
+        />
+      )}
+
       {/* Icon */}
       <div className={`p-2 rounded-lg flex-shrink-0 mt-0.5 ${billItem.isOverdue ? 'bg-red-100' : 'bg-orange-100'}`}>
         <FileText className={`w-4 h-4 ${billItem.isOverdue ? 'text-red-600' : 'text-orange-600'}`} />
@@ -114,7 +138,7 @@ export function PurchaseListItem({ item, itemType, t }: PurchaseListItemProps) {
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        {/* Row 1: Supplier + Status/Overdue Badge */}
+        {/* Row 1: Supplier + Status/Overdue Badge + OCR Status */}
         <div className="flex items-center gap-2 mb-1">
           <h3 className="font-medium text-gray-900 truncate">{billItem.partnerName}</h3>
           {billItem.isOverdue ? (
@@ -125,6 +149,15 @@ export function PurchaseListItem({ item, itemType, t }: PurchaseListItemProps) {
             <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-orange-100 text-orange-700 flex-shrink-0">
               {t('purchase.queueToPay')}
             </span>
+          )}
+          {/* OCR status badge */}
+          {billItem.hasAttachment && billItem.ocrStatus && billItem.ocrStatus !== 'pending' && (
+            <OcrStatusBadge
+              status={billItem.ocrStatus}
+              confidence={billItem.ocrConfidence}
+              compact
+              t={t}
+            />
           )}
         </div>
 
@@ -145,7 +178,32 @@ export function PurchaseListItem({ item, itemType, t }: PurchaseListItemProps) {
         </p>
       </div>
 
-      <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0 mt-1" />
+      {!selectionMode && (
+        <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0 mt-1" />
+      )}
+    </>
+  );
+
+  if (selectionMode) {
+    return (
+      <div
+        className={`flex items-start gap-3 p-3 transition-colors cursor-pointer ${
+          isSelected ? 'bg-blue-50' : 'hover:bg-gray-50'
+        }`}
+        style={{ minHeight: 'var(--height-list-item-normal)' }}
+        onClick={() => billItem.hasAttachment && onToggleSelect?.(billItem.id)}
+      >
+        {billContent}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="flex items-start gap-3 p-3 hover:bg-gray-50 transition-colors cursor-pointer"
+      style={{ minHeight: 'var(--height-list-item-normal)' }}
+    >
+      {billContent}
     </div>
   );
 }

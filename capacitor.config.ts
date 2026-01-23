@@ -13,8 +13,8 @@ const config: CapacitorConfig = {
   plugins: {
     SplashScreen: {
       launchShowDuration: 2000,
-      launchAutoHide: true,
-      backgroundColor: '#111827',
+      launchAutoHide: true, // Auto-hide after duration
+      backgroundColor: '#f8fafc', // Match login page gradient start (slate-50)
       androidSplashResourceName: 'splash',
       androidScaleType: 'CENTER_CROP',
       showSpinner: false,
@@ -22,16 +22,19 @@ const config: CapacitorConfig = {
       splashImmersive: true,
     },
     StatusBar: {
-      style: 'LIGHT',
-      backgroundColor: '#111827',
+      style: 'DARK', // Dark text on light background
+      backgroundColor: '#f8fafc', // Match splash background
     },
   },
   ios: {
     contentInset: 'always',
     allowsLinkPreview: false,
+    // Enable WebView scroll - CSS controls which element scrolls
     scrollEnabled: true,
     // Xcode project settings
     scheme: 'Seisei BizNexus',
+    // Disable caching to always load fresh content
+    limitsNavigationsToAppBoundDomains: false,
   },
   android: {
     allowMixedContent: false,

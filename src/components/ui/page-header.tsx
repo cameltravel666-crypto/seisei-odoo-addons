@@ -1,26 +1,36 @@
 'use client';
 
 import { ReactNode } from 'react';
+import Link from 'next/link';
+import { ChevronLeft } from 'lucide-react';
 
 interface PageHeaderProps {
   title: string;
   action?: ReactNode;
   subtitle?: string;
+  backHref?: string;
 }
 
 /**
  * PageHeader - Unified page header component
  * Fixed height to prevent layout shift
- * Height: 48px (matching design system)
+ * Height: 48px (--height-page-header)
  */
-export function PageHeader({ title, action, subtitle }: PageHeaderProps) {
+export function PageHeader({ title, action, subtitle, backHref }: PageHeaderProps) {
   return (
     <div
       className="flex items-center justify-between gap-[var(--space-3)]"
-      style={{ height: 'var(--height-summary-bar)', minHeight: 'var(--height-summary-bar)' }}
+      style={{ height: 'var(--height-page-header)', minHeight: 'var(--height-page-header)' }}
     >
       <div className="flex-1 min-w-0">
-        <h1 className="page-title">{title}</h1>
+        {backHref ? (
+          <Link href={backHref} className="page-title flex items-center gap-1 hover:text-[var(--color-primary)] transition-colors">
+            <ChevronLeft className="w-5 h-5" />
+            {title}
+          </Link>
+        ) : (
+          <h1 className="page-title">{title}</h1>
+        )}
         {subtitle && (
           <p className="text-sub text-truncate">{subtitle}</p>
         )}

@@ -4,6 +4,12 @@ import { prisma } from '@/lib/db';
 import { createToken, setAuthCookie } from '@/lib/auth';
 import { initializeTenantFeatures } from '@/lib/features';
 import { jwtVerify } from 'jose';
+import { sendEmail, welcomeEmail } from '@/lib/email';
+import {
+  createJob,
+  triggerProvisioningAsync,
+  getTemplateForIndustry,
+} from '@/lib/provisioning';
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || 'default-secret-change-in-production'
@@ -15,12 +21,20 @@ const registerSchema = z.object({
   contactName: z.string().min(1, 'Contact name is required'),
   phone: z.string().optional(),
   industry: z.string().optional(),
-  emailToken: z.string().optional(), // Token from email verification
+  emailToken: z.string().optional(),
+  locale: z.string().optional(),
 });
 
 /**
  * POST /api/auth/register
- * Completes registration after OAuth authentication
+ * Completes registration after OAuth/email verification
+ *
+ * Flow:
+ * 1. Validate email (OAuth token or email verification token)
+ * 2. Create Tenant + User + Session in a single transaction
+ * 3. Create ProvisioningJob for background processing
+ * 4. Trigger async provisioning (non-blocking)
+ * 5. Return immediately with tenant_status=provisioning
  */
 export async function POST(request: NextRequest) {
   try {
@@ -28,10 +42,12 @@ export async function POST(request: NextRequest) {
     const data = registerSchema.parse(body);
 
     let verifiedEmail: string;
-    let authProvider = 'email'; // Default to email
-    let authProviderId = ''; // No provider ID for email
+    let authProvider = 'email';
+    let authProviderId = '';
 
-    // Check if email token is provided (email verification flow)
+    // ========================================
+    // Step 1: Validate Email
+    // ========================================
     if (data.emailToken) {
       try {
         const { payload } = await jwtVerify(data.emailToken, JWT_SECRET);
@@ -45,7 +61,6 @@ export async function POST(request: NextRequest) {
 
         verifiedEmail = payload.email as string;
 
-        // Verify email matches
         if (verifiedEmail.toLowerCase() !== data.email.toLowerCase()) {
           return NextResponse.json(
             { success: false, error: { code: 'EMAIL_MISMATCH', message: 'Email does not match verified email' } },
@@ -61,7 +76,7 @@ export async function POST(request: NextRequest) {
         );
       }
     } else {
-      // OAuth flow - verify pending registration exists
+      // OAuth flow
       const pendingReg = await prisma.pendingRegistration.findUnique({
         where: { email: data.email },
       });
@@ -73,7 +88,6 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Check if registration is expired
       if (pendingReg.expiresAt < new Date()) {
         await prisma.pendingRegistration.delete({ where: { email: data.email } });
         return NextResponse.json(
@@ -87,7 +101,9 @@ export async function POST(request: NextRequest) {
       authProviderId = pendingReg.providerId;
     }
 
-    // Check if email is already registered
+    // ========================================
+    // Step 2: Check if email is already registered
+    // ========================================
     const existingUser = await prisma.user.findFirst({
       where: { email: verifiedEmail.toLowerCase() },
     });
@@ -99,64 +115,78 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate tenant code (TEN-XXXXXXXX)
+    // ========================================
+    // Step 3: Generate unique tenant code (concurrent-safe)
+    // ========================================
     const tenantCode = await generateTenantCode();
 
-    // Create tenant
-    // For now, use a placeholder Odoo URL/DB - will be provisioned by Bridge later
-    const tenant = await prisma.tenant.create({
-      data: {
-        tenantCode,
-        name: data.companyName,
-        odooBaseUrl: 'https://pending.seisei.tokyo', // Placeholder
-        odooDb: 'pending', // Placeholder
-        planCode: 'starter',
-        isActive: true,
-        ownerEmail: verifiedEmail,
-        ownerName: data.contactName,
-        ownerPhone: data.phone,
-        oauthProvider: authProvider,
-        oauthId: authProviderId,
-        billingEmail: verifiedEmail,
-        provisionStatus: 'pending',
-      },
+    // ========================================
+    // Step 4: Create Tenant + User + Session in transaction
+    // ========================================
+    const result = await prisma.$transaction(async (tx) => {
+      // Create tenant with pending status
+      const tenant = await tx.tenant.create({
+        data: {
+          tenantCode,
+          name: data.companyName,
+          odooBaseUrl: 'https://pending.seisei.tokyo',
+          odooDb: 'pending',
+          planCode: 'starter',
+          isActive: true,
+          ownerEmail: verifiedEmail,
+          ownerName: data.contactName,
+          ownerPhone: data.phone,
+          oauthProvider: authProvider,
+          oauthId: authProviderId,
+          billingEmail: verifiedEmail,
+          provisionStatus: 'provisioning',
+        },
+      });
+
+      // Create user
+      const user = await tx.user.create({
+        data: {
+          tenantId: tenant.id,
+          odooUserId: 0, // Will be updated after provisioning
+          odooLogin: verifiedEmail,
+          displayName: data.contactName,
+          email: verifiedEmail,
+          isAdmin: true,
+        },
+      });
+
+      // Create session
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      const session = await tx.session.create({
+        data: {
+          userId: user.id,
+          tenantId: tenant.id,
+          odooSessionId: 'pending_provisioning',
+          expiresAt,
+        },
+      });
+
+      return { tenant, user, session };
     });
 
-    // Initialize all features as enabled (free trial / demo)
+    const { tenant, user, session } = result;
+
+    // ========================================
+    // Step 5: Initialize tenant features based on starter plan
+    // ========================================
     await initializeTenantFeatures(tenant.id, 'starter');
+    // Note: Do NOT enable all modules - only starter plan modules should be enabled
 
-    // Enable all modules for demo (as requested)
-    await enableAllModulesForTenant(tenant.id);
-
-    // Create initial user record
-    const user = await prisma.user.create({
-      data: {
-        tenantId: tenant.id,
-        odooUserId: 0, // Will be set when Odoo is provisioned
-        odooLogin: verifiedEmail,
-        displayName: data.contactName,
-        email: verifiedEmail,
-        isAdmin: true,
-      },
-    });
-
-    // Clean up pending registration (only for OAuth flow)
+    // ========================================
+    // Step 6: Clean up pending registration (OAuth flow)
+    // ========================================
     if (!data.emailToken) {
-      await prisma.pendingRegistration.delete({ where: { email: verifiedEmail } });
+      await prisma.pendingRegistration.delete({ where: { email: verifiedEmail } }).catch(() => {});
     }
 
-    // Create session
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-    const session = await prisma.session.create({
-      data: {
-        userId: user.id,
-        tenantId: tenant.id,
-        odooSessionId: 'oauth_session', // Placeholder for OAuth-based login
-        expiresAt,
-      },
-    });
-
-    // Create JWT token
+    // ========================================
+    // Step 7: Create JWT token and set cookie
+    // ========================================
     const token = await createToken({
       userId: user.id,
       tenantId: tenant.id,
@@ -166,13 +196,52 @@ export async function POST(request: NextRequest) {
       sessionId: session.id,
     });
 
-    // Set auth cookie
     await setAuthCookie(token);
 
-    // Trigger async provisioning with industry-specific template
-    // This runs in background and doesn't block registration
-    triggerProvisioningAsync(tenant.id, tenantCode, data.companyName, verifiedEmail, data.industry);
+    // ========================================
+    // Step 8: Create provisioning job
+    // ========================================
+    const job = await createJob({
+      tenantId: tenant.id,
+      tenantCode: tenant.tenantCode,
+      userId: user.id,
+      progressData: {
+        industry: data.industry,
+        ownerEmail: verifiedEmail,
+        ownerName: data.contactName,
+        templateDb: getTemplateForIndustry(data.industry),
+        locale: data.locale || 'ja',
+      },
+    });
 
+    console.log(`[Register] Created provisioning job ${job.id} for ${tenantCode}`);
+
+    // ========================================
+    // Step 9: Trigger async provisioning (non-blocking)
+    // ========================================
+    triggerProvisioningAsync(job.id);
+
+    // ========================================
+    // Step 10: Send welcome email (non-blocking)
+    // ========================================
+    const welcomeEmailContent = welcomeEmail({
+      tenantName: data.companyName,
+      contactName: data.contactName,
+      tenantCode: tenantCode,
+      locale: data.locale || 'ja',
+    });
+
+    sendEmail({
+      to: verifiedEmail,
+      subject: welcomeEmailContent.subject,
+      html: welcomeEmailContent.html,
+    }).catch((err) => {
+      console.error('[Register] Failed to send welcome email:', err);
+    });
+
+    // ========================================
+    // Return success with tenant status
+    // ========================================
     return NextResponse.json({
       success: true,
       data: {
@@ -186,9 +255,11 @@ export async function POST(request: NextRequest) {
           id: tenant.id,
           tenantCode: tenant.tenantCode,
           name: tenant.name,
+          status: 'provisioning', // Indicates setup is in progress
         },
       },
     });
+
   } catch (error) {
     console.error('[Register Error]', error);
 
@@ -208,26 +279,49 @@ export async function POST(request: NextRequest) {
 
 /**
  * Generate unique tenant code (TEN-XXXXXXXX format)
+ * Uses database-level uniqueness to handle concurrency
  */
 async function generateTenantCode(): Promise<string> {
-  // Get the highest existing tenant number
-  const lastTenant = await prisma.tenant.findFirst({
-    where: {
-      tenantCode: { startsWith: 'TEN-' },
-    },
-    orderBy: { createdAt: 'desc' },
-  });
+  const maxAttempts = 10;
 
-  let nextNumber = 1;
-  if (lastTenant) {
-    const match = lastTenant.tenantCode.match(/TEN-(\d+)/);
-    if (match) {
-      nextNumber = parseInt(match[1], 10) + 1;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    // Get the current max number
+    const lastTenant = await prisma.tenant.findFirst({
+      where: {
+        tenantCode: { startsWith: 'TEN-' },
+        NOT: { tenantCode: 'TEN-DEMO01' }, // Exclude demo tenant
+      },
+      orderBy: { tenantCode: 'desc' },
+      select: { tenantCode: true },
+    });
+
+    let nextNumber = 1;
+    if (lastTenant) {
+      const match = lastTenant.tenantCode.match(/TEN-(\d+)/);
+      if (match) {
+        nextNumber = parseInt(match[1], 10) + 1;
+      }
     }
+
+    const tenantCode = `TEN-${nextNumber.toString().padStart(8, '0')}`;
+
+    // Check if this code already exists (concurrent safety)
+    const exists = await prisma.tenant.findUnique({
+      where: { tenantCode },
+      select: { id: true },
+    });
+
+    if (!exists) {
+      return tenantCode;
+    }
+
+    // Code exists, retry with next number
+    console.log(`[Register] Tenant code ${tenantCode} already exists, retrying...`);
   }
 
-  // Format with leading zeros (8 digits)
-  return `TEN-${nextNumber.toString().padStart(8, '0')}`;
+  // Fallback: use timestamp-based code
+  const timestamp = Date.now().toString(36).toUpperCase();
+  return `TEN-${timestamp.padStart(8, '0').slice(-8)}`;
 }
 
 /**
@@ -245,7 +339,7 @@ async function enableAllModulesForTenant(tenantId: string): Promise<void> {
       where: {
         tenantId_moduleCode: {
           tenantId,
-          moduleCode: moduleCode as any,
+          moduleCode: moduleCode as never,
         },
       },
       update: {
@@ -254,170 +348,10 @@ async function enableAllModulesForTenant(tenantId: string): Promise<void> {
       },
       create: {
         tenantId,
-        moduleCode: moduleCode as any,
+        moduleCode: moduleCode as never,
         isAllowed: true,
         isVisible: true,
       },
     });
   }
-}
-
-/**
- * Map industry to template database name
- */
-function getTemplateForIndustry(industry?: string): string {
-  const templateMap: Record<string, string> = {
-    restaurant: 'tpl_restaurant',
-    retail: 'tpl_retail',
-    service: 'tpl_service',
-    consulting: 'tpl_consulting',
-    realestate: 'tpl_realestate',
-  };
-  return templateMap[industry || ''] || 'tpl_service'; // Default to service template
-}
-
-/**
- * Call local db-copy-service to create database from template
- */
-async function copyDatabaseFromTemplate(
-  sourceDb: string,
-  targetDb: string
-): Promise<{ success: boolean; error?: string }> {
-  const DB_COPY_URL = 'http://127.0.0.1:23001';
-  const DB_COPY_API_KEY = process.env.DB_COPY_API_KEY || 'seisei-db-copy-secret-2026';
-
-  try {
-    const response = await fetch(`${DB_COPY_URL}/copy-database`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-API-Key': DB_COPY_API_KEY,
-      },
-      body: JSON.stringify({
-        source_db: sourceDb,
-        target_db: targetDb,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      return { success: false, error: data.error || `HTTP ${response.status}` };
-    }
-
-    return { success: true };
-  } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
-  }
-}
-
-/**
- * Trigger async provisioning - create tenant database from template and register in Odoo 19
- * This runs in background and doesn't block registration
- */
-function triggerProvisioningAsync(
-  tenantId: string,
-  tenantCode: string,
-  companyName: string,
-  email: string,
-  industry?: string
-): void {
-  // Fire and forget - don't await
-  (async () => {
-    try {
-      console.log(`[Provisioning] Starting for tenant ${tenantCode}, industry: ${industry || 'default'}`);
-
-      // Update status to provisioning
-      await prisma.tenant.update({
-        where: { id: tenantId },
-        data: { provisionStatus: 'provisioning' },
-      });
-
-      // Generate subdomain and database name from tenant code
-      const tenantNumber = tenantCode.replace('TEN-', '');
-      const domainPrimary = `${tenantNumber}.erp.seisei.tokyo`;
-      const customerDbName = `cust_ten_${tenantNumber}`.toLowerCase();
-
-      // Step 1: Copy database from industry template
-      const templateDb = getTemplateForIndustry(industry);
-      console.log(`[Provisioning] Creating database ${customerDbName} from template ${templateDb}...`);
-
-      const copyResult = await copyDatabaseFromTemplate(templateDb, customerDbName);
-      if (!copyResult.success) {
-        throw new Error(`Database copy failed: ${copyResult.error}`);
-      }
-
-      console.log(`[Provisioning] Database ${customerDbName} created successfully`);
-
-      // Step 2: Create tenant in Odoo 19 Operations Management
-      console.log(`[Provisioning] Creating tenant in Odoo 19...`);
-      const { getOdoo19Client } = await import('@/lib/odoo19');
-      const odoo19 = getOdoo19Client();
-
-      const odooTenantId = await odoo19.create('vendor.ops.tenant', {
-        name: companyName,
-        code: tenantCode,
-        subdomain: tenantNumber,
-        plan: 'starter',
-        bridge_sync_status: 'pending',
-        notes: `Owner: ${email}, Industry: ${industry || 'service'}`,
-      });
-
-      console.log(`[Provisioning] Created Odoo 19 tenant ID: ${odooTenantId} for ${tenantCode}`);
-
-      // Step 3: Call Bridge API to store tenant metadata
-      console.log(`[Provisioning] Storing tenant metadata in Bridge API...`);
-      const { upsertTenantInBridge } = await import('@/lib/bridge');
-
-      const bridgeResponse = await upsertTenantInBridge(tenantCode, {
-        tenant_code: tenantCode,
-        tenant_name: companyName,
-        subdomain: tenantNumber,
-        domain_primary: domainPrimary,
-        customer_db_name: customerDbName,
-        plan: 'starter',
-        active: true,
-        note: `Owner: ${email}, Industry: ${industry || 'service'}`,
-      });
-
-      if (!bridgeResponse.ok) {
-        console.warn(`[Provisioning] Bridge API warning: ${bridgeResponse.error}`);
-        // Don't fail - database is already created
-      }
-
-      // Step 4: Update BizNexus tenant with real Odoo configuration
-      const odooBaseUrl = `https://${domainPrimary}`;
-      const odooDb = customerDbName;
-
-      await prisma.tenant.update({
-        where: { id: tenantId },
-        data: {
-          odooBaseUrl,
-          odooDb,
-          provisionStatus: 'completed',
-          bridgeTenantId: odooTenantId.toString(),
-        },
-      });
-
-      // Step 5: Update Odoo 19 with sync status
-      try {
-        await odoo19.write('vendor.ops.tenant', [odooTenantId], {
-          bridge_sync_status: 'ok',
-          business_base_url: odooBaseUrl,
-        });
-      } catch (odoo19Error) {
-        console.warn(`[Provisioning] Failed to update Odoo 19 sync status:`, odoo19Error);
-      }
-
-      console.log(`[Provisioning] Completed for tenant ${tenantCode}`);
-      console.log(`[Provisioning] Odoo URL: ${odooBaseUrl}, DB: ${odooDb}`);
-
-    } catch (error) {
-      console.error(`[Provisioning] Error for tenant ${tenantCode}:`, error);
-      await prisma.tenant.update({
-        where: { id: tenantId },
-        data: { provisionStatus: 'failed' },
-      });
-    }
-  })();
 }

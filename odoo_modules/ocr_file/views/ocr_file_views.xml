@@ -1,0 +1,339 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- OCR File Task Form View -->
+        <record id="view_ocr_file_task_form" model="ir.ui.view">
+            <field name="name">ocr.file.task.form</field>
+            <field name="model">ocr.file.task</field>
+            <field name="arch" type="xml">
+                <form string="OCR File Task">
+                    <header>
+                        <button name="action_start_ocr"
+                                string="Start OCR"
+                                type="object"
+                                class="btn-primary"
+                                invisible="state != 'draft'"/>
+                        <button name="action_fill_template"
+                                string="Fill Template"
+                                type="object"
+                                class="btn-primary"
+                                invisible="state != 'done'"/>
+                        <button name="action_download_output"
+                                string="Download Result"
+                                type="object"
+                                class="btn-success"
+                                icon="fa-download"
+                                invisible="not has_output"/>
+                        <button name="action_reset"
+                                string="Reset"
+                                type="object"
+                                class="btn-secondary"
+                                invisible="state == 'draft'"/>
+                        <field name="state" widget="statusbar" statusbar_visible="draft,processing,done"/>
+                    </header>
+                    <sheet>
+                        <div class="oe_title">
+                            <h1>
+                                <field name="name" placeholder="Task Name"/>
+                            </h1>
+                        </div>
+
+                        <!-- Error Message Alert -->
+                        <div class="alert alert-danger" role="alert" invisible="not ocr_error_message">
+                            <strong>Error:</strong> <field name="ocr_error_message" readonly="1"/>
+                        </div>
+
+                        <group>
+                            <group string="Excel Template">
+                                <field name="template_file" filename="template_filename" widget="binary"
+                                       options="{'accepted_file_extensions': '.xlsx,.xls'}"
+                                       help="Upload Excel template (.xlsx)"/>
+                                <field name="template_filename" invisible="1"/>
+                                <field name="template_headers" invisible="1"/>
+                            </group>
+                            <group string="Status">
+                                <field name="source_file_count" string="Files"/>
+                                <field name="ocr_processed_at" readonly="1"/>
+                                <field name="usage_display" string="Quota" readonly="1"/>
+                            </group>
+                        </group>
+
+                        <!-- Download Result Section - Prominent -->
+                        <div class="alert alert-success" role="alert" invisible="not has_output">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div>
+                                    <strong class="fs-5">Result Ready!</strong>
+                                    <br/>
+                                    <field name="output_filename" readonly="1" nolabel="1"/>
+                                </div>
+                                <button name="action_download_output"
+                                        string="Download Excel"
+                                        type="object"
+                                        class="btn btn-success btn-lg"
+                                        icon="fa-download"/>
+                            </div>
+                        </div>
+
+                        <!-- Show detected template columns -->
+                        <div class="alert alert-info" role="alert" invisible="not template_headers">
+                            <strong>Detected Header Row:</strong> <field name="template_header_row" readonly="1" nolabel="1" class="d-inline"/>
+                            <br/>
+                            <strong>Columns:</strong>
+                            <field name="template_headers" readonly="1" nolabel="1"/>
+                        </div>
+
+                        <notebook>
+                            <page string="Source Files" name="source_files">
+                                <!-- Multi-file upload widget -->
+                                <div class="mb-3" invisible="state != 'draft'">
+                                    <span class="o_form_label fw-bold mb-2">Batch Upload (Select Multiple Files):</span>
+                                    <widget name="multi_file_upload"/>
+                                </div>
+
+                                <field name="source_file_ids" nolabel="1">
+                                    <list editable="bottom">
+                                        <field name="sequence" widget="handle"/>
+                                        <field name="source_file" filename="source_filename" widget="binary"
+                                               options="{'accepted_file_extensions': '.jpg,.jpeg,.png,.gif,.bmp,.pdf'}"/>
+                                        <field name="source_filename"/>
+                                        <field name="state" widget="badge"
+                                               decoration-muted="state == 'pending'"
+                                               decoration-warning="state == 'processing'"
+                                               decoration-success="state == 'done'"
+                                               decoration-danger="state == 'failed'"/>
+                                        <field name="extracted_vendor_name"/>
+                                        <field name="extracted_total_amount"/>
+                                        <field name="ocr_error_message" optional="hide"/>
+                                    </list>
+                                </field>
+                            </page>
+                            <page string="Extracted Data" invisible="state not in ('done', 'failed')">
+                                <field name="source_file_ids" nolabel="1" readonly="1">
+                                    <list>
+                                        <field name="source_filename"/>
+                                        <field name="state" widget="badge"/>
+                                        <field name="extracted_invoice_date"/>
+                                        <field name="extracted_invoice_number"/>
+                                        <field name="extracted_vendor_name"/>
+                                        <field name="extracted_tax_id"/>
+                                        <field name="extracted_total_amount"/>
+                                        <field name="extracted_currency"/>
+                                    </list>
+                                </field>
+                            </page>
+                            <page string="Output File" invisible="not has_output">
+                                <group>
+                                    <field name="output_file" filename="output_filename" widget="binary" readonly="1"/>
+                                    <field name="output_filename" readonly="1"/>
+                                    <field name="has_output" invisible="1"/>
+                                </group>
+                            </page>
+                        </notebook>
+                    </sheet>
+                    <chatter/>
+                </form>
+            </field>
+        </record>
+
+        <!-- OCR File Source Form View (popup) -->
+        <record id="view_ocr_file_source_form" model="ir.ui.view">
+            <field name="name">ocr.file.source.form</field>
+            <field name="model">ocr.file.source</field>
+            <field name="arch" type="xml">
+                <form string="Source File">
+                    <sheet>
+                        <group>
+                            <group string="File">
+                                <field name="source_file" filename="source_filename" widget="binary"/>
+                                <field name="source_filename"/>
+                                <field name="state" widget="badge"/>
+                            </group>
+                            <group string="Status">
+                                <field name="task_id" readonly="1"/>
+                                <field name="ocr_error_message" readonly="1"/>
+                            </group>
+                        </group>
+                        <notebook>
+                            <page string="Extracted Data">
+                                <group>
+                                    <group>
+                                        <field name="extracted_invoice_date"/>
+                                        <field name="extracted_invoice_number"/>
+                                        <field name="extracted_vendor_name"/>
+                                        <field name="extracted_tax_id"/>
+                                    </group>
+                                    <group>
+                                        <field name="extracted_total_amount"/>
+                                        <field name="extracted_currency"/>
+                                    </group>
+                                </group>
+                                <separator string="All Extracted Fields (JSON)"/>
+                                <field name="extracted_data" widget="text"/>
+                                <separator string="Line Items"/>
+                                <field name="extracted_line_items" widget="text"/>
+                            </page>
+                            <page string="Raw Data">
+                                <field name="ocr_raw_data" widget="text" readonly="1"/>
+                            </page>
+                        </notebook>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <!-- OCR File Task Tree View -->
+        <record id="view_ocr_file_task_tree" model="ir.ui.view">
+            <field name="name">ocr.file.task.tree</field>
+            <field name="model">ocr.file.task</field>
+            <field name="arch" type="xml">
+                <list string="OCR File Tasks">
+                    <field name="name"/>
+                    <field name="template_filename"/>
+                    <field name="source_file_count" string="Files"/>
+                    <field name="state" widget="badge"
+                           decoration-info="state == 'draft'"
+                           decoration-warning="state == 'processing'"
+                           decoration-success="state == 'done'"
+                           decoration-danger="state == 'failed'"/>
+                    <field name="ocr_processed_at"/>
+                    <field name="create_date"/>
+                </list>
+            </field>
+        </record>
+
+        <!-- OCR File Task Search View -->
+        <record id="view_ocr_file_task_search" model="ir.ui.view">
+            <field name="name">ocr.file.task.search</field>
+            <field name="model">ocr.file.task</field>
+            <field name="arch" type="xml">
+                <search string="Search OCR Tasks">
+                    <field name="name"/>
+                    <filter string="Draft" name="draft" domain="[('state', '=', 'draft')]"/>
+                    <filter string="Processing" name="processing" domain="[('state', '=', 'processing')]"/>
+                    <filter string="Done" name="done" domain="[('state', '=', 'done')]"/>
+                    <filter string="Failed" name="failed" domain="[('state', '=', 'failed')]"/>
+                    <separator/>
+                    <filter string="Today" name="today" domain="[('create_date', '>=', context_today().strftime('%Y-%m-%d'))]"/>
+                    <group expand="0" string="Group By">
+                        <filter string="Status" name="group_state" context="{'group_by': 'state'}"/>
+                        <filter string="Date" name="group_date" context="{'group_by': 'create_date:day'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <!-- OCR File Task Kanban View -->
+        <record id="view_ocr_file_task_kanban" model="ir.ui.view">
+            <field name="name">ocr.file.task.kanban</field>
+            <field name="model">ocr.file.task</field>
+            <field name="arch" type="xml">
+                <kanban default_group_by="state" class="o_kanban_mobile">
+                    <field name="name"/>
+                    <field name="state"/>
+                    <field name="source_file_count"/>
+                    <field name="create_date"/>
+                    <templates>
+                        <t t-name="card">
+                            <div class="oe_kanban_content">
+                                <strong class="o_kanban_record_title">
+                                    <span t-out="record.name.value"/>
+                                </strong>
+                                <div class="o_kanban_record_body">
+                                    <span><strong>Files:</strong> <t t-out="record.source_file_count.value or 0"/></span>
+                                </div>
+                            </div>
+                        </t>
+                    </templates>
+                </kanban>
+            </field>
+        </record>
+
+        <!-- Action -->
+        <record id="action_ocr_file_task" model="ir.actions.act_window">
+            <field name="name">OCR File Processing</field>
+            <field name="res_model">ocr.file.task</field>
+            <field name="view_mode">list,kanban,form</field>
+            <field name="search_view_id" ref="view_ocr_file_task_search"/>
+            <field name="context">{'search_default_draft': 0}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Create your first OCR file task
+                </p>
+                <p>
+                    Upload an Excel template and multiple source documents (images/PDFs),
+                    then let OCR extract the data and fill your template automatically.
+                </p>
+            </field>
+        </record>
+
+        <!-- OCR Usage Views -->
+        <record id="view_ocr_file_usage_tree" model="ir.ui.view">
+            <field name="name">ocr.file.usage.tree</field>
+            <field name="model">ocr.file.usage</field>
+            <field name="arch" type="xml">
+                <list string="OCR Usage" create="false" delete="false">
+                    <field name="month_display"/>
+                    <field name="image_count"/>
+                    <field name="free_quota"/>
+                    <field name="remaining_free" decoration-danger="remaining_free == 0" decoration-warning="remaining_free &lt; 10"/>
+                    <field name="billable_count"/>
+                    <field name="total_charge" string="Charge (¥)"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="view_ocr_file_usage_form" model="ir.ui.view">
+            <field name="name">ocr.file.usage.form</field>
+            <field name="model">ocr.file.usage</field>
+            <field name="arch" type="xml">
+                <form string="OCR Usage">
+                    <sheet>
+                        <group>
+                            <group string="Period">
+                                <field name="month_display" readonly="1"/>
+                                <field name="company_id" readonly="1"/>
+                            </group>
+                            <group string="Usage">
+                                <field name="image_count" readonly="1"/>
+                                <field name="free_quota"/>
+                                <field name="remaining_free" readonly="1"/>
+                            </group>
+                        </group>
+                        <group>
+                            <group string="Billing">
+                                <field name="price_per_image"/>
+                                <field name="billable_count" readonly="1"/>
+                                <field name="total_charge" readonly="1" string="Total (¥)"/>
+                            </group>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="action_ocr_file_usage" model="ir.actions.act_window">
+            <field name="name">OCR Usage</field>
+            <field name="res_model">ocr.file.usage</field>
+            <field name="view_mode">list,form</field>
+        </record>
+
+        <!-- Menu Items -->
+        <menuitem id="menu_ocr_file_root"
+                  name="Sheet Forge"
+                  web_icon="ocr_file,static/description/icon.png"
+                  sequence="100"/>
+
+        <menuitem id="menu_ocr_file_tasks"
+                  name="OCR Tasks"
+                  parent="menu_ocr_file_root"
+                  action="action_ocr_file_task"
+                  sequence="10"/>
+
+        <menuitem id="menu_ocr_file_usage"
+                  name="Usage &amp; Billing"
+                  parent="menu_ocr_file_root"
+                  action="action_ocr_file_usage"
+                  sequence="20"/>
+
+    </data>
+</odoo>

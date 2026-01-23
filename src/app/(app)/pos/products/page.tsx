@@ -323,6 +323,7 @@ export default function ProductsPage() {
       {/* Page Header - Title + Action Button */}
       <PageHeader
         title={t('pos.products')}
+        backHref="/pos"
         action={
           <button onClick={openCreateModal} className="btn btn-primary">
             <Plus className="w-4 h-4" />

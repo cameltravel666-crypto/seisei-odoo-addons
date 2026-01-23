@@ -34,10 +34,9 @@ export async function GET(request: NextRequest) {
 
     const odoo = await getOdooClientForSession(session);
 
-    // Search for customers (partners that can be customers)
-    const domain: unknown[] = [
-      ['customer_rank', '>', 0],
-    ];
+    // Search for all partners (customers and contacts)
+    // Include both companies and individuals, excluding internal users
+    const domain: unknown[] = [];
 
     if (search) {
       domain.push('|');

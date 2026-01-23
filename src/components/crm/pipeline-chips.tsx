@@ -19,14 +19,14 @@ interface PipelineChipsProps {
   t: (key: string) => string;
 }
 
-// Stage colors - subtle backgrounds
+// Stage colors - business professional palette (no red/green)
 const STAGE_COLORS: Record<string, { bg: string; activeBg: string; dot: string }> = {
-  new: { bg: 'bg-gray-100', activeBg: 'bg-gray-200', dot: 'bg-gray-400' },
-  qualified: { bg: 'bg-blue-50', activeBg: 'bg-blue-100', dot: 'bg-blue-400' },
-  proposition: { bg: 'bg-yellow-50', activeBg: 'bg-yellow-100', dot: 'bg-yellow-400' },
-  negotiation: { bg: 'bg-orange-50', activeBg: 'bg-orange-100', dot: 'bg-orange-400' },
-  won: { bg: 'bg-green-50', activeBg: 'bg-green-100', dot: 'bg-green-500' },
-  lost: { bg: 'bg-red-50', activeBg: 'bg-red-100', dot: 'bg-red-400' },
+  new: { bg: 'bg-slate-100', activeBg: 'bg-slate-200', dot: 'bg-slate-400' },
+  qualified: { bg: 'bg-blue-50', activeBg: 'bg-blue-100', dot: 'bg-blue-500' },
+  proposition: { bg: 'bg-amber-50', activeBg: 'bg-amber-100', dot: 'bg-amber-500' },
+  negotiation: { bg: 'bg-indigo-50', activeBg: 'bg-indigo-100', dot: 'bg-indigo-500' },
+  won: { bg: 'bg-sky-50', activeBg: 'bg-sky-100', dot: 'bg-sky-500' },
+  lost: { bg: 'bg-slate-100', activeBg: 'bg-slate-200', dot: 'bg-slate-400' },
 };
 
 function getStageColor(stageName: string, isWon: boolean, index: number) {
@@ -37,13 +37,13 @@ function getStageColor(stageName: string, isWon: boolean, index: number) {
   if (isWon) {
     return STAGE_COLORS.won;
   }
-  // Default colors by index
-  const defaults = ['gray', 'blue', 'yellow', 'orange', 'purple'];
+  // Default colors by index - business professional palette
+  const defaults = ['slate', 'blue', 'amber', 'indigo', 'violet'];
   const key = defaults[index % defaults.length];
   return {
     bg: `bg-${key}-50`,
     activeBg: `bg-${key}-100`,
-    dot: `bg-${key}-400`,
+    dot: `bg-${key}-500`,
   };
 }
 
@@ -92,11 +92,11 @@ export function PipelineChips({
               isActive
                 ? 'ring-2 ring-blue-500 ring-offset-1'
                 : ''
-            } ${stage.isWon ? 'bg-green-50' : colors.bg}`}
+            } ${colors.bg}`}
             style={{ minHeight: 'var(--height-button-sm)' }}
           >
             <div className="flex items-center gap-1.5">
-              <div className={`w-2 h-2 rounded-full ${stage.isWon ? 'bg-green-500' : colors.dot}`} />
+              <div className={`w-2 h-2 rounded-full ${colors.dot}`} />
               <span className={`font-medium ${isActive ? 'text-gray-900' : 'text-gray-700'}`}>
                 {stage.name}
               </span>

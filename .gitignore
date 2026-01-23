@@ -19,10 +19,13 @@
 
 # production
 /build
+/dist
 
 # misc
 .DS_Store
 *.pem
+*.key
+*.crt
 
 # debug
 npm-debug.log*
@@ -30,8 +33,11 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# env files
+.env
+.env.*
+!.env.example
+!.env.*.example
 
 # vercel
 .vercel
@@ -41,3 +47,51 @@ yarn-error.log*
 next-env.d.ts
 
 /src/generated/prisma
+
+# === Seisei 项目特定 ===
+
+# 敏感信息
+secrets/
+credentials/
+
+# 部署包
+*.tar.gz
+deploy-*.tar.gz
+seisei-erp-*.tar.gz
+
+# 数据库备份
+*.dump
+*.sql
+*.sql.gz
+backups/
+filestore/
+
+# Traefik
+infra/stacks/edge-traefik/acme/acme.json
+infra/stacks/edge-traefik/logs/
+
+# Odoo
+odoo-*+e.*/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.venv/
+venv/
+
+# 移动端
+android/app/build/
+ios/App/Pods/
+ios/App/DerivedData/
+
+# 日志
+*.log
+logs/

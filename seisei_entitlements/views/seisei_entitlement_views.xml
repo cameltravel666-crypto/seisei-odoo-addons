@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Entitlement List View -->
+    <record id="seisei_entitlement_view_list" model="ir.ui.view">
+        <field name="name">seisei.entitlement.list</field>
+        <field name="model">seisei.entitlement</field>
+        <field name="arch" type="xml">
+            <list string="Entitlements" decoration-muted="not active">
+                <field name="feature_key"/>
+                <field name="feature_name"/>
+                <field name="active"/>
+                <field name="granted_at"/>
+                <field name="last_updated"/>
+                <field name="source"/>
+                <field name="tenant_code"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Entitlement Form View -->
+    <record id="seisei_entitlement_view_form" model="ir.ui.view">
+        <field name="name">seisei.entitlement.form</field>
+        <field name="model">seisei.entitlement</field>
+        <field name="arch" type="xml">
+            <form string="Entitlement">
+                <sheet>
+                    <widget name="web_ribbon" title="Inactive" bg_color="bg-danger" invisible="active"/>
+                    <group>
+                        <group string="Feature Info">
+                            <field name="feature_key"/>
+                            <field name="feature_name"/>
+                            <field name="active"/>
+                        </group>
+                        <group string="Source Info">
+                            <field name="tenant_code"/>
+                            <field name="source"/>
+                            <field name="granted_at"/>
+                            <field name="last_updated"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Entitlement Search View -->
+    <record id="seisei_entitlement_view_search" model="ir.ui.view">
+        <field name="name">seisei.entitlement.search</field>
+        <field name="model">seisei.entitlement</field>
+        <field name="arch" type="xml">
+            <search string="Search Entitlements">
+                <field name="feature_key"/>
+                <field name="feature_name"/>
+                <filter string="Active" name="active" domain="[('active', '=', True)]"/>
+                <filter string="Inactive" name="inactive" domain="[('active', '=', False)]"/>
+                <separator/>
+                <filter string="Group by Source" name="group_source" context="{'group_by': 'source'}"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- Entitlement Action -->
+    <record id="seisei_entitlement_action" model="ir.actions.act_window">
+        <field name="name">Entitlements</field>
+        <field name="res_model">seisei.entitlement</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="seisei_entitlement_view_search"/>
+        <field name="context">{'search_default_active': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No entitlements yet
+            </p>
+            <p>
+                Entitlements are automatically received from the billing system.
+            </p>
+        </field>
+    </record>
+
+    <!-- Entitlement Log List View -->
+    <record id="seisei_entitlement_log_view_list" model="ir.ui.view">
+        <field name="name">seisei.entitlement.log.list</field>
+        <field name="model">seisei.entitlement.log</field>
+        <field name="arch" type="xml">
+            <list string="Entitlement Logs" create="false" edit="false">
+                <field name="received_at"/>
+                <field name="tenant_code"/>
+                <field name="source"/>
+                <field name="status" decoration-success="status == 'success'" decoration-danger="status == 'failed'" widget="badge"/>
+                <field name="total_active"/>
+                <field name="api_key_name"/>
+                <field name="request_ip"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Entitlement Log Form View -->
+    <record id="seisei_entitlement_log_view_form" model="ir.ui.view">
+        <field name="name">seisei.entitlement.log.form</field>
+        <field name="model">seisei.entitlement.log</field>
+        <field name="arch" type="xml">
+            <form string="Entitlement Log" create="false" edit="false">
+                <sheet>
+                    <group>
+                        <group string="Request Info">
+                            <field name="received_at"/>
+                            <field name="tenant_code"/>
+                            <field name="source"/>
+                            <field name="status"/>
+                        </group>
+                        <group string="API Info">
+                            <field name="api_key_name"/>
+                            <field name="request_ip"/>
+                            <field name="total_active"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Features Received" name="received">
+                            <field name="features_received"/>
+                        </page>
+                        <page string="Changes" name="changes">
+                            <group>
+                                <field name="features_activated"/>
+                                <field name="features_deactivated"/>
+                                <field name="features_created"/>
+                            </group>
+                        </page>
+                        <page string="Error" name="error" invisible="status != 'failed'">
+                            <field name="error_message"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Entitlement Log Search View -->
+    <record id="seisei_entitlement_log_view_search" model="ir.ui.view">
+        <field name="name">seisei.entitlement.log.search</field>
+        <field name="model">seisei.entitlement.log</field>
+        <field name="arch" type="xml">
+            <search string="Search Logs">
+                <field name="tenant_code"/>
+                <field name="source"/>
+                <filter string="Success" name="success" domain="[('status', '=', 'success')]"/>
+                <filter string="Failed" name="failed" domain="[('status', '=', 'failed')]"/>
+                <separator/>
+                <filter string="Today" name="today" domain="[('received_at', '&gt;=', (context_today()).strftime('%Y-%m-%d'))]"/>
+                <separator/>
+                <filter string="Group by Date" name="group_date" context="{'group_by': 'received_at:day'}"/>
+                <filter string="Group by Status" name="group_status" context="{'group_by': 'status'}"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- Entitlement Log Action -->
+    <record id="seisei_entitlement_log_action" model="ir.actions.act_window">
+        <field name="name">Entitlement Logs</field>
+        <field name="res_model">seisei.entitlement.log</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="seisei_entitlement_log_view_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No entitlement logs yet
+            </p>
+            <p>
+                Logs are created when entitlements are received from the billing system.
+            </p>
+        </field>
+    </record>
+</odoo>

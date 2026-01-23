@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Extend mail.compose.message form to add language selection -->
+    <record id="email_compose_message_wizard_form_multilang" model="ir.ui.view">
+        <field name="name">mail.compose.message.form.multilang</field>
+        <field name="model">mail.compose.message</field>
+        <field name="inherit_id" ref="mail.email_compose_message_wizard_form"/>
+        <field name="arch" type="xml">
+            <!-- Add force_lang field before subject -->
+            <xpath expr="//field[@name='subject']" position="before">
+                <field name="show_force_lang" invisible="1"/>
+                <field name="force_lang"
+                       invisible="not show_force_lang"
+                       options="{'no_create': True, 'no_edit': True}"
+                       placeholder="Select language..."
+                       class="w-50"/>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

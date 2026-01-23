@@ -3,6 +3,9 @@ import { getSession } from '@/lib/auth';
 import { getVisibleModules } from '@/lib/features';
 import { Navigation } from '@/components/layout/nav';
 import { AuthInitializer } from './auth-initializer';
+import { SubscriptionBanner } from '@/components/subscription-banner';
+import { ProvisioningWrapper } from './provisioning-wrapper';
+import { prisma } from '@/lib/db';
 
 export default async function AppLayout({
   children,
@@ -13,6 +16,22 @@ export default async function AppLayout({
 
   if (!session) {
     redirect('/login');
+  }
+
+  // Check tenant's provision status
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: session.tenantId },
+    select: { provisionStatus: true },
+  });
+
+  // If tenant is still provisioning, show provisioning status page
+  if (tenant?.provisionStatus === 'provisioning' || tenant?.provisionStatus === 'pending') {
+    return <ProvisioningWrapper />;
+  }
+
+  // If provisioning failed, show provisioning status page with error
+  if (tenant?.provisionStatus === 'failed') {
+    return <ProvisioningWrapper />;
   }
 
   const visibleModules = await getVisibleModules(session.userId, session.tenantId);
@@ -27,14 +46,34 @@ export default async function AppLayout({
         path: m.path,
       }))}
     >
-      <div className="min-h-screen bg-[var(--color-bg-page)]">
+      {/*
+        App Shell 布局 - 统一的移动端/桌面端布局结构
+
+        移动端: 固定 header + 可滚动 main
+        桌面端: 固定侧边栏 + 可滚动 main
+
+        CSS 控制在 globals.css 中通过媒体查询实现
+        - [data-app-header="mobile"]: 移动端顶栏样式
+        - [data-main-scroll]: 主滚动区样式
+        - --app-header-total-h: 统一的顶栏高度（含 safe-area）
+      */}
+      <div
+        className="app-shell bg-[var(--color-bg-page)]"
+        data-app-shell
+        suppressHydrationWarning
+      >
         <Navigation />
-        {/* Main Content - Fixed header offset with safe area */}
+        {/* Subscription status banner - shows warnings for expiring trials or payment issues */}
+        <div className="md:pl-64">
+          <SubscriptionBanner />
+        </div>
         <main
-          className="md:pl-64 pb-20 md:pb-0"
-          style={{ paddingTop: 'calc(var(--height-header) + env(safe-area-inset-top, 0px))' }}
+          data-main-scroll
+          data-app-main
+          className="md:pl-64"
+          suppressHydrationWarning
         >
-          <div className="md:pt-0 p-[var(--page-padding-x)] md:p-[var(--space-6)]">{children}</div>
+          <div className="p-[var(--page-padding-x)] md:p-[var(--space-6)] pb-20 md:pb-6">{children}</div>
         </main>
       </div>
     </AuthInitializer>

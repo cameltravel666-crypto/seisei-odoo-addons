@@ -336,3 +336,142 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+/**
+ * PUT /api/cash-ledger/entries - Update a draft entry
+ * Body: { entryId: number, amount: number, date?: string }
+ */
+export async function PUT(request: NextRequest) {
+  try {
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json(
+        { success: false, error: { code: 'UNAUTHORIZED', message: 'Not authenticated' } },
+        { status: 401 }
+      );
+    }
+
+    const body = await request.json();
+    const { entryId, amount, date } = body;
+
+    if (!entryId || amount === undefined) {
+      return NextResponse.json(
+        { success: false, error: { code: 'VALIDATION_ERROR', message: 'entryId and amount are required' } },
+        { status: 400 }
+      );
+    }
+
+    const odoo = await getOdooClientForSession(session);
+
+    // Check if entry exists and is draft
+    const [move] = await odoo.searchRead<{ id: number; state: string; ref: string; line_ids: number[] }>(
+      'account.move',
+      [['id', '=', entryId], ['ref', 'ilike', CASH_LEDGER_REF_PREFIX]],
+      { fields: ['state', 'ref', 'line_ids'] }
+    );
+
+    if (!move) {
+      return NextResponse.json(
+        { success: false, error: { code: 'NOT_FOUND', message: 'Entry not found' } },
+        { status: 404 }
+      );
+    }
+
+    if (move.state !== 'draft') {
+      return NextResponse.json(
+        { success: false, error: { code: 'INVALID_STATE', message: 'Only draft entries can be edited' } },
+        { status: 400 }
+      );
+    }
+
+    // Update date if provided
+    if (date) {
+      await odoo.write('account.move', [entryId], { date });
+    }
+
+    // Update amount in line_ids (need to update both debit and credit lines)
+    if (amount > 0 && move.line_ids.length >= 2) {
+      const lines = await odoo.searchRead<{ id: number; debit: number; credit: number }>(
+        'account.move.line',
+        [['id', 'in', move.line_ids]],
+        { fields: ['debit', 'credit'] }
+      );
+
+      for (const line of lines) {
+        if (line.debit > 0) {
+          await odoo.write('account.move.line', [line.id], { debit: amount });
+        } else if (line.credit > 0) {
+          await odoo.write('account.move.line', [line.id], { credit: amount });
+        }
+      }
+    }
+
+    return NextResponse.json({ success: true, data: { updated: true } });
+  } catch (error) {
+    console.error('[CashLedger Update Error]', error);
+    return NextResponse.json(
+      { success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to update entry' } },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * DELETE /api/cash-ledger/entries - Delete a draft entry
+ * Query: ?id=123
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json(
+        { success: false, error: { code: 'UNAUTHORIZED', message: 'Not authenticated' } },
+        { status: 401 }
+      );
+    }
+
+    const searchParams = request.nextUrl.searchParams;
+    const entryId = parseInt(searchParams.get('id') || '');
+
+    if (isNaN(entryId)) {
+      return NextResponse.json(
+        { success: false, error: { code: 'VALIDATION_ERROR', message: 'Valid entry ID is required' } },
+        { status: 400 }
+      );
+    }
+
+    const odoo = await getOdooClientForSession(session);
+
+    // Check if entry exists and is draft
+    const [move] = await odoo.searchRead<{ id: number; state: string; ref: string }>(
+      'account.move',
+      [['id', '=', entryId], ['ref', 'ilike', CASH_LEDGER_REF_PREFIX]],
+      { fields: ['state', 'ref'] }
+    );
+
+    if (!move) {
+      return NextResponse.json(
+        { success: false, error: { code: 'NOT_FOUND', message: 'Entry not found' } },
+        { status: 404 }
+      );
+    }
+
+    if (move.state !== 'draft') {
+      return NextResponse.json(
+        { success: false, error: { code: 'INVALID_STATE', message: 'Only draft entries can be deleted' } },
+        { status: 400 }
+      );
+    }
+
+    // Delete the entry
+    await odoo.callKw('account.move', 'unlink', [[entryId]], {});
+
+    return NextResponse.json({ success: true, data: { deleted: true } });
+  } catch (error) {
+    console.error('[CashLedger Delete Error]', error);
+    return NextResponse.json(
+      { success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to delete entry' } },
+      { status: 500 }
+    );
+  }
+}

@@ -1,0 +1,188 @@
+# Japanese translation for seisei_s3_attachment
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo 18.0\n"
+"Language: ja\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. module: seisei_s3_attachment
+msgid "Seisei S3 Attachment Storage"
+msgstr "Seisei S3添付ファイルストレージ"
+
+#. module: seisei_s3_attachment
+msgid "S3 Object Key"
+msgstr "S3オブジェクトキー"
+
+#. module: seisei_s3_attachment
+msgid "S3 Status"
+msgstr "S3ステータス"
+
+#. module: seisei_s3_attachment
+msgid "Configuration Source"
+msgstr "設定ソース"
+
+#. module: seisei_s3_attachment
+msgid "Enabled"
+msgstr "有効"
+
+#. module: seisei_s3_attachment
+msgid "Configured but disabled"
+msgstr "設定済み（無効）"
+
+#. module: seisei_s3_attachment
+msgid "Not configured"
+msgstr "未設定"
+
+#. module: seisei_s3_attachment
+msgid "(not set)"
+msgstr "（未設定）"
+
+#. module: seisei_s3_attachment
+msgid "Environment Variables (system-wide)"
+msgstr "環境変数（システム全体）"
+
+#. module: seisei_s3_attachment
+msgid "System Parameters"
+msgstr "システムパラメータ"
+
+#. module: seisei_s3_attachment
+msgid "Bucket"
+msgstr "バケット"
+
+#. module: seisei_s3_attachment
+msgid "Region"
+msgstr "リージョン"
+
+#. module: seisei_s3_attachment
+msgid "Prefix"
+msgstr "プレフィックス"
+
+#. module: seisei_s3_attachment
+msgid "Test Connection"
+msgstr "接続テスト"
+
+#. module: seisei_s3_attachment
+msgid "Migrate Existing Attachments"
+msgstr "既存添付ファイルを移行"
+
+#. module: seisei_s3_attachment
+msgid "Migrate Attachments to S3"
+msgstr "S3へ添付ファイルを移行"
+
+#. module: seisei_s3_attachment
+msgid "Connection Successful"
+msgstr "接続成功"
+
+#. module: seisei_s3_attachment
+msgid "Connection Failed"
+msgstr "接続失敗"
+
+#. module: seisei_s3_attachment
+msgid "S3 Migration"
+msgstr "S3移行"
+
+#. module: seisei_s3_attachment
+msgid "S3 Attachment Migration Wizard"
+msgstr "S3添付ファイル移行ウィザード"
+
+#. module: seisei_s3_attachment
+msgid "Preview"
+msgstr "プレビュー"
+
+#. module: seisei_s3_attachment
+msgid "Migrating"
+msgstr "移行中"
+
+#. module: seisei_s3_attachment
+msgid "Done"
+msgstr "完了"
+
+#. module: seisei_s3_attachment
+msgid "Filestore Attachments"
+msgstr "ファイルストア添付ファイル"
+
+#. module: seisei_s3_attachment
+msgid "Filestore Size (MB)"
+msgstr "ファイルストアサイズ (MB)"
+
+#. module: seisei_s3_attachment
+msgid "S3 Attachments"
+msgstr "S3添付ファイル"
+
+#. module: seisei_s3_attachment
+msgid "URL Attachments"
+msgstr "URL添付ファイル"
+
+#. module: seisei_s3_attachment
+msgid "Batch Size"
+msgstr "バッチサイズ"
+
+#. module: seisei_s3_attachment
+msgid "From Date"
+msgstr "開始日"
+
+#. module: seisei_s3_attachment
+msgid "Migrated"
+msgstr "移行済み"
+
+#. module: seisei_s3_attachment
+msgid "Failed"
+msgstr "失敗"
+
+#. module: seisei_s3_attachment
+msgid "Progress"
+msgstr "進捗"
+
+#. module: seisei_s3_attachment
+msgid "Start Migration"
+msgstr "移行開始"
+
+#. module: seisei_s3_attachment
+msgid "Continue"
+msgstr "続行"
+
+#. module: seisei_s3_attachment
+msgid "Refresh"
+msgstr "更新"
+
+#. module: seisei_s3_attachment
+msgid "Rollback Info"
+msgstr "ロールバック情報"
+
+#. module: seisei_s3_attachment
+msgid "Close"
+msgstr "閉じる"
+
+#. module: seisei_s3_attachment
+msgid "Current Attachment Statistics"
+msgstr "現在の添付ファイル統計"
+
+#. module: seisei_s3_attachment
+msgid "Migration Options"
+msgstr "移行オプション"
+
+#. module: seisei_s3_attachment
+msgid "Migration Progress"
+msgstr "移行進捗"
+
+#. module: seisei_s3_attachment
+msgid "S3 Storage"
+msgstr "S3ストレージ"
+
+#. module: seisei_s3_attachment
+msgid "S3 Attachment Storage"
+msgstr "S3添付ファイルストレージ"
+
+#. module: seisei_s3_attachment
+msgid "Storage Status"
+msgstr "ストレージステータス"
+
+#. module: seisei_s3_attachment
+msgid "Current Configuration"
+msgstr "現在の設定"
+
+#. module: seisei_s3_attachment
+msgid "Actions"
+msgstr "アクション"

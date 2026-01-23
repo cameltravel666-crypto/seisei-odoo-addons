@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Header Scroll Diagnostic Script</title>
+  <meta charset="UTF-8">
+</head>
+<body>
+  <h1>Header Scroll 诊断脚本</h1>
+  <p>在浏览器 Console 中运行以下代码，然后将结果截图或复制给我：</p>
+  <pre>
+(() => {
+  const result = {
+    timestamp: new Date().toISOString(),
+    scrollingElement: {
+      tagName: document.scrollingElement?.tagName,
+      scrollTop: document.scrollingElement?.scrollTop,
+      scrollHeight: document.scrollingElement?.scrollHeight,
+      clientHeight: document.scrollingElement?.clientHeight,
+    },
+    body: {
+      scrollTop: document.body.scrollTop,
+      scrollHeight: document.body.scrollHeight,
+      clientHeight: document.body.clientHeight,
+      overflow: getComputedStyle(document.body).overflow,
+      height: getComputedStyle(document.body).height,
+      position: getComputedStyle(document.body).position,
+    },
+    html: {
+      scrollTop: document.documentElement.scrollTop,
+      scrollHeight: document.documentElement.scrollHeight,
+      clientHeight: document.documentElement.clientHeight,
+      overflow: getComputedStyle(document.documentElement).overflow,
+      height: getComputedStyle(document.documentElement).height,
+    },
+    appShell: (() => {
+      const el = document.querySelector('.app-shell');
+      if (!el) return null;
+      const cs = getComputedStyle(el);
+      return {
+        found: true,
+        position: cs.position,
+        overflow: cs.overflow,
+        display: cs.display,
+        flexDirection: cs.flexDirection,
+        height: cs.height,
+        minHeight: cs.minHeight,
+        scrollTop: el.scrollTop,
+        scrollHeight: el.scrollHeight,
+        clientHeight: el.clientHeight,
+      };
+    })(),
+    header: (() => {
+      const el = document.querySelector('[data-app-header]');
+      if (!el) return { found: false };
+      const rect = el.getBoundingClientRect();
+      const cs = getComputedStyle(el);
+      // 检查祖先元素
+      const ancestorsWithTransform = [];
+      let current = el.parentElement;
+      while (current && current !== document.body) {
+        const acs = getComputedStyle(current);
+        if (acs.transform !== 'none' && acs.transform !== 'matrix(1, 0, 0, 1, 0, 0)') {
+          ancestorsWithTransform.push({
+            tag: current.tagName.toLowerCase(),
+            className: current.className,
+            transform: acs.transform,
+          });
+        }
+        if (acs.filter !== 'none') {
+          ancestorsWithTransform.push({
+            tag: current.tagName.toLowerCase(),
+            className: current.className,
+            filter: acs.filter,
+          });
+        }
+        if (acs.backdropFilter !== 'none') {
+          ancestorsWithTransform.push({
+            tag: current.tagName.toLowerCase(),
+            className: current.className,
+            backdropFilter: acs.backdropFilter,
+          });
+        }
+        current = current.parentElement;
+      }
+      return {
+        found: true,
+        tagName: el.tagName.toLowerCase(),
+        dataAttribute: el.getAttribute('data-app-header'),
+        boundingRect: {
+          top: rect.top,
+          left: rect.left,
+          width: rect.width,
+          height: rect.height,
+        },
+        computedStyle: {
+          position: cs.position,
+          top: cs.top,
+          left: cs.left,
+          right: cs.right,
+          zIndex: cs.zIndex,
+          isolation: cs.isolation,
+          transform: cs.transform,
+          overflow: cs.overflow,
+          flexShrink: cs.flexShrink,
+          backgroundColor: cs.backgroundColor,
+        },
+        ancestorsWithTransform: ancestorsWithTransform.length > 0 ? ancestorsWithTransform : null,
+      };
+    })(),
+    mainScroll: (() => {
+      const el = document.querySelector('[data-main-scroll]');
+      if (!el) return { found: false };
+      const rect = el.getBoundingClientRect();
+      const cs = getComputedStyle(el);
+      return {
+        found: true,
+        tagName: el.tagName.toLowerCase(),
+        boundingRect: {
+          top: rect.top,
+          left: rect.left,
+          width: rect.width,
+          height: rect.height,
+        },
+        computedStyle: {
+          position: cs.position,
+          overflowY: cs.overflowY,
+          overflowX: cs.overflowX,
+          flex: cs.flex,
+          minHeight: cs.minHeight,
+          paddingTop: cs.paddingTop,
+        },
+        scrollMetrics: {
+          scrollTop: el.scrollTop,
+          scrollHeight: el.scrollHeight,
+          clientHeight: el.clientHeight,
+          canScroll: el.scrollHeight > el.clientHeight,
+        },
+      };
+    })(),
+    scrollTest: (() => {
+      const header = document.querySelector('[data-app-header]');
+      const mainScroll = document.querySelector('[data-main-scroll]');
+      if (!header || !mainScroll) return { error: 'Elements not found' };
+      
+      const beforeRect = header.getBoundingClientRect();
+      const beforeScrollTop = mainScroll.scrollTop;
+      mainScroll.scrollTop = 100;
+      const afterRect = header.getBoundingClientRect();
+      const afterScrollTop = mainScroll.scrollTop;
+      
+      // 恢复
+      mainScroll.scrollTop = beforeScrollTop;
+      
+      return {
+        headerTopBefore: beforeRect.top,
+        headerTopAfter: afterRect.top,
+        headerMoved: Math.abs(afterRect.top - beforeRect.top) > 1,
+        mainScrollTopBefore: beforeScrollTop,
+        mainScrollTopAfter: afterScrollTop,
+      };
+    })(),
+  };
+  
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('Header Scroll 诊断结果');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log(JSON.stringify(result, null, 2));
+  return result;
+})();
+  </pre>
+  
+  <p><strong>使用步骤：</strong></p>
+  <ol>
+    <li>在应用的浏览器 Console 中运行上面的代码</li>
+    <li>将输出的 JSON 结果复制给我</li>
+    <li>或者，直接告诉我以下信息：
+      <ul>
+        <li>滚动内容时，标题栏会移动吗？</li>
+        <li>在 iPhone 模拟器中，向下拖拽时标题栏会跟着移动吗？</li>
+        <li>在 Console 运行 <code>document.querySelector('[data-app-header]')</code> 能找到元素吗？</li>
+        <li>在 Console 运行 <code>getComputedStyle(document.querySelector('[data-app-header]')).position</code> 返回什么？</li>
+      </ul>
+    </li>
+  </ol>
+</body>
+</html>

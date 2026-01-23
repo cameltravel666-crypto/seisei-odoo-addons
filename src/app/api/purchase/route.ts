@@ -43,6 +43,11 @@ interface VendorBill {
   amount_total: number;
   payment_state: string;
   invoice_origin: string | false;
+  // OCR fields
+  ocr_status?: 'pending' | 'processing' | 'done' | 'failed';
+  ocr_confidence?: number;
+  ocr_pages?: number;
+  message_main_attachment_id?: [number, string] | false;
 }
 
 interface Capabilities {
@@ -174,6 +179,11 @@ export async function GET(request: NextRequest) {
               isOverdue,
               overdueDays,
               invoiceOrigin: bill.invoice_origin || null,
+              // OCR fields
+              ocrStatus: bill.ocr_status || 'pending',
+              ocrConfidence: bill.ocr_confidence || 0,
+              ocrPages: bill.ocr_pages || 0,
+              hasAttachment: !!bill.message_main_attachment_id,
             };
           }),
           pagination: {
@@ -323,7 +333,12 @@ async function getVendorBillsData(
       ['state', '=', 'posted'],
       ['payment_state', '!=', 'paid'],
     ], {
-      fields: ['name', 'partner_id', 'invoice_date', 'invoice_date_due', 'amount_residual', 'amount_total', 'payment_state', 'invoice_origin'],
+      fields: [
+        'name', 'partner_id', 'invoice_date', 'invoice_date_due',
+        'amount_residual', 'amount_total', 'payment_state', 'invoice_origin',
+        // OCR fields
+        'ocr_status', 'ocr_confidence', 'ocr_pages', 'message_main_attachment_id'
+      ],
     });
 
     // Group by partner_id for matching

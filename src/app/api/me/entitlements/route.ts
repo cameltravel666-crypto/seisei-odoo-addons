@@ -1,13 +1,24 @@
 /**
  * GET /api/me/entitlements
  *
- * Returns the current tenant's entitlements (modules, limits, status).
- * Used by frontend feature gates and mobile app module visibility.
+ * Returns the current tenant's effective entitlements including:
+ * - Module access (with enabled status and reason: trial/subscribed/expired/admin_override)
+ * - Usage limits (users, stores, terminals)
+ * - Trial status and remaining days
+ * - Metered usage (OCR / Table Engine)
+ * - Gating mode (lock vs hide)
+ *
+ * This is THE authoritative endpoint for frontend feature gating.
  */
 
 import { NextResponse } from 'next/server';
 import { tenantGuard, guardErrorResponse } from '@/lib/guards';
-import { entitlementsService } from '@/lib/entitlements-service';
+import { entitlementsService, EffectiveEntitlements, UsageData } from '@/lib/entitlements-service';
+
+export interface EntitlementsApiResponse {
+  entitlements: EffectiveEntitlements;
+  usage: UsageData;
+}
 
 export async function GET() {
   // Validate session and tenant
@@ -18,8 +29,24 @@ export async function GET() {
 
   const { tenantId } = guard.context;
 
-  // Get entitlements
-  const entitlements = await entitlementsService.getForApi(tenantId);
+  try {
+    // Get effective entitlements (handles trial logic)
+    const entitlements = await entitlementsService.computeEffective(tenantId);
 
-  return NextResponse.json(entitlements);
+    // Get usage data for metered features
+    const usage = await entitlementsService.getUsage(tenantId);
+
+    const response: EntitlementsApiResponse = {
+      entitlements,
+      usage
+    };
+
+    return NextResponse.json(response);
+  } catch (error) {
+    console.error('[Entitlements API Error]', error);
+    return NextResponse.json(
+      { error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch entitlements' } },
+      { status: 500 }
+    );
+  }
 }

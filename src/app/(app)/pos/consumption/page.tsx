@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -8,6 +9,7 @@ import {
   Package,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
   AlertTriangle
 } from 'lucide-react';
 import { Loading } from '@/components/ui/loading';
@@ -70,7 +72,10 @@ export default function ConsumptionPage() {
   return (
     <div className="space-y-4">
       {/* Page Title */}
-      <h1 className="page-title">{t('consumption')}</h1>
+      <Link href="/pos" className="page-title flex items-center gap-1 hover:text-[var(--color-primary)] transition-colors">
+        <ChevronLeft className="w-5 h-5" />
+        {t('consumption')}
+      </Link>
 
       {/* Date Range Filter */}
       <DateRangeFilter

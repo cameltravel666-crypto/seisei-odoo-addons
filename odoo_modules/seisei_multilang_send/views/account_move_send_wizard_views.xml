@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Extend account.move.send.wizard form to add language selection -->
+    <record id="account_move_send_wizard_form_multilang" model="ir.ui.view">
+        <field name="name">account.move.send.wizard.form.multilang</field>
+        <field name="model">account.move.send.wizard</field>
+        <field name="inherit_id" ref="account.account_move_send_wizard_form"/>
+        <field name="arch" type="xml">
+            <!-- Add force_lang_id before mail_partner_ids in the email section -->
+            <xpath expr="//field[@name='mail_partner_ids']/.." position="before">
+                <group>
+                    <field name="force_lang_id"
+                           string="Document Language"
+                           options="{'no_create': True, 'no_edit': True}"
+                           class="w-50"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

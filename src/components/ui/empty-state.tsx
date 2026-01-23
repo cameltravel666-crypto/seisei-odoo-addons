@@ -1,9 +1,9 @@
 'use client';
 
-import { Package, FileText, BarChart3, ClipboardCheck, Folder } from 'lucide-react';
+import { Package, FileText, BarChart3, ClipboardCheck, Folder, Users } from 'lucide-react';
 
 interface EmptyStateProps {
-  icon?: 'package' | 'file' | 'chart' | 'clipboard' | 'folder';
+  icon?: 'package' | 'file' | 'chart' | 'clipboard' | 'folder' | 'user';
   title: string;
   description?: string;
   action?: React.ReactNode;
@@ -15,6 +15,7 @@ const icons = {
   chart: BarChart3,
   clipboard: ClipboardCheck,
   folder: Folder,
+  user: Users,
 };
 
 export function EmptyState({ icon = 'package', title, description, action }: EmptyStateProps) {

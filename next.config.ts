@@ -5,6 +5,7 @@ const withNextIntl = createNextIntlPlugin('./src/lib/i18n.ts');
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  serverExternalPackages: ['@prisma/client', 'prisma'],
   experimental: {
     serverActions: {
       bodySizeLimit: '2mb',

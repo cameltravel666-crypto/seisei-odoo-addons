@@ -150,16 +150,17 @@ model Tenant {
   opsPasswordUpdatedAt DateTime? @map("ops_password_updated_at")
 
   // Relations
-  features      TenantFeature[]
-  users         User[]
-  sessions      Session[]
-  subscriptions Subscription[]
-  memberships   Membership[]
-  entitlements  Entitlements?
-  auditLogs     AuditLog[]
-  stores        Store[]
-  invitations   Invitation[]
-  files         File[]
+  features           TenantFeature[]
+  users              User[]
+  sessions           Session[]
+  subscriptions      Subscription[]
+  memberships        Membership[]
+  entitlements       Entitlements?
+  moduleEntitlements TenantModuleEntitlement[]
+  auditLogs          AuditLog[]
+  stores             Store[]
+  invitations        Invitation[]
+  files              File[]
 
   @@map("tenants")
 }
@@ -445,12 +446,16 @@ model Entitlements {
   maxStores    Int @default(1) @map("max_stores")
   maxTerminals Int @default(2) @map("max_terminals")
 
-  // Status
-  status      EntitlementStatus @default(ACTIVE)
+  // Trial period (30 days from registration)
+  trialStartAt DateTime? @map("trial_start_at")
+  trialEndAt   DateTime? @map("trial_end_at")
+
+  // Status: trialing | active | past_due | canceled | expired
+  status      EntitlementStatus @default(TRIAL)
   periodStart DateTime?         @map("period_start")
   periodEnd   DateTime?         @map("period_end")
 
-  // Source tracking
+  // Source tracking: web_stripe | manual | admin_override
   source        String  @default("manual") // stripe | manual | odoo19
   stripeSubId   String? @map("stripe_sub_id") // Stripe subscription ID
   odoo19OrderId Int?    @map("odoo19_order_id")
@@ -463,9 +468,89 @@ model Entitlements {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant       Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  usageEvents  TenantUsageEvent[]
+  usagePeriods TenantUsagePeriod[]
 
   @@map("entitlements")
+}
+
+// ============================================
+// Tenant Module Entitlements (per-module control)
+// ============================================
+
+model TenantModuleEntitlement {
+  id       String @id @default(cuid())
+  tenantId String @map("tenant_id")
+
+  moduleKey    String    @map("module_key") // purchase, sales, expenses, etc.
+  enabled      Boolean   @default(true)
+  enabledUntil DateTime? @map("enabled_until") // Null = no expiry
+  reason       String    @default("trial") // trial | plan | admin_override
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, moduleKey])
+  @@index([tenantId])
+  @@map("tenant_module_entitlements")
+}
+
+// ============================================
+// Metered Usage (OCR / Table Engine)
+// ============================================
+
+enum UsageEventStatus {
+  SUCCEEDED
+  FAILED
+  CANCELED
+}
+
+model TenantUsageEvent {
+  id             String           @id @default(cuid())
+  tenantId       String           @map("tenant_id")
+  entitlementsId String           @map("entitlements_id")
+  featureKey     String           @map("feature_key") // ocr | table
+  idempotencyKey String           @unique @map("idempotency_key")
+  status         UsageEventStatus @default(SUCCEEDED)
+  meta           Json? // Additional metadata (file name, result count, etc.)
+  createdAt      DateTime         @default(now()) @map("created_at")
+
+  entitlements Entitlements @relation(fields: [entitlementsId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, featureKey, createdAt])
+  @@index([entitlementsId])
+  @@map("tenant_usage_events")
+}
+
+model TenantUsagePeriod {
+  id             String   @id @default(cuid())
+  tenantId       String   @map("tenant_id")
+  entitlementsId String   @map("entitlements_id")
+  periodStartAt  DateTime @map("period_start_at")
+  periodEndAt    DateTime @map("period_end_at")
+
+  // Usage counts
+  ocrUsed      Int @default(0) @map("ocr_used")
+  tableUsed    Int @default(0) @map("table_used")
+  ocrBillable  Int @default(0) @map("ocr_billable") // Exceeding free quota
+  tableBillable Int @default(0) @map("table_billable")
+
+  // Invoice tracking
+  invoicedAt DateTime? @map("invoiced_at")
+  stripeUsageRecordId String? @map("stripe_usage_record_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  entitlements Entitlements @relation(fields: [entitlementsId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, periodStartAt])
+  @@index([tenantId])
+  @@index([entitlementsId])
+  @@map("tenant_usage_periods")
 }
 
 // ============================================
@@ -665,6 +750,7 @@ enum ProductCategory {
   MAINTENANCE // 软件/运维保守
   ONBOARDING // 服务/导入服务
   RENTAL // 硬件/租赁
+  PURCHASE // 硬件/买断
 }
 
 model SubscriptionProduct {
@@ -880,7 +966,9 @@ enum ProvisioningStep {
   STEP_1_COPY_DB
   STEP_2_ODOO18_AUTH
   STEP_3_ODOO18_UPDATE_ADMIN
+  STEP_3B_ODOO18_SETUP_APIKEY
   STEP_4_ODOO19_UPSERT_TENANT
+  STEP_4B_SEISEI_BILLING_TENANT
   STEP_5_ODOO19_UPSERT_USER
   STEP_6_BRIDGE_METADATA
   STEP_7_FINALIZE

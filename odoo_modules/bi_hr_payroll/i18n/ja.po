@@ -1,0 +1,1024 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# * bi_hr_payroll
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 18.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-01-17 00:00+0000\n"
+"PO-Revision-Date: 2026-01-17 00:00+0000\n"
+"Last-Translator: \n"
+"Language-Team: Japanese\n"
+"Language: ja\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#. module: bi_hr_payroll
+#: model:ir.ui.menu,name:bi_hr_payroll.menu_japan_payroll_config
+msgid "Japan"
+msgstr "日本"
+
+#. module: bi_hr_payroll
+#: model:ir.ui.menu,name:bi_hr_payroll.menu_insurance_prefecture
+#: model:ir.actions.act_window,name:bi_hr_payroll.hr_insurance_prefecture_action
+msgid "Insurance Prefectures"
+msgstr "保険支部"
+
+#. module: bi_hr_payroll
+#: model:ir.ui.menu,name:bi_hr_payroll.menu_insurance_rate
+#: model:ir.actions.act_window,name:bi_hr_payroll.hr_insurance_rate_action
+msgid "Insurance Rates"
+msgstr "保険料率"
+
+#. module: bi_hr_payroll
+#: model:ir.ui.menu,name:bi_hr_payroll.menu_insurance_grade
+#: model:ir.actions.act_window,name:bi_hr_payroll.hr_insurance_grade_action
+msgid "Insurance Grades"
+msgstr "標準報酬等級"
+
+#. module: bi_hr_payroll
+#: model:ir.ui.menu,name:bi_hr_payroll.menu_withholding_tax
+#: model:ir.actions.act_window,name:bi_hr_payroll.hr_withholding_tax_action
+msgid "Withholding Tax"
+msgstr "源泉徴収税額"
+
+#. module: bi_hr_payroll
+#: model:ir.model,name:bi_hr_payroll.model_hr_insurance_prefecture
+msgid "Insurance Prefecture"
+msgstr "保険支部"
+
+#. module: bi_hr_payroll
+#: model:ir.model,name:bi_hr_payroll.model_hr_insurance_rate
+msgid "Insurance Rate"
+msgstr "保険料率"
+
+#. module: bi_hr_payroll
+#: model:ir.model,name:bi_hr_payroll.model_hr_insurance_grade
+msgid "Standard Monthly Remuneration Grade"
+msgstr "標準報酬月額等級"
+
+#. module: bi_hr_payroll
+#: model:ir.model,name:bi_hr_payroll.model_hr_withholding_tax
+msgid "Withholding Tax Table"
+msgstr "源泉徴収税額表"
+
+#. module: bi_hr_payroll
+#: model:ir.model,name:bi_hr_payroll.model_hr_employee_dependant
+msgid "Employee Dependant"
+msgstr "扶養親族"
+
+#. module: bi_hr_payroll
+#: Payslip Form - Buttons
+msgid "Confirm"
+msgstr "確定"
+
+#. module: bi_hr_payroll
+msgid "Compute Sheet"
+msgstr "給与計算"
+
+#. module: bi_hr_payroll
+msgid "Refund"
+msgstr "払い戻し"
+
+#. module: bi_hr_payroll
+msgid "Set to Draft"
+msgstr "下書きに戻す"
+
+#. module: bi_hr_payroll
+msgid "Cancel Payslip"
+msgstr "給与明細取消"
+
+#. module: bi_hr_payroll
+msgid "Close"
+msgstr "閉じる"
+
+#. module: bi_hr_payroll
+msgid "Generate Payslips"
+msgstr "給与明細生成"
+
+#. module: bi_hr_payroll
+#: Payslip Form - Tabs
+msgid "Worked Days & Inputs"
+msgstr "勤務日数・入力"
+
+#. module: bi_hr_payroll
+msgid "Salary Computation"
+msgstr "給与計算"
+
+#. module: bi_hr_payroll
+msgid "Details By Salary Rule Category"
+msgstr "給与ルールカテゴリ別詳細"
+
+#. module: bi_hr_payroll
+msgid "Accounting Information"
+msgstr "会計情報"
+
+#. module: bi_hr_payroll
+#: Payslip Form - Sections
+msgid "Worked Days"
+msgstr "勤務日数"
+
+#. module: bi_hr_payroll
+msgid "WORKED DAYS"
+msgstr "勤務日数"
+
+#. module: bi_hr_payroll
+msgid "Other Inputs"
+msgstr "その他入力"
+
+#. module: bi_hr_payroll
+msgid "Input Data"
+msgstr "入力データ"
+
+#. module: bi_hr_payroll
+msgid "Miscellaneous"
+msgstr "その他"
+
+#. module: bi_hr_payroll
+msgid "Accounting"
+msgstr "会計"
+
+#. module: bi_hr_payroll
+#: Payslip Form - Fields
+msgid "Employee"
+msgstr "従業員"
+
+#. module: bi_hr_payroll
+msgid "Period"
+msgstr "期間"
+
+#. module: bi_hr_payroll
+msgid "Contract"
+msgstr "契約"
+
+#. module: bi_hr_payroll
+msgid "Reference"
+msgstr "参照番号"
+
+#. module: bi_hr_payroll
+msgid "Structure"
+msgstr "給与構造"
+
+#. module: bi_hr_payroll
+msgid "Credit Note"
+msgstr "クレジットノート"
+
+#. module: bi_hr_payroll
+msgid "Description"
+msgstr "説明"
+
+#. module: bi_hr_payroll
+msgid "Number of Days"
+msgstr "日数"
+
+#. module: bi_hr_payroll
+msgid "Number of Hours"
+msgstr "時間数"
+
+#. module: bi_hr_payroll
+msgid "Quantity"
+msgstr "数量"
+
+#. module: bi_hr_payroll
+msgid "Rate"
+msgstr "率"
+
+#. module: bi_hr_payroll
+msgid "Amount"
+msgstr "金額"
+
+#. module: bi_hr_payroll
+msgid "Total"
+msgstr "合計"
+
+#. module: bi_hr_payroll
+msgid "Salary Rule"
+msgstr "給与ルール"
+
+#. module: bi_hr_payroll
+msgid "Category"
+msgstr "カテゴリ"
+
+#. module: bi_hr_payroll
+msgid "Salary Rule Category"
+msgstr "給与ルールカテゴリ"
+
+#. module: bi_hr_payroll
+msgid "Sequence"
+msgstr "順序"
+
+#. module: bi_hr_payroll
+msgid "Company"
+msgstr "会社"
+
+#. module: bi_hr_payroll
+msgid "Payslip Batch"
+msgstr "給与バッチ"
+
+#. module: bi_hr_payroll
+msgid "PaySlip Batch"
+msgstr "給与バッチ"
+
+#. module: bi_hr_payroll
+msgid "Paid"
+msgstr "支払済"
+
+#. module: bi_hr_payroll
+#: Payslip Actions/Menus
+msgid "Employee Payslips"
+msgstr "従業員給与明細"
+
+#. module: bi_hr_payroll
+msgid "Payslips"
+msgstr "給与明細"
+
+#. module: bi_hr_payroll
+msgid "Payslip"
+msgstr "給与明細"
+
+#. module: bi_hr_payroll
+msgid "Payslip Line"
+msgstr "給与明細行"
+
+#. module: bi_hr_payroll
+msgid "Payslip Lines"
+msgstr "給与明細行"
+
+#. module: bi_hr_payroll
+msgid "Payslips Batches"
+msgstr "給与バッチ"
+
+#. module: bi_hr_payroll
+msgid "Payslip Batches"
+msgstr "給与バッチ"
+
+#. module: bi_hr_payroll
+msgid "Salary Structure"
+msgstr "給与構造"
+
+#. module: bi_hr_payroll
+msgid "Salary Structures"
+msgstr "給与構造"
+
+#. module: bi_hr_payroll
+msgid "Salary Rules"
+msgstr "給与ルール"
+
+#. module: bi_hr_payroll
+msgid "Contribution Register"
+msgstr "控除登録"
+
+#. module: bi_hr_payroll
+msgid "Contribution Registers"
+msgstr "控除登録"
+
+#. module: bi_hr_payroll
+#: States
+msgid "Draft"
+msgstr "下書き"
+
+#. module: bi_hr_payroll
+msgid "Done"
+msgstr "完了"
+
+#. module: bi_hr_payroll
+msgid "Cancelled"
+msgstr "キャンセル"
+
+#. module: bi_hr_payroll
+msgid "States"
+msgstr "ステータス"
+
+#. module: bi_hr_payroll
+msgid "Employees"
+msgstr "従業員"
+
+#. module: bi_hr_payroll
+msgid "Companies"
+msgstr "会社"
+
+#. module: bi_hr_payroll
+#: Search/Filter
+msgid "Search Payslips"
+msgstr "給与明細検索"
+
+#. module: bi_hr_payroll
+msgid "Search Payslip Batches"
+msgstr "給与バッチ検索"
+
+#. module: bi_hr_payroll
+msgid "Search Payslip Lines"
+msgstr "給与明細行検索"
+
+#. module: bi_hr_payroll
+msgid "Group By"
+msgstr "グループ化"
+
+#. module: bi_hr_payroll
+msgid "Amount Type"
+msgstr "金額タイプ"
+
+#. module: bi_hr_payroll
+msgid "Draft Slip"
+msgstr "下書き"
+
+#. module: bi_hr_payroll
+msgid "Done Slip"
+msgstr "完了"
+
+#. module: bi_hr_payroll
+msgid "Draft Payslip Batches"
+msgstr "下書きバッチ"
+
+#. module: bi_hr_payroll
+msgid "Done Payslip Batches"
+msgstr "完了バッチ"
+
+#. module: bi_hr_payroll
+#: Configuration
+msgid "Configuration"
+msgstr "設定"
+
+#. module: bi_hr_payroll
+msgid "Payroll"
+msgstr "給与管理"
+
+#. module: bi_hr_payroll
+#: Help text
+msgid "Payslip Computation Details"
+msgstr "給与計算詳細"
+
+#. module: bi_hr_payroll
+msgid "Add an internal note..."
+msgstr "内部メモを追加..."
+
+#. module: bi_hr_payroll
+#: Date fields
+msgid "Date From"
+msgstr "開始日"
+
+#. module: bi_hr_payroll
+msgid "Date To"
+msgstr "終了日"
+
+#. module: bi_hr_payroll
+msgid "Start Date"
+msgstr "開始日"
+
+#. module: bi_hr_payroll
+msgid "End Date"
+msgstr "終了日"
+
+#. module: bi_hr_payroll
+#: Salary Rule Category
+msgid "Salary Rule Categories"
+msgstr "給与ルールカテゴリ"
+
+#. module: bi_hr_payroll
+#: Calculations group
+msgid "Calculations"
+msgstr "計算"
+
+#. module: bi_hr_payroll
+#: Japan Payroll specific
+msgid "Japan Payroll"
+msgstr "日本給与"
+
+#. module: bi_hr_payroll
+msgid "Personal Information"
+msgstr "個人情報"
+
+#. module: bi_hr_payroll
+msgid "Insurance Settings"
+msgstr "保険設定"
+
+#. module: bi_hr_payroll
+msgid "Tax Settings"
+msgstr "税金設定"
+
+#. module: bi_hr_payroll
+msgid "Dependants"
+msgstr "扶養親族"
+
+#. module: bi_hr_payroll
+msgid "Dependants Count"
+msgstr "扶養人数"
+
+#. module: bi_hr_payroll
+#: Prefecture/Rate fields
+msgid "Prefecture Name"
+msgstr "支部名"
+
+#. module: bi_hr_payroll
+msgid "Code"
+msgstr "コード"
+
+#. module: bi_hr_payroll
+msgid "Active"
+msgstr "有効"
+
+#. module: bi_hr_payroll
+msgid "Prefecture"
+msgstr "支部"
+
+#. module: bi_hr_payroll
+msgid "Fiscal Year"
+msgstr "年度"
+
+#. module: bi_hr_payroll
+msgid "Effective Date"
+msgstr "適用開始日"
+
+#. module: bi_hr_payroll
+msgid "Expiry Date"
+msgstr "適用終了日"
+
+#. module: bi_hr_payroll
+msgid "Health Insurance Rate"
+msgstr "健康保険率"
+
+#. module: bi_hr_payroll
+msgid "Health + Care Rate"
+msgstr "介護含健保率"
+
+#. module: bi_hr_payroll
+msgid "Care Insurance Diff"
+msgstr "介護保険差額"
+
+#. module: bi_hr_payroll
+msgid "Pension Rate"
+msgstr "厚生年金率"
+
+#. module: bi_hr_payroll
+msgid "Employment Insurance Rate"
+msgstr "雇用保険率"
+
+#. module: bi_hr_payroll
+msgid "Note"
+msgstr "備考"
+
+#. module: bi_hr_payroll
+msgid "Notes"
+msgstr "備考"
+
+#. module: bi_hr_payroll
+msgid "Grade"
+msgstr "等級"
+
+#. module: bi_hr_payroll
+msgid "Grade Display"
+msgstr "等級表示"
+
+#. module: bi_hr_payroll
+msgid "Standard Monthly"
+msgstr "標準報酬月額"
+
+#. module: bi_hr_payroll
+msgid "Wage Min"
+msgstr "報酬下限"
+
+#. module: bi_hr_payroll
+msgid "Wage Max"
+msgstr "報酬上限"
+
+#. module: bi_hr_payroll
+msgid "Has Pension"
+msgstr "年金対象"
+
+#. module: bi_hr_payroll
+msgid "Pension Grade"
+msgstr "厚生年金等級"
+
+#. module: bi_hr_payroll
+msgid "Tax (0 dependents)"
+msgstr "扶養0人"
+
+#. module: bi_hr_payroll
+msgid "Tax (1 dependent)"
+msgstr "扶養1人"
+
+#. module: bi_hr_payroll
+msgid "Tax (2 dependents)"
+msgstr "扶養2人"
+
+#. module: bi_hr_payroll
+msgid "Tax (3 dependents)"
+msgstr "扶養3人"
+
+#. module: bi_hr_payroll
+msgid "Tax (4 dependents)"
+msgstr "扶養4人"
+
+#. module: bi_hr_payroll
+msgid "Tax (5 dependents)"
+msgstr "扶養5人"
+
+#. module: bi_hr_payroll
+msgid "Tax (6 dependents)"
+msgstr "扶養6人"
+
+#. module: bi_hr_payroll
+msgid "Tax (7 dependents)"
+msgstr "扶養7人"
+
+#. module: bi_hr_payroll
+msgid "Tax Column B"
+msgstr "乙欄"
+
+#. module: bi_hr_payroll
+msgid "Column B"
+msgstr "乙欄"
+
+#. module: bi_hr_payroll
+msgid "My Number"
+msgstr "マイナンバー"
+
+#. module: bi_hr_payroll
+msgid "Nationality"
+msgstr "国籍"
+
+#. module: bi_hr_payroll
+msgid "Insurance Prefecture"
+msgstr "健康保険支部"
+
+#. module: bi_hr_payroll
+msgid "Effective Insurance Prefecture"
+msgstr "有効保険支部"
+
+#. module: bi_hr_payroll
+msgid "Resident Tax"
+msgstr "住民税"
+
+#. module: bi_hr_payroll
+msgid "Tax Column"
+msgstr "税額欄"
+
+#. module: bi_hr_payroll
+msgid "Column A (Primary job)"
+msgstr "甲欄（主たる給与）"
+
+#. module: bi_hr_payroll
+msgid "Column B (Secondary job)"
+msgstr "乙欄（従たる給与）"
+
+#. module: bi_hr_payroll
+msgid "Health Insurance Grade"
+msgstr "健康保険等級"
+
+#. module: bi_hr_payroll
+msgid "Age"
+msgstr "年齢"
+
+#. module: bi_hr_payroll
+msgid "Care Insurance Applicable"
+msgstr "介護保険対象"
+
+#. module: bi_hr_payroll
+msgid "Name"
+msgstr "名前"
+
+#. module: bi_hr_payroll
+msgid "Relationship"
+msgstr "関係"
+
+#. module: bi_hr_payroll
+msgid "Spouse"
+msgstr "配偶者"
+
+#. module: bi_hr_payroll
+msgid "Child"
+msgstr "子"
+
+#. module: bi_hr_payroll
+msgid "Parent"
+msgstr "親"
+
+#. module: bi_hr_payroll
+msgid "Grandparent"
+msgstr "祖父母"
+
+#. module: bi_hr_payroll
+msgid "Sibling"
+msgstr "兄弟姉妹"
+
+#. module: bi_hr_payroll
+msgid "Other"
+msgstr "その他"
+
+#. module: bi_hr_payroll
+msgid "Birth Date"
+msgstr "生年月日"
+
+#. module: bi_hr_payroll
+msgid "Gender"
+msgstr "性別"
+
+#. module: bi_hr_payroll
+msgid "Male"
+msgstr "男性"
+
+#. module: bi_hr_payroll
+msgid "Female"
+msgstr "女性"
+
+#. module: bi_hr_payroll
+msgid "Address"
+msgstr "住所"
+
+#. module: bi_hr_payroll
+msgid "Annual Income"
+msgstr "年間所得"
+
+#. module: bi_hr_payroll
+msgid "Eligible"
+msgstr "扶養対象"
+
+#. module: bi_hr_payroll
+msgid "Default Insurance Prefecture"
+msgstr "デフォルト保険支部"
+
+#. module: bi_hr_payroll
+msgid "Basic Info"
+msgstr "基本情報"
+
+#. module: bi_hr_payroll
+msgid "Rates"
+msgstr "料率"
+
+#. module: bi_hr_payroll
+msgid "Wage Range"
+msgstr "給与範囲"
+
+#. module: bi_hr_payroll
+msgid "Tax Column A (Primary Job)"
+msgstr "甲欄（主たる給与）"
+
+#. module: bi_hr_payroll
+msgid "Tax Column B (Secondary Job)"
+msgstr "乙欄（従たる給与）"
+
+#. module: bi_hr_payroll
+msgid "0 Dependents"
+msgstr "扶養0人"
+
+#. module: bi_hr_payroll
+msgid "1 Dependent"
+msgstr "扶養1人"
+
+#. module: bi_hr_payroll
+msgid "2 Dependents"
+msgstr "扶養2人"
+
+#. module: bi_hr_payroll
+msgid "3 Dependents"
+msgstr "扶養3人"
+
+#. module: bi_hr_payroll
+msgid "4 Dependents"
+msgstr "扶養4人"
+
+#. module: bi_hr_payroll
+msgid "5 Dependents"
+msgstr "扶養5人"
+
+#. module: bi_hr_payroll
+msgid "6 Dependents"
+msgstr "扶養6人"
+
+#. module: bi_hr_payroll
+msgid "7 Dependents"
+msgstr "扶養7人"
+
+#. module: bi_hr_payroll
+msgid "0 Dep"
+msgstr "0人"
+
+#. module: bi_hr_payroll
+msgid "1 Dep"
+msgstr "1人"
+
+#. module: bi_hr_payroll
+msgid "2 Dep"
+msgstr "2人"
+
+#. module: bi_hr_payroll
+msgid "3 Dep"
+msgstr "3人"
+
+#. module: bi_hr_payroll
+msgid "4 Dep"
+msgstr "4人"
+
+#. module: bi_hr_payroll
+msgid "5 Dep"
+msgstr "5人"
+
+#. module: bi_hr_payroll
+msgid "6 Dep"
+msgstr "6人"
+
+#. module: bi_hr_payroll
+msgid "7 Dep"
+msgstr "7人"
+
+#. module: bi_hr_payroll
+msgid "Current"
+msgstr "現在"
+
+#. module: bi_hr_payroll
+msgid "Insurance Rate Update Reminder"
+msgstr "保険料率更新のお知らせ"
+
+#. module: bi_hr_payroll
+msgid "Please import the new fiscal year insurance rates."
+msgstr "新年度の保険料率をインポートしてください。"
+
+#. module: bi_hr_payroll
+#: Core Payroll View Strings
+msgid "Confirm"
+msgstr "確定"
+
+#. module: bi_hr_payroll
+msgid "Compute Sheet"
+msgstr "給与計算"
+
+#. module: bi_hr_payroll
+msgid "Refund"
+msgstr "払戻"
+
+#. module: bi_hr_payroll
+msgid "Set to Draft"
+msgstr "下書きに戻す"
+
+#. module: bi_hr_payroll
+msgid "Cancel Payslip"
+msgstr "給与明細キャンセル"
+
+#. module: bi_hr_payroll
+msgid "Close"
+msgstr "締切"
+
+#. module: bi_hr_payroll
+msgid "Generate Payslips"
+msgstr "給与明細を生成"
+
+#. module: bi_hr_payroll
+msgid "Worked Days & Inputs"
+msgstr "勤務日数・入力"
+
+#. module: bi_hr_payroll
+msgid "Salary Computation"
+msgstr "給与計算"
+
+#. module: bi_hr_payroll
+msgid "Details By Salary Rule Category"
+msgstr "給与規則カテゴリ別詳細"
+
+#. module: bi_hr_payroll
+msgid "Accounting Information"
+msgstr "会計情報"
+
+#. module: bi_hr_payroll
+msgid "Miscellaneous"
+msgstr "その他"
+
+#. module: bi_hr_payroll
+msgid "Accounting"
+msgstr "会計"
+
+#. module: bi_hr_payroll
+msgid "Worked Days"
+msgstr "勤務日数"
+
+#. module: bi_hr_payroll
+msgid "Other Inputs"
+msgstr "その他入力"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_payslip__paid
+msgid "Made Payment Order ? "
+msgstr "支払済？"
+
+#. module: bi_hr_payroll
+msgid "Payslip"
+msgstr "給与明細"
+
+#. module: bi_hr_payroll
+msgid "Payslips"
+msgstr "給与明細"
+
+#. module: bi_hr_payroll
+msgid "Employee Payslips"
+msgstr "従業員給与明細"
+
+#. module: bi_hr_payroll
+msgid "Payslips Batches"
+msgstr "給与明細バッチ"
+
+#. module: bi_hr_payroll
+msgid "Payslip Batch"
+msgstr "給与明細バッチ"
+
+#. module: bi_hr_payroll
+msgid "Payslip Line"
+msgstr "給与明細行"
+
+#. module: bi_hr_payroll
+msgid "Payslip Lines"
+msgstr "給与明細行"
+
+#. module: bi_hr_payroll
+msgid "Salary Structure"
+msgstr "給与体系"
+
+#. module: bi_hr_payroll
+msgid "Search Payslips"
+msgstr "給与明細を検索"
+
+#. module: bi_hr_payroll
+msgid "Search Payslip Batches"
+msgstr "給与バッチを検索"
+
+#. module: bi_hr_payroll
+msgid "Search Payslip Lines"
+msgstr "給与明細行を検索"
+
+#. module: bi_hr_payroll
+msgid "Draft"
+msgstr "下書き"
+
+#. module: bi_hr_payroll
+msgid "Done"
+msgstr "完了"
+
+#. module: bi_hr_payroll
+msgid "Draft Slip"
+msgstr "下書き明細"
+
+#. module: bi_hr_payroll
+msgid "Done Slip"
+msgstr "完了明細"
+
+#. module: bi_hr_payroll
+msgid "Draft Payslip Batches"
+msgstr "下書きバッチ"
+
+#. module: bi_hr_payroll
+msgid "Done Payslip Batches"
+msgstr "完了バッチ"
+
+#. module: bi_hr_payroll
+msgid "Group By"
+msgstr "グループ化"
+
+#. module: bi_hr_payroll
+msgid "Employees"
+msgstr "従業員"
+
+#. module: bi_hr_payroll
+msgid "Companies"
+msgstr "会社"
+
+#. module: bi_hr_payroll
+msgid "States"
+msgstr "状態"
+
+#. module: bi_hr_payroll
+msgid "Calculations"
+msgstr "計算"
+
+#. module: bi_hr_payroll
+msgid "Salary Rule Category"
+msgstr "給与規則カテゴリ"
+
+#. module: bi_hr_payroll
+msgid "Contribution Register"
+msgstr "社会保険登録"
+
+#. module: bi_hr_payroll
+msgid "Amount Type"
+msgstr "金額タイプ"
+
+#. module: bi_hr_payroll
+msgid "Employee"
+msgstr "従業員"
+
+#. module: bi_hr_payroll
+msgid "Period"
+msgstr "期間"
+
+#. module: bi_hr_payroll
+msgid "Contract"
+msgstr "契約"
+
+#. module: bi_hr_payroll
+msgid "Reference"
+msgstr "参照番号"
+
+#. module: bi_hr_payroll
+msgid "Structure"
+msgstr "体系"
+
+#. module: bi_hr_payroll
+msgid "Name"
+msgstr "名称"
+
+#. module: bi_hr_payroll
+msgid "Credit Note"
+msgstr "クレジットノート"
+
+#. module: bi_hr_payroll
+msgid "Description"
+msgstr "説明"
+
+#. module: bi_hr_payroll
+msgid "Code"
+msgstr "コード"
+
+#. module: bi_hr_payroll
+msgid "Days"
+msgstr "日数"
+
+#. module: bi_hr_payroll
+msgid "Number of Days"
+msgstr "日数"
+
+#. module: bi_hr_payroll
+msgid "Hours"
+msgstr "時間"
+
+#. module: bi_hr_payroll
+msgid "Number of Hours"
+msgstr "時間数"
+
+#. module: bi_hr_payroll
+msgid "Amount"
+msgstr "金額"
+
+#. module: bi_hr_payroll
+msgid "Quantity"
+msgstr "数量"
+
+#. module: bi_hr_payroll
+msgid "Rate"
+msgstr "率"
+
+#. module: bi_hr_payroll
+msgid "Total"
+msgstr "合計"
+
+#. module: bi_hr_payroll
+msgid "Category"
+msgstr "カテゴリ"
+
+#. module: bi_hr_payroll
+msgid "Sequence"
+msgstr "順序"
+
+#. module: bi_hr_payroll
+msgid "Company"
+msgstr "会社"
+
+#. module: bi_hr_payroll
+msgid "Batch Name"
+msgstr "バッチ名"
+
+#. module: bi_hr_payroll
+msgid "PaySlip Batch"
+msgstr "給与明細バッチ"
+
+#. module: bi_hr_payroll
+msgid "Worked Day"
+msgstr "勤務日"
+
+#. module: bi_hr_payroll
+msgid "Input Data"
+msgstr "入力データ"
+
+#. module: bi_hr_payroll
+msgid "Total Working Days"
+msgstr "総勤務日数"
+
+#. module: bi_hr_payroll
+msgid "Payslip Computation Details"
+msgstr "給与計算詳細"
+
+#. module: bi_hr_payroll
+msgid "Add an internal note..."
+msgstr "内部メモを追加..."
+
+#. module: bi_hr_payroll
+msgid "Is a Blocking Reason?"
+msgstr "ブロック理由？"
+
+#. module: bi_hr_payroll
+#: model:ir.model.fields,field_description:bi_hr_payroll.field_hr_employee__base_wage
+msgid "Base Wage"
+msgstr "基本給"
+
+#. module: bi_hr_payroll
+msgid "Monthly base wage for insurance grade calculation"
+msgstr "保険等級計算用の月額基本給"

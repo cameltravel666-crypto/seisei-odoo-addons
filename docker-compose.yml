@@ -8,7 +8,9 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-seisei}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-seisei123}
       POSTGRES_DB: ${POSTGRES_DB:-seisei_erp}
-    # No external port - only accessible within docker network
+    # Port for local development
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -29,6 +31,15 @@ services:
       - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
       - ENCRYPTION_KEY=${ENCRYPTION_KEY:-your-32-char-encryption-key-here}
       - NODE_ENV=${NODE_ENV:-production}
+      - DEFAULT_ODOO_URL=${DEFAULT_ODOO_URL:-https://testodoo.seisei.tokyo}
+      - DEFAULT_ODOO_DB=${DEFAULT_ODOO_DB:-test001}
+      # Stripe Configuration
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-https://erp.seisei.tokyo}
+      # Cron Job Secret
+      - CRON_SECRET=${CRON_SECRET}
     ports:
       - "${APP_PORT:-9527}:9527"
     depends_on:

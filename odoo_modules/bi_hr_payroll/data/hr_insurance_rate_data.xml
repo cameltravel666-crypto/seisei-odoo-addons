@@ -1,0 +1,431 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- Insurance Rates for Reiwa 7 (2025) / 令和7年度保険料率 -->
+        <!-- Effective from March 2025 -->
+
+        <record id="rate_hokkaido_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_hokkaido"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.1031</field>
+            <field name="health_rate_with_care">0.1190</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+        <record id="rate_aomori_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_aomori"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.0985</field>
+            <field name="health_rate_with_care">0.1144</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+        <record id="rate_iwate_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_iwate"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.0962</field>
+            <field name="health_rate_with_care">0.1121</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+        <record id="rate_miyagi_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_miyagi"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.1011</field>
+            <field name="health_rate_with_care">0.1170</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+        <record id="rate_akita_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_akita"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.1001</field>
+            <field name="health_rate_with_care">0.1160</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+        <record id="rate_yamagata_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_yamagata"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.0975</field>
+            <field name="health_rate_with_care">0.1134</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+        <record id="rate_fukushima_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_fukushima"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.0962</field>
+            <field name="health_rate_with_care">0.1121</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+        <record id="rate_ibaraki_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_ibaraki"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.0967</field>
+            <field name="health_rate_with_care">0.1126</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+        <record id="rate_tochigi_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_tochigi"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.0982</field>
+            <field name="health_rate_with_care">0.1141</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+        <record id="rate_gunma_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_gunma"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.0977</field>
+            <field name="health_rate_with_care">0.1136</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+        <record id="rate_saitama_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_saitama"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.0976</field>
+            <field name="health_rate_with_care">0.1135</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+        <record id="rate_chiba_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_chiba"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.0979</field>
+            <field name="health_rate_with_care">0.1138</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+        <record id="rate_tokyo_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_tokyo"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.0991</field>
+            <field name="health_rate_with_care">0.1150</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+        <record id="rate_kanagawa_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_kanagawa"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.0992</field>
+            <field name="health_rate_with_care">0.1151</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+        <record id="rate_niigata_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_niigata"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.0955</field>
+            <field name="health_rate_with_care">0.1114</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+        <record id="rate_toyama_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_toyama"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.0965</field>
+            <field name="health_rate_with_care">0.1124</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+        <record id="rate_ishikawa_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_ishikawa"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.0988</field>
+            <field name="health_rate_with_care">0.1147</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+        <record id="rate_fukui_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_fukui"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.0994</field>
+            <field name="health_rate_with_care">0.1153</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+        <record id="rate_yamanashi_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_yamanashi"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.0989</field>
+            <field name="health_rate_with_care">0.1148</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+        <record id="rate_nagano_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_nagano"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.0969</field>
+            <field name="health_rate_with_care">0.1128</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+        <record id="rate_gifu_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_gifu"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.0993</field>
+            <field name="health_rate_with_care">0.1152</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+        <record id="rate_shizuoka_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_shizuoka"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.0980</field>
+            <field name="health_rate_with_care">0.1139</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+        <record id="rate_aichi_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_aichi"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.1003</field>
+            <field name="health_rate_with_care">0.1162</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+        <record id="rate_mie_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_mie"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.0999</field>
+            <field name="health_rate_with_care">0.1158</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+        <record id="rate_shiga_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_shiga"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.0997</field>
+            <field name="health_rate_with_care">0.1156</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+        <record id="rate_kyoto_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_kyoto"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.1003</field>
+            <field name="health_rate_with_care">0.1162</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+        <record id="rate_osaka_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_osaka"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.1024</field>
+            <field name="health_rate_with_care">0.1183</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+        <record id="rate_hyogo_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_hyogo"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.1016</field>
+            <field name="health_rate_with_care">0.1175</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+        <record id="rate_nara_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_nara"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.1002</field>
+            <field name="health_rate_with_care">0.1161</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+        <record id="rate_wakayama_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_wakayama"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.1019</field>
+            <field name="health_rate_with_care">0.1178</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+        <record id="rate_tottori_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_tottori"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.0993</field>
+            <field name="health_rate_with_care">0.1152</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+        <record id="rate_shimane_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_shimane"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.0994</field>
+            <field name="health_rate_with_care">0.1153</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+        <record id="rate_okayama_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_okayama"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.1017</field>
+            <field name="health_rate_with_care">0.1176</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+        <record id="rate_hiroshima_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_hiroshima"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.0997</field>
+            <field name="health_rate_with_care">0.1156</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+        <record id="rate_yamaguchi_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_yamaguchi"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.1036</field>
+            <field name="health_rate_with_care">0.1195</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+        <record id="rate_tokushima_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_tokushima"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.1047</field>
+            <field name="health_rate_with_care">0.1206</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+        <record id="rate_kagawa_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_kagawa"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.1021</field>
+            <field name="health_rate_with_care">0.1180</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+        <record id="rate_ehime_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_ehime"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.1018</field>
+            <field name="health_rate_with_care">0.1177</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+        <record id="rate_kochi_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_kochi"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.1013</field>
+            <field name="health_rate_with_care">0.1172</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+        <record id="rate_fukuoka_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_fukuoka"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.1031</field>
+            <field name="health_rate_with_care">0.1190</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+        <record id="rate_saga_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_saga"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.1078</field>
+            <field name="health_rate_with_care">0.1237</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+        <record id="rate_nagasaki_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_nagasaki"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.1041</field>
+            <field name="health_rate_with_care">0.1200</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+        <record id="rate_kumamoto_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_kumamoto"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.1012</field>
+            <field name="health_rate_with_care">0.1171</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+        <record id="rate_oita_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_oita"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.1025</field>
+            <field name="health_rate_with_care">0.1184</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+        <record id="rate_miyazaki_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_miyazaki"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.1009</field>
+            <field name="health_rate_with_care">0.1168</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+        <record id="rate_kagoshima_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_kagoshima"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.1031</field>
+            <field name="health_rate_with_care">0.1190</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+        <record id="rate_okinawa_r7" model="hr.insurance.rate">
+            <field name="prefecture_id" ref="prefecture_okinawa"/>
+            <field name="fiscal_year">令和7年度</field>
+            <field name="effective_date">2025-03-01</field>
+            <field name="health_rate">0.0944</field>
+            <field name="health_rate_with_care">0.1103</field>
+            <field name="pension_rate">0.183</field>
+            <field name="employment_rate">0.006</field>
+        </record>
+    </data>
+</odoo>

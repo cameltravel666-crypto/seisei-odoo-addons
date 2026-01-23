@@ -340,13 +340,17 @@ export const auditService = {
     userId: string;
     success: boolean;
     reason?: string;
+    method?: string; // 'password', 'oauth_google', 'oauth_microsoft', 'email_code'
   }) {
     await this.log({
       tenantId: params.tenantId,
       userId: params.userId,
       action: params.success ? 'LOGIN_SUCCESS' : 'LOGIN_FAILED',
       resource: 'session',
-      metadata: params.reason ? { reason: params.reason } : undefined
+      metadata: {
+        ...(params.reason && { reason: params.reason }),
+        ...(params.method && { method: params.method }),
+      }
     });
   },
 

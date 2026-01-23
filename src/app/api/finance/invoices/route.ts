@@ -24,6 +24,11 @@ interface AccountMove {
   invoice_origin: string | false;
   ref: string | false;
   currency_id: [number, string] | false;
+  // OCR fields (from custom_ocr_finance module)
+  ocr_status?: 'pending' | 'processing' | 'done' | 'failed';
+  ocr_confidence?: number;
+  ocr_pages?: number;
+  message_main_attachment_id?: [number, string] | false;
 }
 
 // Invoice types
@@ -123,7 +128,9 @@ export async function GET(request: NextRequest) {
           'name', 'partner_id', 'invoice_date', 'invoice_date_due',
           'amount_total', 'amount_residual', 'amount_untaxed', 'amount_tax',
           'state', 'payment_state', 'move_type', 'invoice_origin', 'ref',
-          'currency_id'
+          'currency_id',
+          // OCR fields
+          'ocr_status', 'ocr_confidence', 'ocr_pages', 'message_main_attachment_id'
         ],
         limit,
         offset,
@@ -228,6 +235,11 @@ export async function GET(request: NextRequest) {
             currency: Array.isArray(item.currency_id) ? item.currency_id[1] : 'JPY',
             isOverdue,
             overdueDays,
+            // OCR fields
+            ocrStatus: item.ocr_status || 'pending',
+            ocrConfidence: item.ocr_confidence || 0,
+            ocrPages: item.ocr_pages || 0,
+            hasAttachment: !!item.message_main_attachment_id,
           };
         }),
         pagination: {

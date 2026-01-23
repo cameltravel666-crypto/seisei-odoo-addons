@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useMemo, useRef } from 'react';
+import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { FolderTree, Plus, Edit2, Trash2, GripVertical, ChevronRight, ChevronDown, Upload } from 'lucide-react';
+import { FolderTree, Plus, Edit2, Trash2, GripVertical, ChevronRight, ChevronDown, ChevronLeft, Upload } from 'lucide-react';
 import { useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory } from '@/hooks/use-pos';
 import { Loading } from '@/components/ui/loading';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -269,7 +270,10 @@ export default function CategoriesPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="page-title">{t('category.title')}</h1>
+        <Link href="/pos" className="page-title flex items-center gap-1 hover:text-[var(--color-primary)] transition-colors">
+          <ChevronLeft className="w-5 h-5" />
+          {t('category.title')}
+        </Link>
         <button
           onClick={() => openCreateModal()}
           className="btn btn-primary flex items-center gap-2"

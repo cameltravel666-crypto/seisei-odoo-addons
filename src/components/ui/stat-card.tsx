@@ -10,25 +10,26 @@ interface StatCardProps {
 
 /**
  * Unified stat card component for consistent KPI display across all pages
+ * Business Professional Color Scheme - No red/green
  *
  * Types:
- * - neutral: Gray text for counts (default)
- * - amount: Green text for money/positive values
- * - negative: Red text for cancelled/warning values
- * - highlight: Blue text for primary metrics
+ * - neutral: Slate-800 for general counts (default)
+ * - amount: Slate-800 for money/values (professional dark)
+ * - negative: Slate-600 for secondary values (muted)
+ * - highlight: Blue-600 for primary metrics (accent)
  */
 export function StatCard({ value, label, type = 'neutral', onClick, active }: StatCardProps) {
   const colorMap = {
-    neutral: 'text-gray-900',
-    amount: 'text-green-600',
-    negative: 'text-red-500',
+    neutral: 'text-slate-800',
+    amount: 'text-slate-800',
+    negative: 'text-slate-600',
     highlight: 'text-blue-600',
   };
 
   const activeRingMap = {
-    neutral: 'ring-gray-400 bg-gray-50',
-    amount: 'ring-green-400 bg-green-50',
-    negative: 'ring-red-400 bg-red-50',
+    neutral: 'ring-slate-400 bg-slate-50',
+    amount: 'ring-slate-400 bg-slate-50',
+    negative: 'ring-slate-400 bg-slate-50',
     highlight: 'ring-blue-400 bg-blue-50',
   };
 
