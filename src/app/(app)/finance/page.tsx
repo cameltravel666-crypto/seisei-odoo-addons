@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
-import { FileText, Receipt, CreditCard, TrendingUp, TrendingDown, DollarSign, PiggyBank, BarChart3, FileCheck, Calculator, Wallet, LineChart, AlertCircle } from 'lucide-react';
+import { FileText, Receipt, CreditCard, TrendingUp, TrendingDown, DollarSign, PiggyBank, BarChart3, FileCheck, Calculator, Wallet, LineChart, AlertCircle, List } from 'lucide-react';
 import { useInvoices } from '@/hooks/use-finance';
 import { KpiCard, KpiCardGrid } from '@/components/ui/kpi-card';
 import { KpiCardSkeleton } from '@/components/ui/skeleton';
@@ -107,6 +107,12 @@ export default function FinancePage() {
   };
 
   const menuItems = [
+    {
+      href: '/finance/move-lines',
+      icon: List,
+      label: t('finance.moveLines') || '日记账分录',
+      desc: t('finance.moveLinesDesc') || '查看所有会计分录明细',
+    },
     {
       href: '/finance/invoices',
       icon: FileText,
