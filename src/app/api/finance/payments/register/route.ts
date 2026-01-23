@@ -283,10 +283,34 @@ export async function GET(request: NextRequest) {
 
     const odoo = await getOdooClientForSession(session);
 
+    // Check if invoiceId is provided to filter by company
+    const { searchParams } = new URL(request.url);
+    const invoiceId = searchParams.get('invoiceId');
+
+    let companyId: number | null = null;
+
+    if (invoiceId) {
+      // Get the invoice's company
+      const invoices = await odoo.searchRead<{ id: number; company_id: [number, string] | false }>(
+        'account.move',
+        [['id', '=', parseInt(invoiceId)]],
+        { fields: ['company_id'] }
+      );
+      if (invoices.length > 0 && invoices[0].company_id) {
+        companyId = invoices[0].company_id[0];
+      }
+    }
+
+    // Build domain - filter by company if available
+    const domain: Array<[string, string, unknown]> = [['type', 'in', ['bank', 'cash']]];
+    if (companyId) {
+      domain.push(['company_id', '=', companyId]);
+    }
+
     // Get bank and cash journals
     const journals = await odoo.searchRead<AccountJournal>(
       'account.journal',
-      [['type', 'in', ['bank', 'cash']]],
+      domain,
       { fields: ['id', 'name', 'type', 'code'], order: 'type, name' }
     );
 

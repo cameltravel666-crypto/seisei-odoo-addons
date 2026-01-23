@@ -53,16 +53,16 @@ export function PaymentModal({
     }
   }, [isOpen, amount]);
 
-  // Fetch available payment journals
+  // Fetch available payment journals (filtered by invoice's company)
   const { data: journalsData, isLoading: isLoadingJournals } = useQuery({
-    queryKey: ['payment-journals'],
+    queryKey: ['payment-journals', invoiceId],
     queryFn: async () => {
-      const res = await fetch('/api/finance/payments/register');
+      const res = await fetch(`/api/finance/payments/register?invoiceId=${invoiceId}`);
       const data: ApiResponse<{ journals: PaymentJournal[] }> = await res.json();
       if (!data.success) throw new Error(data.error?.message || 'Failed to fetch journals');
       return data.data!.journals;
     },
-    enabled: isOpen,
+    enabled: isOpen && !!invoiceId,
   });
 
   // Set default journal when data loads
