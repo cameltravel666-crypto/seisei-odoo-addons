@@ -107,6 +107,14 @@ export async function POST(request: NextRequest) {
 // Export verification code checker for use in verify-code API
 export function checkVerificationCode(email: string, code: string): { valid: boolean; error?: string } {
   const normalizedEmail = email.toLowerCase().trim();
+
+  // Test mode: allow code "000000" for automated testing
+  if (process.env.ALLOW_TEST_CODE === 'true' && code === '000000') {
+    console.log(`[SendCode] Test code accepted for ${normalizedEmail}`);
+    verificationCodes.delete(normalizedEmail);
+    return { valid: true };
+  }
+
   const stored = verificationCodes.get(normalizedEmail);
 
   if (!stored) {

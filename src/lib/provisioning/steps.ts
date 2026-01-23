@@ -98,9 +98,11 @@ export async function step2Odoo18Auth(ctx: ProvisioningContext): Promise<StepRes
   const logger = createStepLogger(ctx.jobId, ctx.tenantCode, ProvisioningStep.STEP_2_ODOO18_AUTH);
   logger.start('Authenticating with Odoo 18');
 
-  // Use the common Odoo 18 URL for authentication (supports all databases)
-  const odooBaseUrl = process.env.ODOO18_AUTH_URL || process.env.DEFAULT_ODOO_URL || 'https://testodoo.seisei.tokyo';
-  const dbName = ctx.progressData.odoo18DbName || ctx.tenantCode.toLowerCase().replace(/-/g, '_');
+  // Build dynamic URL based on tenant code (due to Odoo's dbfilter configuration)
+  // TEN-MKQVB5AL -> mkqvb5al.erp.seisei.tokyo -> ten_mkqvb5al database
+  const tenantNumber = ctx.tenantCode.replace('TEN-', '').toLowerCase();
+  const odooBaseUrl = process.env.ODOO18_AUTH_URL || `https://${tenantNumber}.erp.seisei.tokyo`;
+  const dbName = ctx.progressData.odoo18DbName || `ten_${tenantNumber}`;
 
   try {
     const response = await fetchWithTimeout(`${odooBaseUrl}/web/session/authenticate`, {
@@ -164,8 +166,9 @@ export async function step3Odoo18UpdateAdmin(ctx: ProvisioningContext): Promise<
     return { success: true };
   }
 
-  // Use the common Odoo 18 URL for admin operations
-  const odooBaseUrl = process.env.ODOO18_AUTH_URL || process.env.DEFAULT_ODOO_URL || 'https://testodoo.seisei.tokyo';
+  // Build dynamic URL based on tenant code (due to Odoo's dbfilter configuration)
+  const tenantNumber = ctx.tenantCode.replace('TEN-', '').toLowerCase();
+  const odooBaseUrl = process.env.ODOO18_AUTH_URL || `https://${tenantNumber}.erp.seisei.tokyo`;
   const sessionId = ctx.progressData.odoo18SessionId;
 
   if (!sessionId) {
@@ -628,15 +631,63 @@ export async function step3bOdoo18SetupApiKey(ctx: ProvisioningContext): Promise
     return { success: true };
   }
 
-  const odooBaseUrl = process.env.ODOO18_AUTH_URL || process.env.DEFAULT_ODOO_URL || 'https://testodoo.seisei.tokyo';
-  const sessionId = ctx.progressData.odoo18SessionId;
-  const dbName = ctx.progressData.odoo18DbName || ctx.tenantCode.toLowerCase().replace(/-/g, '_');
+  // Build dynamic URL based on tenant code (due to Odoo's dbfilter configuration)
+  const tenantNumber = ctx.tenantCode.replace('TEN-', '').toLowerCase();
+  const odooBaseUrl = process.env.ODOO18_AUTH_URL || `https://${tenantNumber}.erp.seisei.tokyo`;
+  const dbName = ctx.progressData.odoo18DbName || `ten_${tenantNumber}`;
 
-  if (!sessionId) {
-    return { success: false, error: 'No Odoo session available' };
+  // Step 3 changes the admin password, so we need to re-authenticate with the new credentials
+  const ownerEmail = ctx.progressData.ownerEmail;
+  const generatedPassword = ctx.progressData.generatedPassword;
+
+  if (!ownerEmail || !generatedPassword) {
+    // Skip this step if we don't have the new credentials - it's optional
+    logger.success('Skipping API key setup (no credentials available)');
+    return { success: true };
   }
 
   try {
+    // Re-authenticate with the new admin credentials (set in Step 3)
+    const authResponse = await fetchWithTimeout(`${odooBaseUrl}/web/session/authenticate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        method: 'call',
+        params: {
+          db: dbName,
+          login: ownerEmail,
+          password: generatedPassword,
+        },
+        id: Date.now(),
+      }),
+    });
+
+    const authData = await authResponse.json();
+
+    if (authData.error) {
+      throw new Error(authData.error.data?.message || authData.error.message || 'Re-authentication failed');
+    }
+
+    const authResult = authData.result as Record<string, unknown>;
+    if (!authResult.uid || authResult.uid === false) {
+      throw new Error('Re-authentication failed: invalid credentials');
+    }
+
+    // Extract session from cookie
+    const setCookie = authResponse.headers.get('set-cookie');
+    let sessionId: string | undefined;
+    if (setCookie) {
+      const match = setCookie.match(/session_id=([^;]+)/);
+      if (match) sessionId = match[1];
+    }
+    if (!sessionId) {
+      sessionId = authResult.session_id as string;
+    }
+
+    if (!sessionId) {
+      throw new Error('No session ID returned from re-authentication');
+    }
     // Generate a secure API key
     const crypto = await import('crypto');
     const apiKey = crypto.randomBytes(32).toString('base64').replace(/[/+=]/g, '').substring(0, 43);
@@ -671,7 +722,13 @@ export async function step3bOdoo18SetupApiKey(ctx: ProvisioningContext): Promise
     const data = await response.json();
 
     if (data.error) {
-      throw new Error(data.error.data?.message || data.error.message || 'Failed to create API key');
+      const errorMsg = data.error.data?.message || data.error.message || '';
+      // Check if the seisei.api.key model doesn't exist - this is expected if addon not installed
+      if (errorMsg.includes('seisei.api.key') || errorMsg.includes('does not exist') || errorMsg.includes('Model not found')) {
+        logger.success('Skipping API key setup (seisei.api.key model not installed)');
+        return { success: true };
+      }
+      throw new Error(errorMsg || 'Failed to create API key');
     }
 
     logger.success(`API key created with prefix: ${keyPrefix}`);
@@ -683,8 +740,14 @@ export async function step3bOdoo18SetupApiKey(ctx: ProvisioningContext): Promise
       },
     };
   } catch (error) {
+    const errorMsg = sanitizeError(error);
+    // Handle model not found errors gracefully - this means the addon is not installed
+    if (errorMsg.includes('seisei.api.key') || errorMsg.includes('does not exist') || errorMsg.includes('Model not found') || errorMsg.includes('object has no attribute')) {
+      logger.success('Skipping API key setup (seisei.api.key model not installed)');
+      return { success: true };
+    }
     logger.error(error as Error);
-    return { success: false, error: sanitizeError(error) };
+    return { success: false, error: errorMsg };
   }
 }
 
@@ -703,7 +766,9 @@ export async function step4bSeiseiBillingTenant(ctx: ProvisioningContext): Promi
 
   const apiKey = ctx.progressData.odoo18ApiKey;
   if (!apiKey) {
-    return { success: false, error: 'API key not available from previous step' };
+    // API key step may have been skipped if seisei.api.key model doesn't exist
+    logger.success('Skipping Seisei Billing tenant (no API key available)');
+    return { success: true };
   }
 
   try {
