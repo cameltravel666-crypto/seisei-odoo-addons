@@ -33,6 +33,7 @@ import {
   Lock,
   FileSpreadsheet,
   Wallet,
+  FileStack,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useIsIOSAppStoreBuild } from '@/lib/appChannel';
@@ -143,6 +144,8 @@ export function Navigation() {
       })),
     // Product Management - unified product/category/BOM management
     { path: '/products', icon: Boxes, label: t('products') },
+    // Billing Center - 票据中心 (Odoo Accounting/Invoicing wrapper)
+    { path: '/billing', icon: FileStack, label: t('billing') },
     // Document OCR - scan invoices/receipts and create documents
     { path: '/ocr', icon: FileText, label: t('ocr') },
     // Sheet Forge - standalone module for template-based OCR extraction

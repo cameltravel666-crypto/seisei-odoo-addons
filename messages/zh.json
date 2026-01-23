@@ -76,6 +76,7 @@
     "moduleSettings": "模块设置",
     "logout": "退出登录",
     "language": "语言",
+    "billing": "票据中心",
     "ocr": "文档识别",
     "sheetforge": "表格引擎"
   },
@@ -1108,5 +1109,11 @@
     "rejected": "已拒绝",
     "reported": "已提交",
     "posted": "已过账"
+  },
+  "billing": {
+    "customerInvoices": "客户发票",
+    "vendorBills": "供应商账单",
+    "bank": "银行",
+    "expenses": "费用"
   }
 }

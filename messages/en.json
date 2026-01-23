@@ -76,6 +76,7 @@
     "moduleSettings": "Module Settings",
     "logout": "Logout",
     "language": "Language",
+    "billing": "Billing Center",
     "ocr": "Document OCR",
     "sheetforge": "Sheet Forge"
   },
@@ -1086,5 +1087,11 @@
     "rejected": "Rejected",
     "reported": "Reported",
     "posted": "Posted"
+  },
+  "billing": {
+    "customerInvoices": "Customer Invoices",
+    "vendorBills": "Vendor Bills",
+    "bank": "Bank",
+    "expenses": "Expenses"
   }
 }

@@ -76,6 +76,7 @@
     "moduleSettings": "モジュール設定",
     "logout": "ログアウト",
     "language": "言語",
+    "billing": "請求センター",
     "ocr": "文書識別",
     "sheetforge": "シートフォージ"
   },
@@ -1086,5 +1087,11 @@
     "rejected": "却下",
     "reported": "提出済み",
     "posted": "記帳済み"
+  },
+  "billing": {
+    "customerInvoices": "顧客請求書",
+    "vendorBills": "仕入請求書",
+    "bank": "銀行",
+    "expenses": "経費"
   }
 }
