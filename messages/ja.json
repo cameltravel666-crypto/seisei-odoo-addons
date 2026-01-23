@@ -38,7 +38,8 @@
     "date": "日付",
     "amount": "金額",
     "creating": "作成中...",
-    "confirmDelete": "削除しますか？"
+    "confirmDelete": "削除しますか？",
+    "optional": "任意"
   },
   "auth": {
     "login": "ログイン",
@@ -884,6 +885,25 @@
     "overdueAlert": "{count}件の延滞請求書があります",
     "tax": "税率",
     "noTax": "税なし"
+  },
+  "payment": {
+    "confirmReceipt": "入金を確認",
+    "confirmPayment": "出金を確認",
+    "receivePayment": "入金を確認",
+    "makePayment": "出金を確認",
+    "invoice": "請求書",
+    "partner": "取引先",
+    "amountToReceive": "入金予定額",
+    "amountToPay": "支払予定額",
+    "paymentMethod": "支払方法",
+    "paymentDate": "支払日",
+    "paymentAmount": "支払金額",
+    "memo": "メモ",
+    "memoPlaceholder": "支払メモ...",
+    "receiptSuccess": "入金完了",
+    "paymentSuccess": "出金完了",
+    "invoiceReconciled": "請求書が消込済みになりました",
+    "error": "操作に失敗しました"
   },
   "ocr": {
     "batchOcr": "OCR識別",

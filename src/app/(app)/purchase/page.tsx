@@ -2,15 +2,16 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { Scan, Package } from 'lucide-react';
 import { EmptyState, Pagination, DateRangeFilter, type PeriodType, FAB, ListSkeleton, Skeleton } from '@/components/ui';
 import { StatusTabs, type QueueType } from '@/components/purchase/status-tabs';
 import { SummaryBar } from '@/components/purchase/summary-bar';
 import { SortFilterBar, type SortOption } from '@/components/purchase/sort-filter-bar';
-import { PurchaseListItem } from '@/components/purchase/purchase-list-item';
+import { PurchaseListItem, type BillItem } from '@/components/purchase/purchase-list-item';
 import { OcrBatchButton } from '@/components/ocr';
+import { PaymentModal } from '@/components/payment-modal';
 import type { ApiResponse } from '@/types';
 
 // Types matching the API response
@@ -47,25 +48,6 @@ interface POItem {
   unpaidAmount: number;
 }
 
-interface BillItem {
-  id: number;
-  name: string;
-  partnerId: number | null;
-  partnerName: string;
-  invoiceDate: string | null;
-  invoiceDateDue: string | null;
-  amountResidual: number;
-  amountTotal: number;
-  isOverdue: boolean;
-  overdueDays: number;
-  invoiceOrigin: string | null;
-  // OCR fields
-  ocrStatus?: 'pending' | 'processing' | 'done' | 'failed';
-  ocrConfidence?: number;
-  ocrPages?: number;
-  hasAttachment?: boolean;
-}
-
 interface PurchaseData {
   capabilities: Capabilities;
   kpi: KPIs;
@@ -77,6 +59,7 @@ interface PurchaseData {
 
 export default function PurchasePage() {
   const t = useTranslations();
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [period, setPeriod] = useState<PeriodType>('month');
   const [customDateFrom, setCustomDateFrom] = useState(() => {
@@ -93,6 +76,10 @@ export default function PurchasePage() {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
+  // Payment modal state
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [selectedBill, setSelectedBill] = useState<BillItem | null>(null);
+
   const handleToggleSelect = (id: number) => {
     setSelectedIds(prev =>
       prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
@@ -107,6 +94,22 @@ export default function PurchasePage() {
   const handleOcrComplete = () => {
     setSelectedIds([]);
     setSelectionMode(false);
+  };
+
+  // Payment modal handlers
+  const handlePaymentClick = (bill: BillItem) => {
+    setSelectedBill(bill);
+    setPaymentModalOpen(true);
+  };
+
+  const handlePaymentClose = () => {
+    setPaymentModalOpen(false);
+    setSelectedBill(null);
+  };
+
+  const handlePaymentSuccess = () => {
+    // Refresh the list after successful payment
+    queryClient.invalidateQueries({ queryKey: ['purchase'] });
   };
 
   // Calculate date range based on period
@@ -342,6 +345,7 @@ export default function PurchasePage() {
                 selectionMode={selectionMode && data.itemType === 'bill'}
                 isSelected={selectedIds.includes(item.id)}
                 onToggleSelect={handleToggleSelect}
+                onPaymentClick={data.itemType === 'bill' ? handlePaymentClick : undefined}
               />
             ))}
           </div>
@@ -362,6 +366,20 @@ export default function PurchasePage() {
           onComplete={handleOcrComplete}
           onClear={handleClearSelection}
           t={t}
+        />
+      )}
+
+      {/* Payment Modal */}
+      {selectedBill && (
+        <PaymentModal
+          isOpen={paymentModalOpen}
+          onClose={handlePaymentClose}
+          invoiceId={selectedBill.id}
+          invoiceName={selectedBill.name}
+          partnerName={selectedBill.partnerName}
+          amount={selectedBill.amountResidual}
+          type="outbound"
+          onSuccess={handlePaymentSuccess}
         />
       )}
     </div>

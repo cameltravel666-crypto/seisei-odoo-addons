@@ -38,7 +38,8 @@
     "date": "日期",
     "amount": "金额",
     "creating": "创建中...",
-    "confirmDelete": "确定要删除吗？"
+    "confirmDelete": "确定要删除吗？",
+    "optional": "可选"
   },
   "auth": {
     "login": "登录",
@@ -898,6 +899,25 @@
     "overdueAlert": "{count}张发票已逾期需要处理",
     "tax": "税率",
     "noTax": "无税"
+  },
+  "payment": {
+    "confirmReceipt": "确认收款",
+    "confirmPayment": "确认付款",
+    "receivePayment": "确认收款",
+    "makePayment": "确认付款",
+    "invoice": "账单",
+    "partner": "往来单位",
+    "amountToReceive": "应收金额",
+    "amountToPay": "应付金额",
+    "paymentMethod": "付款方式",
+    "paymentDate": "付款日期",
+    "paymentAmount": "付款金额",
+    "memo": "备注",
+    "memoPlaceholder": "付款备注...",
+    "receiptSuccess": "收款成功",
+    "paymentSuccess": "付款成功",
+    "invoiceReconciled": "账单已核销",
+    "error": "操作失败"
   },
   "ocr": {
     "batchOcr": "OCR识别",

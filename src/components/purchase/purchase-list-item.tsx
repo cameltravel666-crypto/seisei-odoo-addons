@@ -22,6 +22,7 @@ interface POItem {
 interface BillItem {
   id: number;
   name: string;
+  partnerId: number | null;
   partnerName: string;
   invoiceDate: string | null;
   invoiceDateDue: string | null;
@@ -46,6 +47,8 @@ interface PurchaseListItemProps {
   selectionMode?: boolean;
   isSelected?: boolean;
   onToggleSelect?: (id: number) => void;
+  // Payment click handler (for bills)
+  onPaymentClick?: (bill: BillItem) => void;
 }
 
 export function PurchaseListItem({
@@ -55,6 +58,7 @@ export function PurchaseListItem({
   selectionMode = false,
   isSelected = false,
   onToggleSelect,
+  onPaymentClick,
 }: PurchaseListItemProps) {
   const isPO = itemType === 'po';
   const poItem = item as POItem;
@@ -202,8 +206,12 @@ export function PurchaseListItem({
     <div
       className="flex items-start gap-3 p-3 hover:bg-gray-50 transition-colors cursor-pointer"
       style={{ minHeight: 'var(--height-list-item-normal)' }}
+      onClick={() => onPaymentClick?.(billItem)}
     >
       {billContent}
     </div>
   );
 }
+
+// Export BillItem type for external use
+export type { BillItem };

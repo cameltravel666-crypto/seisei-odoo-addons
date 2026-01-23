@@ -2,12 +2,13 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { Package } from 'lucide-react';
 import { EmptyState, Pagination, DateRangeFilter, type PeriodType, FAB, ListSkeleton } from '@/components/ui';
 import { SalesSummaryBar } from '@/components/sales/summary-bar';
-import { SalesListItem } from '@/components/sales/sales-list-item';
+import { SalesListItem, type InvoiceItem } from '@/components/sales/sales-list-item';
+import { PaymentModal } from '@/components/payment-modal';
 import type { ApiResponse } from '@/types';
 
 // Reuse types from purchase for consistency
@@ -47,20 +48,6 @@ interface SOItem {
   isOverdueDelivery: boolean;
   hasUnpaidInvoices: boolean;
   unpaidAmount: number;
-}
-
-interface InvoiceItem {
-  id: number;
-  name: string;
-  partnerId: number | null;
-  partnerName: string;
-  invoiceDate: string | null;
-  invoiceDateDue: string | null;
-  amountResidual: number;
-  amountTotal: number;
-  isOverdue: boolean;
-  overdueDays: number;
-  invoiceOrigin: string | null;
 }
 
 interface SalesData {
@@ -207,6 +194,7 @@ function SortFilterBar({
 
 export default function SalesPage() {
   const t = useTranslations();
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [period, setPeriod] = useState<PeriodType>('month');
   const [customDateFrom, setCustomDateFrom] = useState(() => {
@@ -218,6 +206,10 @@ export default function SalesPage() {
   const [activeQueue, setActiveQueue] = useState<SalesQueueType>('to_confirm');
   const [sortBy, setSortBy] = useState<SortOption>('date_desc');
   const [overdueOnly, setOverdueOnly] = useState(false);
+
+  // Payment modal state
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<InvoiceItem | null>(null);
 
   // Calculate date range based on period
   const getDateRange = () => {
@@ -347,6 +339,22 @@ export default function SalesPage() {
     return messages[activeQueue] || t('sales.noItems');
   };
 
+  // Payment modal handlers
+  const handlePaymentClick = (invoice: InvoiceItem) => {
+    setSelectedInvoice(invoice);
+    setPaymentModalOpen(true);
+  };
+
+  const handlePaymentClose = () => {
+    setPaymentModalOpen(false);
+    setSelectedInvoice(null);
+  };
+
+  const handlePaymentSuccess = () => {
+    // Refresh the list after successful payment
+    queryClient.invalidateQueries({ queryKey: ['sales'] });
+  };
+
   return (
     <div className="space-y-3 pb-24">
       {/*
@@ -420,6 +428,7 @@ export default function SalesPage() {
                 item={item as any}
                 itemType={data.itemType}
                 t={t}
+                onPaymentClick={data.itemType === 'invoice' ? handlePaymentClick : undefined}
               />
             ))}
           </div>
@@ -432,6 +441,20 @@ export default function SalesPage() {
 
       {/* FAB - Create Sales Order */}
       <FAB href="/sales/create" label={t('sales.createOrder')} />
+
+      {/* Payment Modal */}
+      {selectedInvoice && (
+        <PaymentModal
+          isOpen={paymentModalOpen}
+          onClose={handlePaymentClose}
+          invoiceId={selectedInvoice.id}
+          invoiceName={selectedInvoice.name}
+          partnerName={selectedInvoice.partnerName}
+          amount={selectedInvoice.amountResidual}
+          type="inbound"
+          onSuccess={handlePaymentSuccess}
+        />
+      )}
     </div>
   );
 }

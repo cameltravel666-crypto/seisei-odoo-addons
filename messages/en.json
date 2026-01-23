@@ -38,7 +38,8 @@
     "date": "Date",
     "amount": "Amount",
     "creating": "Creating...",
-    "confirmDelete": "Are you sure you want to delete?"
+    "confirmDelete": "Are you sure you want to delete?",
+    "optional": "Optional"
   },
   "auth": {
     "login": "Login",
@@ -884,6 +885,25 @@
     "overdueAlert": "{count} overdue invoices require attention",
     "tax": "Tax",
     "noTax": "No Tax"
+  },
+  "payment": {
+    "confirmReceipt": "Confirm Receipt",
+    "confirmPayment": "Confirm Payment",
+    "receivePayment": "Receive Payment",
+    "makePayment": "Make Payment",
+    "invoice": "Invoice",
+    "partner": "Partner",
+    "amountToReceive": "Amount to Receive",
+    "amountToPay": "Amount to Pay",
+    "paymentMethod": "Payment Method",
+    "paymentDate": "Payment Date",
+    "paymentAmount": "Payment Amount",
+    "memo": "Memo",
+    "memoPlaceholder": "Payment memo...",
+    "receiptSuccess": "Payment Received",
+    "paymentSuccess": "Payment Completed",
+    "invoiceReconciled": "Invoice reconciled",
+    "error": "Operation Failed"
   },
   "ocr": {
     "batchOcr": "OCR Scan",

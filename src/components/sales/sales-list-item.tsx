@@ -22,6 +22,7 @@ interface SOItem {
 interface InvoiceItem {
   id: number;
   name: string;
+  partnerId: number | null;
   partnerName: string;
   invoiceDate: string | null;
   invoiceDateDue: string | null;
@@ -36,6 +37,8 @@ interface SalesListItemProps {
   item: SOItem | InvoiceItem;
   itemType: 'so' | 'invoice';
   t: (key: string, values?: Record<string, string | number | Date>) => string;
+  // Payment click handler (for invoices)
+  onPaymentClick?: (invoice: InvoiceItem) => void;
 }
 
 function getQueueBadgeStyle(queue: string): string {
@@ -48,7 +51,7 @@ function getQueueBadgeStyle(queue: string): string {
   return styles[queue] || 'bg-gray-100 text-gray-700';
 }
 
-export function SalesListItem({ item, itemType, t }: SalesListItemProps) {
+export function SalesListItem({ item, itemType, t, onPaymentClick }: SalesListItemProps) {
   const isSO = itemType === 'so';
   const soItem = item as SOItem;
   const invoiceItem = item as InvoiceItem;
@@ -117,6 +120,7 @@ export function SalesListItem({ item, itemType, t }: SalesListItemProps) {
     <div
       className="flex items-start gap-3 p-3 hover:bg-gray-50 transition-colors cursor-pointer"
       style={{ minHeight: 'var(--height-list-item-normal)' }}
+      onClick={() => onPaymentClick?.(invoiceItem)}
     >
       {/* Icon */}
       <div className={`p-2 rounded-lg flex-shrink-0 mt-0.5 ${invoiceItem.isOverdue ? 'bg-red-100' : 'bg-orange-100'}`}>
@@ -160,3 +164,6 @@ export function SalesListItem({ item, itemType, t }: SalesListItemProps) {
     </div>
   );
 }
+
+// Export InvoiceItem type for external use
+export type { InvoiceItem };
