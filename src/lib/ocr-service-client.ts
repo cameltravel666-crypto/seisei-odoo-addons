@@ -4,7 +4,8 @@
  */
 
 // Configuration from environment
-const OCR_SERVICE_URL = process.env.OCR_SERVICE_URL || 'http://ocr-service:8080';
+// OCR_SERVICE_URL should be base URL like http://ocr-service:8080/api/v1
+const OCR_SERVICE_URL = process.env.OCR_SERVICE_URL || 'http://ocr-service:8080/api/v1';
 const OCR_SERVICE_KEY = process.env.OCR_SERVICE_KEY || '';
 
 export interface OcrServiceRequest {
@@ -38,7 +39,8 @@ export interface OcrServiceResult {
 export async function callCentralOcrService(
   request: OcrServiceRequest
 ): Promise<OcrServiceResult> {
-  const url = `${OCR_SERVICE_URL}/api/v1/ocr/process`;
+  // OCR_SERVICE_URL already includes /api/v1
+  const url = `${OCR_SERVICE_URL}/ocr/process`;
 
   if (!OCR_SERVICE_KEY) {
     console.error('[OCR Client] OCR_SERVICE_KEY not configured');
@@ -98,7 +100,8 @@ export async function getOcrUsage(tenantId: string, yearMonth?: string): Promise
   billableCount: number;
   totalCost: number;
 } | null> {
-  const url = new URL(`${OCR_SERVICE_URL}/api/v1/usage/${tenantId}`);
+  // OCR_SERVICE_URL already includes /api/v1
+  const url = new URL(`${OCR_SERVICE_URL}/usage/${tenantId}`);
   if (yearMonth) {
     url.searchParams.set('year_month', yearMonth);
   }
