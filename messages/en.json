@@ -913,6 +913,21 @@
     "invoiceReconciled": "Invoice reconciled",
     "error": "Operation Failed"
   },
+  "email": {
+    "compose": "Compose Email",
+    "send": "Send",
+    "sending": "Sending...",
+    "sent": "Email sent",
+    "sentTo": "Sent to",
+    "sendFailed": "Failed to send",
+    "recipient": "To",
+    "subject": "Subject",
+    "subjectPlaceholder": "Email subject",
+    "body": "Message",
+    "bodyPlaceholder": "Email content...",
+    "attachments": "Attachments",
+    "templateLoadFailed": "Failed to load template"
+  },
   "ocr": {
     "batchOcr": "OCR Scan",
     "processing": "Processing...",

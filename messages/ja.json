@@ -913,6 +913,21 @@
     "invoiceReconciled": "請求書が消込済みになりました",
     "error": "操作に失敗しました"
   },
+  "email": {
+    "compose": "メールを作成",
+    "send": "送信",
+    "sending": "送信中...",
+    "sent": "メールを送信しました",
+    "sentTo": "送信先",
+    "sendFailed": "送信に失敗しました",
+    "recipient": "宛先",
+    "subject": "件名",
+    "subjectPlaceholder": "メールの件名",
+    "body": "本文",
+    "bodyPlaceholder": "メール本文...",
+    "attachments": "添付ファイル",
+    "templateLoadFailed": "テンプレートの読み込みに失敗しました"
+  },
   "ocr": {
     "batchOcr": "OCR識別",
     "processing": "識別中...",

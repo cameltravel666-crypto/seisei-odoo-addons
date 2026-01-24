@@ -927,6 +927,21 @@
     "invoiceReconciled": "账单已核销",
     "error": "操作失败"
   },
+  "email": {
+    "compose": "编辑邮件",
+    "send": "发送",
+    "sending": "发送中...",
+    "sent": "邮件已发送",
+    "sentTo": "已发送至",
+    "sendFailed": "发送失败",
+    "recipient": "收件人",
+    "subject": "主题",
+    "subjectPlaceholder": "邮件主题",
+    "body": "正文",
+    "bodyPlaceholder": "邮件内容...",
+    "attachments": "附件",
+    "templateLoadFailed": "加载模板失败"
+  },
   "ocr": {
     "batchOcr": "OCR识别",
     "processing": "识别中...",

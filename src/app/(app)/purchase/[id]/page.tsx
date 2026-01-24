@@ -24,6 +24,7 @@ import {
 import { Loading } from '@/components/ui/loading';
 import type { ApiResponse } from '@/types';
 import { StickyActionBar, StickyActionBarContent } from '@/components/documents';
+import { EmailComposeModal } from '@/components/email-compose-modal';
 
 interface Supplier {
   id: number;
@@ -117,6 +118,7 @@ export default function PurchaseOrderDetailPage({
   const [isEmailing, setIsEmailing] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [showLangDialog, setShowLangDialog] = useState(false);
+  const [showEmailModal, setShowEmailModal] = useState(false);
   const [showActions, setShowActions] = useState(false);
   const [showLines, setShowLines] = useState(true);
 
@@ -418,31 +420,19 @@ export default function PurchaseOrderDetailPage({
     }
   };
 
-  // Send email via Odoo
-  const handleSendEmail = async () => {
+  // Open email compose modal
+  const handleSendEmail = () => {
     if (!order) return;
+    setShowEmailModal(true);
+  };
 
-    setIsEmailing(true);
-    try {
-      const res = await fetch(`/api/purchase/${id}/email`, { method: 'POST' });
-      const data = await res.json();
-      if (data.success) {
-        // Update order state if needed
-        if (order.state === 'draft') {
-          setOrder((prev) => prev ? { ...prev, state: 'sent' } : null);
-        }
-        // Show success message
-        alert(t('common.success') + ': ' + (data.data?.message || 'Email sent'));
-        queryClient.invalidateQueries({ queryKey: ['purchase'] });
-      } else {
-        alert(data.error?.message || 'Failed to send email');
-      }
-    } catch {
-      alert('Failed to send email');
-    } finally {
-      setIsEmailing(false);
-      setShowActions(false);
+  // Handle email sent successfully
+  const handleEmailSent = () => {
+    // Update order state if needed
+    if (order && order.state === 'draft') {
+      setOrder((prev) => prev ? { ...prev, state: 'sent' } : null);
     }
+    queryClient.invalidateQueries({ queryKey: ['purchase'] });
   };
 
   // Show language selection dialog before generating PDF
@@ -1118,6 +1108,18 @@ export default function PurchaseOrderDetailPage({
             </div>
           </div>
         </>
+      )}
+
+      {/* Email Compose Modal */}
+      {order && (
+        <EmailComposeModal
+          isOpen={showEmailModal}
+          onClose={() => setShowEmailModal(false)}
+          orderId={order.id}
+          orderName={order.name}
+          partnerName={order.partnerName}
+          onSuccess={handleEmailSent}
+        />
       )}
 
       <style jsx>{`

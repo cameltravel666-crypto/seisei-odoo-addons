@@ -8,6 +8,13 @@ interface MailTemplate {
   name: string;
 }
 
+interface EmailRequestBody {
+  recipient?: string;
+  subject?: string;
+  body?: string;
+  attachment_ids?: number[];
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -40,6 +47,98 @@ export async function POST(
 
     const odoo = await getOdooClientForSession(session);
 
+    // Parse request body for custom email content
+    let customEmail: EmailRequestBody = {};
+    try {
+      const bodyText = await request.text();
+      if (bodyText) {
+        customEmail = JSON.parse(bodyText);
+      }
+    } catch {
+      // If no body or invalid JSON, proceed with default behavior
+    }
+
+    const hasCustomContent = customEmail.recipient || customEmail.subject || customEmail.body;
+
+    // If custom content is provided, create mail.compose.message with custom values
+    if (hasCustomContent) {
+      try {
+        // Find the purchase order email template for the base
+        const templates = await odoo.searchRead<MailTemplate>(
+          'mail.template',
+          [['model', '=', 'purchase.order']],
+          { fields: ['id', 'name'], limit: 1 }
+        );
+
+        // Build compose message values
+        const composeValues: Record<string, unknown> = {
+          model: 'purchase.order',
+          res_ids: [orderId],
+          composition_mode: 'comment',
+          auto_delete_message: false,
+        };
+
+        // Add template if found
+        if (templates.length > 0) {
+          composeValues.template_id = templates[0].id;
+        }
+
+        // Override with custom values
+        if (customEmail.recipient) {
+          composeValues.email_from = false; // Use default
+          composeValues.partner_ids = false; // Clear default partners
+          composeValues.email_to = customEmail.recipient;
+        }
+        if (customEmail.subject) {
+          composeValues.subject = customEmail.subject;
+        }
+        if (customEmail.body) {
+          composeValues.body = customEmail.body;
+        }
+        if (customEmail.attachment_ids && customEmail.attachment_ids.length > 0) {
+          composeValues.attachment_ids = [[6, 0, customEmail.attachment_ids]];
+        }
+
+        // Create the compose message
+        const composerId = await odoo.callKw<number>(
+          'mail.compose.message',
+          'create',
+          [composeValues]
+        );
+
+        // Send the email
+        await odoo.callKw(
+          'mail.compose.message',
+          'action_send_mail',
+          [[composerId]]
+        );
+
+        // Update order state to 'sent' if it was draft
+        try {
+          await odoo.callKw(
+            'purchase.order',
+            'write',
+            [[orderId], { state: 'sent' }]
+          );
+        } catch {
+          // Ignore state update errors
+        }
+
+        return NextResponse.json({
+          success: true,
+          data: {
+            sent: true,
+            message: 'Email sent successfully',
+            recipient: customEmail.recipient,
+          },
+        });
+      } catch (customError) {
+        console.error('[Purchase Email] Custom email failed:', customError);
+        throw customError;
+      }
+    }
+
+    // Default behavior: Use template-based sending
     // Method 1: Try using action_rfq_send which opens email composer in Odoo
     // This triggers Odoo's built-in email workflow
     try {
