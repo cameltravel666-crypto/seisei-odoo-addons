@@ -12,7 +12,8 @@ services:
     ports:
       - "${POSTGRES_PORT:-5433}:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      # 使用固定的外部卷名，避免因目录名不同创建多个卷
+      - seisei-erp_seisei_erp_postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-seisei}"]
       interval: 10s
@@ -59,7 +60,9 @@ services:
       - "traefik.http.services.biznexus.loadbalancer.server.port=9527"
 
 volumes:
-  postgres_data:
+  # 外部卷 - 在服务器上已存在，不会随项目目录名改变
+  seisei-erp_seisei_erp_postgres_data:
+    external: true
 
 networks:
   edge:
