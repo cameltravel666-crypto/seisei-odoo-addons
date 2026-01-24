@@ -482,8 +482,9 @@ export const membershipService = {
 
   /**
    * Get or create membership for a user (used during login)
+   * If user.isAdmin is true but membership role is not admin, upgrade the role
    */
-  async ensureMembership(userId: string, tenantId: string, isAdmin: boolean) {
+  async ensureMembership(userId: string, tenantId: string, isAdmin: boolean): Promise<MembershipData | null> {
     let membership = await this.get(userId, tenantId);
 
     if (!membership) {
@@ -493,6 +494,16 @@ export const membershipService = {
         tenantId,
         role: isAdmin ? 'ORG_ADMIN' : 'OPERATOR'
       });
+    } else if (isAdmin && membership.role !== 'ORG_ADMIN' && membership.role !== 'BILLING_ADMIN') {
+      // User is admin but membership doesn't reflect it - upgrade to ORG_ADMIN
+      await prisma.membership.update({
+        where: {
+          userId_tenantId: { userId, tenantId }
+        },
+        data: { role: 'ORG_ADMIN' }
+      });
+      // Re-fetch to get consistent type
+      membership = await this.get(userId, tenantId);
     }
 
     return membership;

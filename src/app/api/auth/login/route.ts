@@ -37,6 +37,16 @@ export async function POST(request: NextRequest) {
     // Find tenant
     const tenant = await prisma.tenant.findUnique({
       where: { tenantCode },
+      select: {
+        id: true,
+        tenantCode: true,
+        name: true,
+        odooBaseUrl: true,
+        odooDb: true,
+        isActive: true,
+        planCode: true,
+        ownerEmail: true,
+      },
     });
 
     if (!tenant) {
@@ -69,27 +79,66 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Upsert user
-    const user = await prisma.user.upsert({
+    // Find or create user
+    // First, try to find existing user by email (for users created during registration with odooUserId=0)
+    // Then try by odooUserId, then create if not found
+    let user = await prisma.user.findFirst({
       where: {
-        tenantId_odooUserId: {
-          tenantId: tenant.id,
-          odooUserId: odooSession.uid,
-        },
-      },
-      update: {
-        odooLogin: username,
-        displayName: odooSession.name,
-        lastLoginAt: new Date(),
-      },
-      create: {
         tenantId: tenant.id,
-        odooUserId: odooSession.uid,
-        odooLogin: username,
-        displayName: odooSession.name,
-        isAdmin: false, // Could be determined from Odoo groups
+        OR: [
+          { email: username.toLowerCase() },
+          { odooLogin: username.toLowerCase() },
+        ],
       },
     });
+
+    if (user) {
+      // Update existing user with Odoo info
+      user = await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          odooUserId: odooSession.uid,
+          odooLogin: username,
+          displayName: odooSession.name,
+          lastLoginAt: new Date(),
+        },
+      });
+    } else {
+      // Try to find by odooUserId
+      user = await prisma.user.findUnique({
+        where: {
+          tenantId_odooUserId: {
+            tenantId: tenant.id,
+            odooUserId: odooSession.uid,
+          },
+        },
+      });
+
+      if (user) {
+        // Update existing user
+        user = await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            odooLogin: username,
+            displayName: odooSession.name,
+            lastLoginAt: new Date(),
+          },
+        });
+      } else {
+        // Create new user - check if this is the tenant owner (should be admin)
+        const isOwner = tenant.ownerEmail?.toLowerCase() === username.toLowerCase();
+        user = await prisma.user.create({
+          data: {
+            tenantId: tenant.id,
+            odooUserId: odooSession.uid,
+            odooLogin: username,
+            displayName: odooSession.name,
+            email: username.includes('@') ? username.toLowerCase() : null,
+            isAdmin: isOwner, // Tenant owner should be admin
+          },
+        });
+      }
+    }
 
     // Create app session
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
@@ -125,13 +174,16 @@ export async function POST(request: NextRequest) {
       user.isAdmin
     );
 
+    // Determine admin status from membership role
+    const isAdmin = membership?.role === 'ORG_ADMIN' || membership?.role === 'BILLING_ADMIN';
+
     // Create JWT with role info
     const token = await createToken({
       userId: user.id,
       tenantId: tenant.id,
       tenantCode: tenant.tenantCode,
       odooUserId: user.odooUserId,
-      isAdmin: membership.role === 'ORG_ADMIN' || membership.role === 'BILLING_ADMIN',
+      isAdmin,
       sessionId: session.id,
     });
 
@@ -152,7 +204,7 @@ export async function POST(request: NextRequest) {
           id: user.id,
           displayName: user.displayName,
           email: user.email,
-          isAdmin: membership.role === 'ORG_ADMIN' || membership.role === 'BILLING_ADMIN',
+          isAdmin,
         },
         tenant: {
           id: tenant.id,
@@ -160,8 +212,8 @@ export async function POST(request: NextRequest) {
           name: tenant.name,
         },
         membership: {
-          role: membership.role,
-          storeScope: membership.storeScope,
+          role: membership?.role ?? 'OPERATOR',
+          storeScope: membership?.storeScope ?? [],
         },
       },
     });

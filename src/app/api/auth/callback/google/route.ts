@@ -188,13 +188,16 @@ export async function GET(request: NextRequest) {
           user.isAdmin
         );
 
+        // Determine admin status from membership role
+        const isAdmin = membership?.role === 'ORG_ADMIN' || membership?.role === 'BILLING_ADMIN';
+
         // Create JWT
         const token = await createToken({
           userId: user.id,
           tenantId: existingTenant.id,
           tenantCode: existingTenant.tenantCode,
           odooUserId: user.odooUserId,
-          isAdmin: membership.role === 'ORG_ADMIN' || membership.role === 'BILLING_ADMIN',
+          isAdmin,
           sessionId: session.id,
         });
 
