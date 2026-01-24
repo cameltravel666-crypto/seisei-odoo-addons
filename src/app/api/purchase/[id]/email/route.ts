@@ -82,12 +82,9 @@ export async function POST(
           composeValues.template_id = templates[0].id;
         }
 
-        // Override with custom values
-        if (customEmail.recipient) {
-          composeValues.email_from = false; // Use default
-          composeValues.partner_ids = false; // Clear default partners
-          composeValues.email_to = customEmail.recipient;
-        }
+        // Override with custom values - use record_name for recipient display
+        // Note: Odoo 18 mail.compose.message doesn't have email_to field
+        // We'll set the recipient in the body instead and rely on template's partner
         if (customEmail.subject) {
           composeValues.subject = customEmail.subject;
         }

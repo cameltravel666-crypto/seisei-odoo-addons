@@ -28,6 +28,8 @@ interface EmailComposeModalProps {
   partnerName: string;
   partnerEmail?: string;
   onSuccess?: () => void;
+  /** Order type: 'purchase' or 'sales'. Defaults to 'purchase' */
+  orderType?: 'purchase' | 'sales';
 }
 
 // Convert HTML to plain text for display
@@ -70,8 +72,12 @@ export function EmailComposeModal({
   partnerName,
   partnerEmail,
   onSuccess,
+  orderType = 'purchase',
 }: EmailComposeModalProps) {
   const t = useTranslations();
+
+  // Determine API base path based on order type
+  const apiBasePath = orderType === 'sales' ? `/api/sales/${orderId}` : `/api/purchase/${orderId}`;
 
   const [recipient, setRecipient] = useState(partnerEmail || '');
   const [subject, setSubject] = useState('');
@@ -79,29 +85,65 @@ export function EmailComposeModal({
   const [attachmentIds, setAttachmentIds] = useState<number[]>([]);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
 
+  // Track if template has been applied
+  const [templateApplied, setTemplateApplied] = useState(false);
+
   // Fetch email template/defaults
-  const { data: templateData, isLoading: isLoadingTemplate, error: templateError } = useQuery({
-    queryKey: ['email-template', orderId],
+  const { data: templateData, isLoading: isLoadingTemplate, error: templateError, refetch } = useQuery({
+    queryKey: ['email-template', orderType, orderId],
     queryFn: async () => {
-      const res = await fetch(`/api/purchase/${orderId}/email/template`);
+      const res = await fetch(`${apiBasePath}/email/template`);
       const data: ApiResponse<EmailTemplate> = await res.json();
       if (!data.success) throw new Error(data.error?.message || 'Failed to fetch email template');
       return data.data!;
     },
     enabled: isOpen && !!orderId,
+    retry: 2,
+    staleTime: 0, // Always refetch when modal opens
   });
 
-  // Set form values when template loads
+  // Generate default email content if template is empty
+  const generateDefaultContent = () => {
+    const docType = orderType === 'sales' ? '見積書' : '発注書';
+    const docTypeEn = orderType === 'sales' ? 'Quotation' : 'Purchase Order';
+    return {
+      subject: `${orderName} - ${docType} / ${docTypeEn}`,
+      body: `${partnerName} 様\n\nいつもお世話になっております。\n\n添付にて${docType} ${orderName} をお送りいたします。\n\nご確認のほどよろしくお願いいたします。`,
+    };
+  };
+
+  // Set form values when template loads or when fetch fails
   useEffect(() => {
-    if (templateData) {
-      setRecipient(templateData.recipient || partnerEmail || '');
-      setSubject(templateData.subject || '');
-      // Convert HTML to plain text for editing
-      setBody(htmlToPlainText(templateData.body || ''));
-      setAttachments(templateData.attachments || []);
-      setAttachmentIds(templateData.attachments?.map(a => a.id) || []);
+    if (isOpen && !templateApplied && !isLoadingTemplate) {
+      if (templateData) {
+        const hasContent = templateData.subject || templateData.body;
+
+        if (hasContent) {
+          setRecipient(templateData.recipient || partnerEmail || '');
+          setSubject(templateData.subject || '');
+          setBody(htmlToPlainText(templateData.body || ''));
+          setAttachments(templateData.attachments || []);
+          setAttachmentIds(templateData.attachments?.map(a => a.id) || []);
+        } else {
+          // Template loaded but empty - use generated defaults
+          const defaults = generateDefaultContent();
+          setRecipient(templateData.recipient || partnerEmail || '');
+          setSubject(defaults.subject);
+          setBody(defaults.body);
+          setAttachments(templateData.attachments || []);
+          setAttachmentIds(templateData.attachments?.map(a => a.id) || []);
+        }
+        setTemplateApplied(true);
+      } else if (templateError) {
+        // Template fetch failed - use generated defaults
+        const defaults = generateDefaultContent();
+        setRecipient(partnerEmail || '');
+        setSubject(defaults.subject);
+        setBody(defaults.body);
+        setTemplateApplied(true);
+      }
     }
-  }, [templateData, partnerEmail]);
+  }, [templateData, templateError, partnerEmail, isOpen, templateApplied, isLoadingTemplate, orderType, orderName, partnerName]);
 
   // Reset form when modal closes
   useEffect(() => {
@@ -111,13 +153,14 @@ export function EmailComposeModal({
       setBody('');
       setAttachments([]);
       setAttachmentIds([]);
+      setTemplateApplied(false);
     }
   }, [isOpen, partnerEmail]);
 
   // Send email mutation
   const sendEmail = useMutation({
     mutationFn: async () => {
-      const res = await fetch(`/api/purchase/${orderId}/email`, {
+      const res = await fetch(`${apiBasePath}/email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -227,23 +270,10 @@ export function EmailComposeModal({
           </div>
         )}
 
-        {/* Template Error */}
-        {templateError && !sendEmail.isSuccess && !sendEmail.isError && (
-          <div className="p-6">
-            <div className="flex items-start gap-3 p-4 bg-yellow-50 rounded-lg mb-4">
-              <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="font-medium text-yellow-800">{t('email.templateLoadFailed') || '加载模板失败'}</p>
-                <p className="text-sm text-yellow-600 mt-1">
-                  {(templateError as Error)?.message || t('common.error')}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Template Error - removed, now handled by showing form with defaults */}
 
-        {/* Form */}
-        {!sendEmail.isSuccess && !sendEmail.isError && !isLoadingTemplate && (
+        {/* Form - only show when template is loaded and applied */}
+        {!sendEmail.isSuccess && !sendEmail.isError && !isLoadingTemplate && templateApplied && (
           <>
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
               {/* Recipient */}

@@ -24,6 +24,7 @@ import {
   Pencil,
 } from 'lucide-react';
 import { Loading } from '@/components/ui/loading';
+import { EmailComposeModal } from '@/components/email-compose-modal';
 import type { ApiResponse } from '@/types';
 import { StickyActionBar, StickyActionBarContent } from '@/components/documents';
 
@@ -107,10 +108,10 @@ export default function SalesOrderDetailPage({
   const [error, setError] = useState<string | null>(null);
 
   const [isConfirming, setIsConfirming] = useState(false);
-  const [isEmailing, setIsEmailing] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [showLangDialog, setShowLangDialog] = useState(false);
   const [showLines, setShowLines] = useState(true);
+  const [showEmailModal, setShowEmailModal] = useState(false);
 
   // Edit mode state
   const [editMode, setEditMode] = useState(false);
@@ -384,27 +385,17 @@ export default function SalesOrderDetailPage({
     }
   };
 
-  // Send email
-  const handleSendEmail = async () => {
+  // Open email compose modal
+  const handleSendEmail = () => {
     if (!order) return;
+    setShowEmailModal(true);
+  };
 
-    setIsEmailing(true);
-    try {
-      const res = await fetch(`/api/sales/${id}/email`, { method: 'POST' });
-      const data = await res.json();
-      if (data.success) {
-        alert(t('sales.emailSent'));
-        if (order.state === 'draft') {
-          setOrder((prev) => prev ? { ...prev, state: 'sent' } : null);
-          queryClient.invalidateQueries({ queryKey: ['sales'] });
-        }
-      } else {
-        alert(data.error?.message || t('sales.emailFailed'));
-      }
-    } catch {
-      alert(t('sales.emailFailed'));
-    } finally {
-      setIsEmailing(false);
+  // Handle successful email send
+  const handleEmailSuccess = () => {
+    if (order && order.state === 'draft') {
+      setOrder((prev) => prev ? { ...prev, state: 'sent' } : null);
+      queryClient.invalidateQueries({ queryKey: ['sales'] });
     }
   };
 
@@ -863,17 +854,10 @@ export default function SalesOrderDetailPage({
               {canSendEmail && (
                 <button
                   onClick={handleSendEmail}
-                  disabled={isEmailing}
                   className="flex-1 btn bg-blue-600 text-white hover:bg-blue-700 py-3 flex items-center justify-center gap-2 min-h-[44px]"
                 >
-                  {isEmailing ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <>
-                      <Mail className="w-5 h-5" />
-                      {t('sales.sendEmail')}
-                    </>
-                  )}
+                  <Mail className="w-5 h-5" />
+                  {t('sales.sendEmail')}
                 </button>
               )}
 
@@ -1068,6 +1052,19 @@ export default function SalesOrderDetailPage({
             </div>
           </div>
         </>
+      )}
+
+      {/* Email Compose Modal */}
+      {order && (
+        <EmailComposeModal
+          isOpen={showEmailModal}
+          onClose={() => setShowEmailModal(false)}
+          orderId={order.id}
+          orderName={order.name}
+          partnerName={order.partnerName}
+          orderType="sales"
+          onSuccess={handleEmailSuccess}
+        />
       )}
 
       <style jsx>{`

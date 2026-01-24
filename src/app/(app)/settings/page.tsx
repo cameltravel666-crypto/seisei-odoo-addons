@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
-import { CreditCard, Blocks, ChevronRight, User, Building2, Users } from 'lucide-react';
+import { CreditCard, Blocks, ChevronRight, User, Building2, Users, Mail } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth';
 import { useIsIOSAppStoreBuild } from '@/lib/appChannel';
 
@@ -37,6 +37,14 @@ const settingsItems = [
     icon: Blocks,
     titleKey: 'modules.title',
     descKey: 'modules.description',
+    adminOnly: true,
+  },
+  {
+    key: 'email',
+    href: '/settings/email',
+    icon: Mail,
+    titleKey: 'email.settings',
+    descKey: 'email.settingsDesc',
     adminOnly: true,
   },
 ];
