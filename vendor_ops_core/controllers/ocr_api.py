@@ -107,19 +107,35 @@ class OcrWebhookController(http.Controller):
                         status=404
                     )
 
-                # Calculate new counts
-                new_count = tenant.ocr_image_count + ocr_pages
-                free_quota = 30  # Default free quota
-                billable = max(0, new_count - free_quota)
-                total_cost = billable * 20  # 20 JPY per image
+                # Get values from Odoo 18 (source of truth)
+                # If image_count is provided, use it directly (full sync from Odoo 18)
+                # Otherwise, increment by ocr_pages (legacy mode)
+                if 'image_count' in params:
+                    # Full sync mode - Odoo 18 sends total counts
+                    new_count = params.get('image_count', 0)
+                    free_quota = params.get('free_quota', 30)
+                    billable = params.get('billable_count', max(0, new_count - free_quota))
+                    total_cost = params.get('total_cost', billable * 20)
+                    year_month = params.get('year_month', '')
+                else:
+                    # Increment mode - legacy, add pages to existing count
+                    new_count = tenant.ocr_image_count + ocr_pages
+                    free_quota = 30  # Default free quota
+                    billable = max(0, new_count - free_quota)
+                    total_cost = billable * 20  # 20 JPY per image
+                    year_month = ''
 
                 # Update tenant record
-                tenant.write({
+                update_vals = {
                     'ocr_image_count': new_count,
                     'ocr_billable_count': billable,
                     'ocr_total_cost': total_cost,
                     'ocr_last_sync': fields.Datetime.now(),
-                })
+                }
+                if year_month:
+                    update_vals['ocr_year_month'] = year_month
+
+                tenant.write(update_vals)
 
                 # Commit the transaction
                 cr.commit()

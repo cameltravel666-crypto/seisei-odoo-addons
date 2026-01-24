@@ -2,6 +2,10 @@
 
 from odoo import models, fields, api
 from datetime import datetime, date
+import logging
+import requests
+
+_logger = logging.getLogger(__name__)
 
 
 class OcrFileUsage(models.Model):
@@ -77,10 +81,78 @@ class OcrFileUsage(models.Model):
 
     @api.model
     def increment_usage(self, count=1, company_id=None):
-        """Increment image count for current month"""
+        """Increment image count for current month and sync to Odoo 19"""
         usage = self.get_current_usage(company_id)
         usage.image_count += count
+
+        # Sync to Odoo 19 after updating
+        usage._sync_to_odoo19()
+
         return usage
+
+    def _sync_to_odoo19(self):
+        """Push usage data to Odoo 19 vendor.ops.tenant via webhook"""
+        self.ensure_one()
+
+        ICP = self.env['ir.config_parameter'].sudo()
+        odoo19_url = ICP.get_param('ocr.odoo19_webhook_url', '')
+        odoo19_api_key = ICP.get_param('ocr.odoo19_api_key', 'seisei-ocr-webhook-2026')
+
+        if not odoo19_url:
+            _logger.debug("Odoo 19 webhook URL not configured, skipping sync")
+            return
+
+        # Get tenant code from company (stored in company's ref or a custom field)
+        company = self.company_id
+        # Try multiple sources for tenant code
+        tenant_code = (
+            getattr(company, 'tenant_code', None) or
+            company.ref or
+            getattr(company, 'x_tenant_code', None) or
+            ''
+        )
+
+        if not tenant_code:
+            _logger.warning(f"No tenant code for company {company.name}, skipping Odoo 19 sync")
+            return
+
+        # Build JSON-RPC format payload expected by Odoo 19 webhook
+        payload = {
+            'jsonrpc': '2.0',
+            'method': 'call',
+            'params': {
+                'tenant_code': tenant_code,
+                'ocr_pages': self.image_count,  # Send total count, Odoo 19 will replace
+                'year_month': f"{self.year}-{self.month:02d}",
+                'image_count': self.image_count,
+                'free_quota': self.free_quota,
+                'billable_count': self.billable_count,
+                'total_cost': self.total_charge,
+                'api_key': odoo19_api_key,
+            },
+            'id': None
+        }
+
+        try:
+            headers = {
+                'Content-Type': 'application/json',
+                'X-Odoo-Database': 'ERP',
+            }
+
+            response = requests.post(
+                odoo19_url,
+                json=payload,
+                headers=headers,
+                timeout=10
+            )
+
+            if response.status_code == 200:
+                _logger.info(f"Synced OCR usage to Odoo 19: {tenant_code} = {self.image_count} images")
+            else:
+                _logger.warning(f"Failed to sync to Odoo 19: HTTP {response.status_code} - {response.text[:200]}")
+
+        except requests.RequestException as e:
+            _logger.warning(f"Failed to sync OCR usage to Odoo 19: {e}")
 
     @api.model
     def check_quota(self, count=1, company_id=None):
