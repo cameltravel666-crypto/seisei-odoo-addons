@@ -2,11 +2,19 @@
 
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
-import { CreditCard, Blocks, ChevronRight, User, Palette, Users } from 'lucide-react';
+import { CreditCard, Blocks, ChevronRight, User, Building2, Users } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth';
 import { useIsIOSAppStoreBuild } from '@/lib/appChannel';
 
 const settingsItems = [
+  {
+    key: 'company',
+    href: '/settings/company',
+    icon: Building2,
+    titleKey: 'company.title',
+    descKey: 'company.description',
+    adminOnly: true,
+  },
   {
     key: 'team',
     href: '/settings/team',

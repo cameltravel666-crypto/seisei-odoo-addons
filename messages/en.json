@@ -102,6 +102,10 @@
     "infoTitle": "About Module Management",
     "infoDescription": "When you hide a module, it will be hidden for all users. Users can still hide modules they don't need from their personal settings."
   },
+  "company": {
+    "title": "Company Information",
+    "description": "Manage company basic information"
+  },
   "team": {
     "title": "Team Management",
     "description": "Manage team members and invitations"

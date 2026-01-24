@@ -102,6 +102,10 @@
     "infoTitle": "关于模块管理",
     "infoDescription": "关闭模块后，该模块将对所有用户隐藏。用户仍然可以通过个人设置隐藏他们不需要的模块。"
   },
+  "company": {
+    "title": "公司信息",
+    "description": "管理公司基本信息"
+  },
   "team": {
     "title": "团队管理",
     "description": "管理团队成员和邀请"
