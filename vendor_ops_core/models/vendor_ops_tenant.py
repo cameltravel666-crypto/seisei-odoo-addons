@@ -667,14 +667,20 @@ class VendorOpsTenant(models.Model):
                 })
                 _logger.info(f"Synced OCR usage for tenant {self.code}: {data}")
             elif response.status_code == 404:
-                # No usage yet
-                self.write({
-                    'ocr_image_count': 0,
-                    'ocr_billable_count': 0,
-                    'ocr_total_cost': 0,
-                    'ocr_year_month': year_month,
-                    'ocr_last_sync': fields.Datetime.now(),
-                })
+                # No usage data from central OCR service
+                # DON'T reset if we already have webhook data (Odoo 18 pushes directly)
+                if self.ocr_image_count == 0:
+                    self.write({
+                        'ocr_year_month': year_month,
+                        'ocr_last_sync': fields.Datetime.now(),
+                    })
+                    _logger.info(f"No OCR usage for tenant {self.code} (404)")
+                else:
+                    # Preserve webhook data, only update sync time
+                    self.write({
+                        'ocr_last_sync': fields.Datetime.now(),
+                    })
+                    _logger.info(f"No central OCR data for tenant {self.code} (404), preserving webhook data: {self.ocr_image_count} images")
             else:
                 _logger.error(f"Failed to sync OCR usage for tenant {self.code}: HTTP {response.status_code}")
 

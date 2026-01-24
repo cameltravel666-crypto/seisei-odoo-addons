@@ -3,6 +3,7 @@
 from . import models
 from . import wizard
 from . import services
+from . import controllers
 
 
 def _post_init_align_sequences(env):
