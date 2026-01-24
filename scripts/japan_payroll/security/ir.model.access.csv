@@ -1,0 +1,9 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_hr_insurance_prefecture_user,hr.insurance.prefecture.user,model_hr_insurance_prefecture,bi_hr_payroll.group_hr_payroll_user,1,0,0,0
+access_hr_insurance_prefecture_manager,hr.insurance.prefecture.manager,model_hr_insurance_prefecture,bi_hr_payroll.group_hr_payroll_manager,1,1,1,1
+access_hr_insurance_grade_user,hr.insurance.grade.user,model_hr_insurance_grade,bi_hr_payroll.group_hr_payroll_user,1,0,0,0
+access_hr_insurance_grade_manager,hr.insurance.grade.manager,model_hr_insurance_grade,bi_hr_payroll.group_hr_payroll_manager,1,1,1,1
+access_hr_insurance_rate_user,hr.insurance.rate.user,model_hr_insurance_rate,bi_hr_payroll.group_hr_payroll_user,1,0,0,0
+access_hr_insurance_rate_manager,hr.insurance.rate.manager,model_hr_insurance_rate,bi_hr_payroll.group_hr_payroll_manager,1,1,1,1
+access_hr_withholding_tax_user,hr.withholding.tax.user,model_hr_withholding_tax,bi_hr_payroll.group_hr_payroll_user,1,0,0,0
+access_hr_withholding_tax_manager,hr.withholding.tax.manager,model_hr_withholding_tax,bi_hr_payroll.group_hr_payroll_manager,1,1,1,1

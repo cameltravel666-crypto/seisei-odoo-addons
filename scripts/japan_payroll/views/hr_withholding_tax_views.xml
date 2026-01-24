@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Withholding Tax Tree View -->
+    <record id="hr_withholding_tax_view_tree" model="ir.ui.view">
+        <field name="name">hr.withholding.tax.view.tree</field>
+        <field name="model">hr.withholding.tax</field>
+        <field name="arch" type="xml">
+            <list string="Withholding Tax Table">
+                <field name="wage_min"/>
+                <field name="wage_max"/>
+                <field name="tax_dep_0"/>
+                <field name="tax_dep_1"/>
+                <field name="tax_dep_2"/>
+                <field name="tax_dep_3"/>
+                <field name="tax_dep_4"/>
+                <field name="tax_dep_5"/>
+                <field name="tax_dep_6"/>
+                <field name="tax_dep_7"/>
+                <field name="tax_column_b"/>
+                <field name="active" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Withholding Tax Form View -->
+    <record id="hr_withholding_tax_view_form" model="ir.ui.view">
+        <field name="name">hr.withholding.tax.view.form</field>
+        <field name="model">hr.withholding.tax</field>
+        <field name="arch" type="xml">
+            <form string="Withholding Tax">
+                <sheet>
+                    <group>
+                        <group string="Wage Range">
+                            <field name="wage_min"/>
+                            <field name="wage_max"/>
+                            <field name="active"/>
+                        </group>
+                        <group string="Column B">
+                            <field name="tax_column_b"/>
+                        </group>
+                    </group>
+                    <group string="Column A - Tax by Dependants">
+                        <group>
+                            <field name="tax_dep_0"/>
+                            <field name="tax_dep_1"/>
+                            <field name="tax_dep_2"/>
+                            <field name="tax_dep_3"/>
+                        </group>
+                        <group>
+                            <field name="tax_dep_4"/>
+                            <field name="tax_dep_5"/>
+                            <field name="tax_dep_6"/>
+                            <field name="tax_dep_7"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Withholding Tax Action -->
+    <record id="hr_withholding_tax_action" model="ir.actions.act_window">
+        <field name="name">Withholding Tax Table</field>
+        <field name="res_model">hr.withholding.tax</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create a withholding tax entry
+            </p>
+            <p>
+                Define the withholding tax table for income tax calculations.
+            </p>
+        </field>
+    </record>
+
+</odoo>

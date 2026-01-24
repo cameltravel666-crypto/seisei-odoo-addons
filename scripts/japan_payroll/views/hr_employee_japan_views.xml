@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Employee Form View Extension - Japan Payroll -->
+    <record id="hr_employee_view_form_japan" model="ir.ui.view">
+        <field name="name">hr.employee.view.form.japan</field>
+        <field name="model">hr.employee</field>
+        <field name="inherit_id" ref="hr.view_employee_form"/>
+        <field name="priority">50</field>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page string="Japan Payroll" name="japan_payroll" groups="hr.group_hr_user">
+                    <group>
+                        <group string="Personal Information">
+                            <field name="my_number"/>
+                            <field name="nationality"/>
+                            <field name="age"/>
+                        </group>
+                        <group string="Salary">
+                            <field name="base_wage"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="Social Insurance">
+                            <field name="insurance_prefecture_id"/>
+                            <field name="health_insurance_grade_id"/>
+                            <field name="pension_grade_id"/>
+                            <field name="is_care_insurance_applicable"/>
+                            <button name="action_update_insurance_grades"
+                                    string="Update Grades from Base Wage"
+                                    type="object"
+                                    class="btn-secondary"/>
+                        </group>
+                        <group string="Tax Information">
+                            <field name="tax_column"/>
+                            <field name="dependants_count"/>
+                            <field name="resident_tax_amount"/>
+                        </group>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

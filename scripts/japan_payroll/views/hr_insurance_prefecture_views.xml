@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Insurance Prefecture Tree View -->
+    <record id="hr_insurance_prefecture_view_tree" model="ir.ui.view">
+        <field name="name">hr.insurance.prefecture.view.tree</field>
+        <field name="model">hr.insurance.prefecture</field>
+        <field name="arch" type="xml">
+            <list string="Prefectures">
+                <field name="sequence" widget="handle"/>
+                <field name="code"/>
+                <field name="name"/>
+                <field name="active" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Insurance Prefecture Form View -->
+    <record id="hr_insurance_prefecture_view_form" model="ir.ui.view">
+        <field name="name">hr.insurance.prefecture.view.form</field>
+        <field name="model">hr.insurance.prefecture</field>
+        <field name="arch" type="xml">
+            <form string="Prefecture">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="code"/>
+                            <field name="name"/>
+                        </group>
+                        <group>
+                            <field name="sequence"/>
+                            <field name="active"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Insurance Rates" name="rates">
+                            <field name="rate_ids" nolabel="1">
+                                <list>
+                                    <field name="fiscal_year"/>
+                                    <field name="effective_date"/>
+                                    <field name="health_rate"/>
+                                    <field name="health_rate_with_care"/>
+                                    <field name="pension_rate"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Insurance Prefecture Action -->
+    <record id="hr_insurance_prefecture_action" model="ir.actions.act_window">
+        <field name="name">Prefectures</field>
+        <field name="res_model">hr.insurance.prefecture</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create a prefecture
+            </p>
+            <p>
+                Define prefectures for social insurance rate calculations.
+            </p>
+        </field>
+    </record>
+
+</odoo>

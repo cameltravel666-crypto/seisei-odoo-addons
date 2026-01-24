@@ -1,24 +1,226 @@
-Odoo客户端错误
+哎呀！
 
-UncaughtPromiseError > OwlError
-Uncaught Promise > An error occured in the owl lifecycle (see this Error's "cause" property)
+ 出了点问题......如果您遇到困难，请提供这些错误报告给您合作的支持服务商 
 
-Occured on testodoo.seisei.tokyo on 2026-01-23 02:19:21 GMT
+Odoo服务器错误
 
-OwlError: An error occured in the owl lifecycle (see this Error's "cause" property)
-    Error: An error occured in the owl lifecycle (see this Error's "cause" property)
-        at handleError (https://testodoo.seisei.tokyo/web/assets/22868a2/web.assets_web.min.js:972:101)
-        at App.handleError (https://testodoo.seisei.tokyo/web/assets/22868a2/web.assets_web.min.js:1630:29)
-        at ComponentNode.initiateRender (https://testodoo.seisei.tokyo/web/assets/22868a2/web.assets_web.min.js:1064:19)
+RPC_ERROR
+Odoo Server Error
 
-Caused by: Error: "account.move"."ocr_confidence" field is undefined.
-    at Field.parseFieldNode (https://testodoo.seisei.tokyo/web/assets/22868a2/web.assets_web.min.js:7752:330)
-    at https://testodoo.seisei.tokyo/web/assets/22868a2/web.assets_web.min.js:8685:954
-    at visit (https://testodoo.seisei.tokyo/web/assets/22868a2/web.assets_web.min.js:4785:51)
-    at visitChildren (https://testodoo.seisei.tokyo/web/assets/22868a2/web.assets_web.min.js:4784:171)
-    at visit (https://testodoo.seisei.tokyo/web/assets/22868a2/web.assets_web.min.js:4785:129)
-    at visitChildren (https://testodoo.seisei.tokyo/web/assets/22868a2/web.assets_web.min.js:4784:171)
-    at visit (https://testodoo.seisei.tokyo/web/assets/22868a2/web.assets_web.min.js:4785:129)
-    at visitChildren (https://testodoo.seisei.tokyo/web/assets/22868a2/web.assets_web.min.js:4784:171)
-    at visit (https://testodoo.seisei.tokyo/web/assets/22868a2/web.assets_web.min.js:4785:129)
-    at visitChildren (https://testodoo.seisei.tokyo/web/assets/22868a2/web.assets_web.min.js:4784:171)
+Occured on admin.erp.seisei.tokyo on model account.move on 2026-01-24 02:43:44 GMT
+
+Traceback (most recent call last):
+  File "/mnt/extra-addons/odoo_ocr_final/models/account_move.py", line 126, in action_send_to_ocr
+    matched_count = self._create_invoice_lines_from_ocr(
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/extra-addons/odoo_ocr_final/models/account_move.py", line 374, in _create_invoice_lines_from_ocr
+    self.env['account.move.line'].create(line_vals)
+  File "<decorator-gen-110>", line 2, in create
+  File "/usr/lib/python3/dist-packages/odoo/api.py", line 497, in _model_create_multi
+    return create(self, [arg])
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/odoo/addons/account/models/account_move_line.py", line 1543, in create
+    with moves._check_balanced(move_container),\
+  File "/usr/lib/python3.12/contextlib.py", line 144, in __exit__
+    next(self.gen)
+  File "/usr/lib/python3/dist-packages/odoo/addons/account/models/account_move.py", line 3220, in _sync_dynamic_lines
+    with ExitStack() as stack:
+  File "/usr/lib/python3.12/contextlib.py", line 610, in __exit__
+    raise exc_details[1]
+  File "/usr/lib/python3.12/contextlib.py", line 595, in __exit__
+    if cb(*exc_details):
+       ^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/contextlib.py", line 144, in __exit__
+    next(self.gen)
+  File "/usr/lib/python3/dist-packages/odoo/addons/account/models/account_move.py", line 3059, in _sync_tax_lines
+    AccountTax._add_accounting_data_in_base_lines_tax_details(base_lines_values, move.company_id, include_caba_tags=move.always_tax_exigible)
+                                                                                                                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/odoo/fields.py", line 1244, in __get__
+    self.recompute(record)
+  File "/usr/lib/python3/dist-packages/odoo/fields.py", line 1471, in recompute
+    apply_except_missing(self.compute_value, recs)
+  File "/usr/lib/python3/dist-packages/odoo/fields.py", line 1444, in apply_except_missing
+    func(records)
+  File "/usr/lib/python3/dist-packages/odoo/fields.py", line 1493, in compute_value
+    records._compute_field_value(self)
+  File "/usr/lib/python3/dist-packages/odoo/addons/mail/models/mail_thread.py", line 442, in _compute_field_value
+    return super()._compute_field_value(field)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/odoo/models.py", line 5297, in _compute_field_value
+    fields.determine(field.compute, self)
+  File "/usr/lib/python3/dist-packages/odoo/fields.py", line 110, in determine
+    return needle(*args)
+           ^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/odoo/addons/point_of_sale/models/account_move.py", line 24, in _compute_always_tax_exigible
+    if move.always_tax_exigible or move.tax_cash_basis_created_move_ids:
+                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/odoo/fields.py", line 4639, in __get__
+    return super().__get__(records, owner)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/odoo/fields.py", line 3077, in __get__
+    return super().__get__(records, owner)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/odoo/fields.py", line 1274, in __get__
+    recs._fetch_field(self)
+  File "/usr/lib/python3/dist-packages/odoo/models.py", line 4115, in _fetch_field
+    self.fetch(fnames)
+  File "/usr/lib/python3/dist-packages/odoo/models.py", line 4153, in fetch
+    fetched = self._fetch_query(query, fields_to_fetch)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/odoo/models.py", line 4264, in _fetch_query
+    field.read(fetched)
+  File "/usr/lib/python3/dist-packages/odoo/fields.py", line 4654, in read
+    lines = comodel.search_fetch(domain, field_names)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/odoo/models.py", line 1781, in search_fetch
+    return self._fetch_query(query, fields_to_fetch)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/odoo/models.py", line 4240, in _fetch_query
+    rows = self.env.execute_query(query.select(*sql_terms))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/odoo/api.py", line 992, in execute_query
+    self.flush_query(query)
+  File "/usr/lib/python3/dist-packages/odoo/api.py", line 984, in flush_query
+    self[model_name].flush_model(field_names)
+  File "/usr/lib/python3/dist-packages/odoo/models.py", line 6769, in flush_model
+    self._flush(fnames)
+  File "/usr/lib/python3/dist-packages/odoo/models.py", line 6847, in _flush
+    model.browse(some_ids)._write_multi(vals_list)
+  File "/usr/lib/python3/dist-packages/odoo/models.py", line 4933, in _write_multi
+    self.env.execute_query(SQL(
+  File "/usr/lib/python3/dist-packages/odoo/api.py", line 993, in execute_query
+    self.cr.execute(query)
+  File "/usr/lib/python3/dist-packages/odoo/sql_db.py", line 364, in execute
+    res = self._obj.execute(query, params)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.SerializationFailure: could not serialize access due to concurrent update
+
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/lib/python3/dist-packages/odoo/http.py", line 2166, in _transactioning
+    return service_model.retrying(func, env=self.env)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/odoo/service/model.py", line 156, in retrying
+    result = func()
+             ^^^^^^
+  File "/usr/lib/python3/dist-packages/odoo/http.py", line 2133, in _serve_ir_http
+    response = self.dispatcher.dispatch(rule.endpoint, args)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/odoo/http.py", line 2381, in dispatch
+    result = self.request.registry['ir.http']._dispatch(endpoint)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/odoo/addons/base/models/ir_http.py", line 333, in _dispatch
+    result = endpoint(**request.params)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/odoo/http.py", line 754, in route_wrapper
+    result = endpoint(self, *args, **params_ok)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/odoo/addons/web/controllers/dataset.py", line 42, in call_button
+    action = call_kw(request.env[model], method, args, kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/odoo/api.py", line 535, in call_kw
+    result = getattr(recs, name)(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/extra-addons/odoo_ocr_final/models/account_move.py", line 147, in action_send_to_ocr
+    self.write({
+  File "/usr/lib/python3/dist-packages/odoo/addons/purchase/models/account_invoice.py", line 183, in write
+    res = super(AccountMove, self).write(vals)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/odoo/addons/account/models/account_move.py", line 3421, in write
+    with self._sync_dynamic_lines(container):
+  File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/odoo/addons/account/models/account_move.py", line 3221, in _sync_dynamic_lines
+    stack.enter_context(self._sync_dynamic_line(
+  File "/usr/lib/python3.12/contextlib.py", line 526, in enter_context
+    result = _enter(cm)
+             ^^^^^^^^^^
+  File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/odoo/addons/account/models/account_move.py", line 3111, in _sync_dynamic_line
+    needed_before = needed()
+                    ^^^^^^^^
+  File "/usr/lib/python3/dist-packages/odoo/addons/account/models/account_move.py", line 3097, in needed
+    return self._sync_dynamic_line_needed_values(container['records'].mapped(needed_vals_fname))
+                                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/odoo/models.py", line 6514, in mapped
+    recs = recs._fields[name].mapped(recs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/odoo/fields.py", line 1385, in mapped
+    self.__get__(first(remaining))
+  File "/usr/lib/python3/dist-packages/odoo/fields.py", line 1311, in __get__
+    self.compute_value(recs)
+  File "/usr/lib/python3/dist-packages/odoo/fields.py", line 2589, in compute_value
+    super().compute_value(records)
+  File "/usr/lib/python3/dist-packages/odoo/fields.py", line 1493, in compute_value
+    records._compute_field_value(self)
+  File "/usr/lib/python3/dist-packages/odoo/addons/mail/models/mail_thread.py", line 442, in _compute_field_value
+    return super()._compute_field_value(field)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/odoo/models.py", line 5297, in _compute_field_value
+    fields.determine(field.compute, self)
+  File "/usr/lib/python3/dist-packages/odoo/fields.py", line 110, in determine
+    return needle(*args)
+           ^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/odoo/addons/hr_expense/models/account_move.py", line 60, in _compute_needed_terms
+    super()._compute_needed_terms()
+  File "/usr/lib/python3/dist-packages/odoo/addons/account/models/account_move.py", line 1306, in _compute_needed_terms
+    if invoice.is_invoice(True) and invoice.invoice_line_ids:
+                                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/odoo/fields.py", line 4639, in __get__
+    return super().__get__(records, owner)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/odoo/fields.py", line 3077, in __get__
+    return super().__get__(records, owner)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/odoo/fields.py", line 1274, in __get__
+    recs._fetch_field(self)
+  File "/usr/lib/python3/dist-packages/odoo/models.py", line 4115, in _fetch_field
+    self.fetch(fnames)
+  File "/usr/lib/python3/dist-packages/odoo/models.py", line 4153, in fetch
+    fetched = self._fetch_query(query, fields_to_fetch)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/odoo/models.py", line 4264, in _fetch_query
+    field.read(fetched)
+  File "/usr/lib/python3/dist-packages/odoo/fields.py", line 4654, in read
+    lines = comodel.search_fetch(domain, field_names)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/odoo/addons/account/models/account_move_line.py", line 1420, in search_fetch
+    return super(AccountMoveLine, contextualized).search_fetch(domain, field_names, offset, limit, order)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/odoo/models.py", line 1781, in search_fetch
+    return self._fetch_query(query, fields_to_fetch)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/odoo/models.py", line 4240, in _fetch_query
+    rows = self.env.execute_query(query.select(*sql_terms))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/odoo/api.py", line 992, in execute_query
+    self.flush_query(query)
+  File "/usr/lib/python3/dist-packages/odoo/api.py", line 984, in flush_query
+    self[model_name].flush_model(field_names)
+  File "/usr/lib/python3/dist-packages/odoo/addons/account/models/account_move_line.py", line 1698, in flush_model
+    return super().flush_model(self._parse_flush_fnames(fnames))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/odoo/models.py", line 6769, in flush_model
+    self._flush(fnames)
+  File "/usr/lib/python3/dist-packages/odoo/models.py", line 6847, in _flush
+    model.browse(some_ids)._write_multi(vals_list)
+  File "/usr/lib/python3/dist-packages/odoo/models.py", line 4933, in _write_multi
+    self.env.execute_query(SQL(
+  File "/usr/lib/python3/dist-packages/odoo/api.py", line 993, in execute_query
+    self.cr.execute(query)
+  File "/usr/lib/python3/dist-packages/odoo/sql_db.py", line 364, in execute
+    res = self._obj.execute(query, params)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.InFailedSqlTransaction: current transaction is aborted, commands ignored until end of transaction block
+
+
+The above server error caused the following client error:
+RPC_ERROR: Odoo Server Error
+    RPC_ERROR
+        at makeErrorFromResponse (https://admin.erp.seisei.tokyo/web/assets/3cfffc5/web.assets_web.min.js:3165:165)
+        at XMLHttpRequest.<anonymous> (https://admin.erp.seisei.tokyo/web/assets/3cfffc5/web.assets_web.min.js:3170:13)

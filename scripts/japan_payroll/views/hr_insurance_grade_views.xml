@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Insurance Grade Tree View -->
+    <record id="hr_insurance_grade_view_tree" model="ir.ui.view">
+        <field name="name">hr.insurance.grade.view.tree</field>
+        <field name="model">hr.insurance.grade</field>
+        <field name="arch" type="xml">
+            <list string="Insurance Grades">
+                <field name="grade"/>
+                <field name="standard_monthly"/>
+                <field name="wage_min"/>
+                <field name="wage_max"/>
+                <field name="pension_grade"/>
+                <field name="has_pension"/>
+                <field name="active" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Insurance Grade Form View -->
+    <record id="hr_insurance_grade_view_form" model="ir.ui.view">
+        <field name="name">hr.insurance.grade.view.form</field>
+        <field name="model">hr.insurance.grade</field>
+        <field name="arch" type="xml">
+            <form string="Insurance Grade">
+                <sheet>
+                    <group>
+                        <group string="Grade Information">
+                            <field name="grade"/>
+                            <field name="grade_display"/>
+                            <field name="standard_monthly"/>
+                        </group>
+                        <group string="Wage Range">
+                            <field name="wage_min"/>
+                            <field name="wage_max"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="Pension">
+                            <field name="pension_grade"/>
+                            <field name="has_pension"/>
+                        </group>
+                        <group>
+                            <field name="active"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Insurance Grade Action -->
+    <record id="hr_insurance_grade_action" model="ir.actions.act_window">
+        <field name="name">Insurance Grades</field>
+        <field name="res_model">hr.insurance.grade</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create an insurance grade
+            </p>
+            <p>
+                Define insurance grades for social insurance calculations.
+            </p>
+        </field>
+    </record>
+
+</odoo>

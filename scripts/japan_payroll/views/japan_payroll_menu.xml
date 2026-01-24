@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Japan Payroll Configuration Menu -->
+    <menuitem id="menu_japan_payroll_config"
+        name="Japan Payroll"
+        parent="bi_hr_payroll.menu_hr_payroll_configuration"
+        sequence="50"/>
+
+    <menuitem id="menu_japan_insurance_prefecture"
+        name="Prefectures"
+        parent="menu_japan_payroll_config"
+        action="hr_insurance_prefecture_action"
+        sequence="10"/>
+
+    <menuitem id="menu_japan_insurance_grade"
+        name="Insurance Grades"
+        parent="menu_japan_payroll_config"
+        action="hr_insurance_grade_action"
+        sequence="20"/>
+
+    <menuitem id="menu_japan_insurance_rate"
+        name="Insurance Rates"
+        parent="menu_japan_payroll_config"
+        action="hr_insurance_rate_action"
+        sequence="30"/>
+
+    <menuitem id="menu_japan_withholding_tax"
+        name="Withholding Tax Table"
+        parent="menu_japan_payroll_config"
+        action="hr_withholding_tax_action"
+        sequence="40"/>
+
+</odoo>
