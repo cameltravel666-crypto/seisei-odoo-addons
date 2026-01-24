@@ -1,6 +1,6 @@
 /**
  * OCR Utilities for Receipt Processing
- * Uses Gemini API for text recognition
+ * Uses AI vision API for text recognition
  */
 
 import * as crypto from 'crypto';
@@ -189,7 +189,7 @@ export async function callOcrService(imageBuffer: Buffer): Promise<OcrResult> {
   const { GEMINI_API_KEY, GEMINI_MODEL, TIMEOUT_MS, RETRY_COUNT } = OCR_CONFIG;
 
   if (!GEMINI_API_KEY) {
-    throw new Error('GEMINI_API_KEY not configured');
+    throw new Error('OCR service temporarily unavailable');
   }
 
   // Convert image to base64
@@ -249,21 +249,22 @@ export async function callOcrService(imageBuffer: Buffer): Promise<OcrResult> {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
+        console.error(`[OCR] API error: ${response.status} - ${errorText}`);
+        throw new Error('OCR processing failed. Please try again.');
       }
 
       const result = await response.json();
       const candidates = result.candidates || [];
 
       if (!candidates.length) {
-        throw new Error('No response from Gemini');
+        throw new Error('OCR processing failed. No result returned.');
       }
 
       const content = candidates[0].content || {};
       const parts = content.parts || [];
 
       if (!parts.length) {
-        throw new Error('Empty response from Gemini');
+        throw new Error('OCR processing failed. Empty result.');
       }
 
       const rawText = parts[0].text || '';
