@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { Prisma } from '@prisma/client';
+import { syncSubscriptionItemUpdateToOdoo, syncSubscriptionItemRemovalToOdoo } from '@/lib/odoo-sync';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -136,6 +137,15 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       data: { totalAmount: newTotal },
     });
 
+    // Sync quantity change to Odoo 19 (fire and forget)
+    syncSubscriptionItemUpdateToOdoo({
+      subscriptionId: item.subscriptionId,
+      productId: item.productId,
+      quantity,
+    }).catch((err) => {
+      console.error('[Update Subscription Item] Odoo sync failed:', err);
+    });
+
     return NextResponse.json({
       success: true,
       data: {
@@ -219,6 +229,10 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       }
     }
 
+    // Store product info for Odoo sync before marking as cancelled
+    const odoo19ProductId = item.product.odoo19ProductId;
+    const subscriptionId = item.subscriptionId;
+
     // Mark item as cancelled
     await prisma.subscriptionItem.update({
       where: { id },
@@ -227,6 +241,16 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         endDate: new Date(),
       },
     });
+
+    // Sync removal to Odoo 19 (fire and forget)
+    if (odoo19ProductId) {
+      syncSubscriptionItemRemovalToOdoo({
+        subscriptionId,
+        odoo19ProductId,
+      }).catch((err) => {
+        console.error('[Delete Subscription Item] Odoo sync failed:', err);
+      });
+    }
 
     // Recalculate total amount
     const remainingItems = await prisma.subscriptionItem.findMany({

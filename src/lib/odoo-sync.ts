@@ -204,6 +204,171 @@ export async function syncCancellationToOdoo(subscriptionId: string): Promise<vo
 }
 
 /**
+ * Sync subscription update to Odoo (add/remove/update items)
+ * Called when subscription items are modified via PUT or DELETE
+ */
+export async function syncSubscriptionUpdateToOdoo(subscriptionId: string): Promise<void> {
+  try {
+    const subscription = await prisma.subscription.findUnique({
+      where: { id: subscriptionId },
+      include: {
+        items: {
+          where: { status: { in: ['TRIAL', 'ACTIVE'] } },
+          include: { product: true },
+        },
+        tenant: true,
+      },
+    });
+
+    if (!subscription) {
+      console.log('[Odoo Sync] Subscription not found:', subscriptionId);
+      return;
+    }
+
+    if (!subscription.odoo19OrderId) {
+      console.log('[Odoo Sync] No Odoo order for subscription:', subscriptionId);
+      return;
+    }
+
+    // Build order lines from active subscription items
+    const orderLines = subscription.items
+      .filter((item) => item.product.odoo19ProductId)
+      .map((item) => [
+        0,
+        0,
+        {
+          product_id: item.product.odoo19ProductId,
+          product_uom_qty: item.quantity,
+          price_unit: Number(item.unitPrice),
+        },
+      ]);
+
+    // Delete existing order lines first, then add new ones
+    // Get existing order lines
+    const existingLines = await odoo.searchRead<{ id: number }>(
+      'sale.order.line',
+      [['order_id', '=', subscription.odoo19OrderId]],
+      ['id']
+    );
+
+    if (existingLines.length > 0) {
+      // Delete existing lines (use unlink)
+      await odoo.callKw('sale.order.line', 'unlink', [existingLines.map((l) => l.id)]);
+    }
+
+    // Add new order lines
+    if (orderLines.length > 0) {
+      await odoo.write('sale.order', [subscription.odoo19OrderId], {
+        order_line: orderLines,
+      });
+    }
+
+    console.log('[Odoo Sync] Updated Odoo order:', subscription.odoo19OrderId, 'with', orderLines.length, 'items');
+  } catch (error) {
+    console.error('[Odoo Sync] Failed to sync subscription update:', error);
+    // Don't throw - Odoo sync failure shouldn't break the main flow
+  }
+}
+
+/**
+ * Sync subscription item quantity update to Odoo
+ */
+export async function syncSubscriptionItemUpdateToOdoo(params: {
+  subscriptionId: string;
+  productId: string;
+  quantity: number;
+}): Promise<void> {
+  try {
+    const subscription = await prisma.subscription.findUnique({
+      where: { id: params.subscriptionId },
+      include: {
+        items: {
+          where: { productId: params.productId },
+          include: { product: true },
+        },
+      },
+    });
+
+    if (!subscription?.odoo19OrderId) {
+      console.log('[Odoo Sync] No Odoo order for subscription:', params.subscriptionId);
+      return;
+    }
+
+    const item = subscription.items[0];
+    if (!item?.product.odoo19ProductId) {
+      console.log('[Odoo Sync] No Odoo product ID for item');
+      return;
+    }
+
+    // Find the order line in Odoo
+    const orderLines = await odoo.searchRead<{ id: number; product_id: [number, string] }>(
+      'sale.order.line',
+      [
+        ['order_id', '=', subscription.odoo19OrderId],
+        ['product_id', '=', item.product.odoo19ProductId],
+      ],
+      ['id', 'product_id']
+    );
+
+    if (orderLines.length > 0) {
+      // Update existing line
+      await odoo.write('sale.order.line', [orderLines[0].id], {
+        product_uom_qty: params.quantity,
+      });
+      console.log('[Odoo Sync] Updated order line quantity:', orderLines[0].id, '->', params.quantity);
+    } else {
+      // Line doesn't exist in Odoo, add it
+      await odoo.create('sale.order.line', {
+        order_id: subscription.odoo19OrderId,
+        product_id: item.product.odoo19ProductId,
+        product_uom_qty: params.quantity,
+        price_unit: Number(item.unitPrice),
+      });
+      console.log('[Odoo Sync] Created order line for product:', item.product.odoo19ProductId);
+    }
+  } catch (error) {
+    console.error('[Odoo Sync] Failed to sync item update:', error);
+  }
+}
+
+/**
+ * Sync subscription item removal to Odoo
+ */
+export async function syncSubscriptionItemRemovalToOdoo(params: {
+  subscriptionId: string;
+  odoo19ProductId: number;
+}): Promise<void> {
+  try {
+    const subscription = await prisma.subscription.findUnique({
+      where: { id: params.subscriptionId },
+    });
+
+    if (!subscription?.odoo19OrderId) {
+      console.log('[Odoo Sync] No Odoo order for subscription:', params.subscriptionId);
+      return;
+    }
+
+    // Find the order line in Odoo
+    const orderLines = await odoo.searchRead<{ id: number }>(
+      'sale.order.line',
+      [
+        ['order_id', '=', subscription.odoo19OrderId],
+        ['product_id', '=', params.odoo19ProductId],
+      ],
+      ['id']
+    );
+
+    if (orderLines.length > 0) {
+      // Delete the line
+      await odoo.callKw('sale.order.line', 'unlink', [orderLines.map((l) => l.id)]);
+      console.log('[Odoo Sync] Removed order line for product:', params.odoo19ProductId);
+    }
+  } catch (error) {
+    console.error('[Odoo Sync] Failed to sync item removal:', error);
+  }
+}
+
+/**
  * Sync customer data to Odoo
  */
 export async function syncCustomerToOdoo(tenantId: string): Promise<number | null> {

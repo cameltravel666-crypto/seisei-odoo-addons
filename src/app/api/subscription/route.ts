@@ -4,6 +4,9 @@ import { prisma } from '@/lib/db';
 import { combinedGuard } from '@/lib/guards';
 import { odoo19 } from '@/lib/odoo19';
 import { Prisma } from '@prisma/client';
+import { syncSubscriptionUpdateToOdoo, syncCancellationToOdoo } from '@/lib/odoo-sync';
+import { stripe } from '@/lib/stripe';
+import { updateSubscriptionStatus } from '@/lib/subscription-service';
 
 // GET current subscription info (with items)
 export async function GET() {
@@ -557,6 +560,11 @@ export async function PUT(request: NextRequest) {
       });
     }
 
+    // Sync changes to Odoo 19 (fire and forget - don't block response)
+    syncSubscriptionUpdateToOdoo(subscription.id).catch((err) => {
+      console.error('[Update Subscription] Odoo sync failed:', err);
+    });
+
     return NextResponse.json({
       success: true,
       data: {
@@ -570,6 +578,159 @@ export async function PUT(request: NextRequest) {
     console.error('[Update Subscription Error]', error);
     return NextResponse.json(
       { success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to update subscription' } },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE cancel subscription
+export async function DELETE(request: NextRequest) {
+  try {
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json(
+        { success: false, error: { code: 'UNAUTHORIZED', message: 'Not authenticated' } },
+        { status: 401 }
+      );
+    }
+
+    // Check for BILLING_ADMIN role (subscription cancellation requires owner permission)
+    const guard = await combinedGuard(session.tenantId, session.userId, {
+      minRole: 'BILLING_ADMIN',
+    });
+
+    if (!guard.allowed) {
+      return NextResponse.json(
+        { success: false, error: { code: 'FORBIDDEN', message: 'Billing admin access required to cancel subscription' } },
+        { status: 403 }
+      );
+    }
+
+    // Get cancellation options from request body
+    const { cancelImmediately = false, reason = '' } = await request.json().catch(() => ({}));
+
+    // Get existing subscription
+    const subscription = await prisma.subscription.findFirst({
+      where: {
+        tenantId: session.tenantId,
+        status: { in: ['TRIAL', 'ACTIVE', 'PAST_DUE'] },
+      },
+      include: {
+        tenant: true,
+        items: {
+          include: { product: true },
+        },
+      },
+    });
+
+    if (!subscription) {
+      return NextResponse.json(
+        { success: false, error: { code: 'NOT_FOUND', message: 'No active subscription found' } },
+        { status: 404 }
+      );
+    }
+
+    // === CANCELLATION RULES ===
+
+    // Rule 1: Minimum commitment period (30 days from start)
+    const minimumCommitmentDays = 30;
+    const subscriptionAge = Math.floor(
+      (Date.now() - subscription.startDate.getTime()) / (1000 * 60 * 60 * 24)
+    );
+
+    if (subscriptionAge < minimumCommitmentDays && !subscription.isInTrial) {
+      return NextResponse.json({
+        success: false,
+        error: {
+          code: 'CANCELLATION_BLOCKED',
+          message: `Cannot cancel subscription within the first ${minimumCommitmentDays} days. Subscription age: ${subscriptionAge} days.`,
+          details: {
+            minimumCommitmentDays,
+            subscriptionAge,
+            canCancelAfter: new Date(
+              subscription.startDate.getTime() + minimumCommitmentDays * 24 * 60 * 60 * 1000
+            ).toISOString(),
+          },
+        },
+      }, { status: 400 });
+    }
+
+    // Rule 2: Trial subscriptions can be cancelled immediately
+    const canCancelImmediately = subscription.isInTrial || cancelImmediately;
+
+    // Calculate effective cancellation date
+    let effectiveCancellationDate: Date;
+    if (canCancelImmediately) {
+      effectiveCancellationDate = new Date();
+    } else {
+      // Cancel at end of current billing period
+      effectiveCancellationDate = subscription.nextBillingDate || new Date();
+    }
+
+    // Cancel in Stripe if applicable
+    if (subscription.stripeSubscriptionId) {
+      try {
+        if (canCancelImmediately) {
+          // Cancel immediately
+          await stripe.subscriptions.cancel(subscription.stripeSubscriptionId);
+        } else {
+          // Cancel at period end
+          await stripe.subscriptions.update(subscription.stripeSubscriptionId, {
+            cancel_at_period_end: true,
+          });
+        }
+        console.log(`[Subscription] Cancelled Stripe subscription: ${subscription.stripeSubscriptionId}`);
+      } catch (stripeError) {
+        console.error('[Subscription] Failed to cancel Stripe subscription:', stripeError);
+        // Continue with local cancellation even if Stripe fails
+      }
+    }
+
+    // Update subscription status
+    if (canCancelImmediately) {
+      // Immediate cancellation
+      await updateSubscriptionStatus(subscription.id, 'CANCELLED');
+    } else {
+      // Schedule cancellation (mark as pending cancellation)
+      await prisma.subscription.update({
+        where: { id: subscription.id },
+        data: {
+          autoRenew: false,
+          endDate: effectiveCancellationDate,
+          lastSyncAt: new Date(),
+        },
+      });
+    }
+
+    // Log cancellation reason
+    if (reason) {
+      console.log(`[Subscription] Cancellation reason for ${subscription.id}: ${reason}`);
+      // Could also store in audit log or dedicated table
+    }
+
+    // Sync cancellation to Odoo 19 (fire and forget)
+    if (canCancelImmediately) {
+      syncCancellationToOdoo(subscription.id).catch((err) => {
+        console.error('[Cancel Subscription] Odoo sync failed:', err);
+      });
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        subscriptionId: subscription.id,
+        status: canCancelImmediately ? 'CANCELLED' : 'PENDING_CANCELLATION',
+        cancelledImmediately: canCancelImmediately,
+        effectiveCancellationDate: effectiveCancellationDate.toISOString(),
+        message: canCancelImmediately
+          ? 'Subscription has been cancelled immediately'
+          : `Subscription will be cancelled on ${effectiveCancellationDate.toISOString().split('T')[0]}`,
+      },
+    });
+  } catch (error) {
+    console.error('[Cancel Subscription Error]', error);
+    return NextResponse.json(
+      { success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to cancel subscription' } },
       { status: 500 }
     );
   }
