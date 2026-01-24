@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   Upload,
@@ -63,17 +63,16 @@ interface SessionData {
 
 function PublicOcrContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Query params
-  const mode = searchParams.get('mode');
   const type = (searchParams.get('type') as DocType) || 'receipt';
   const utmSource = searchParams.get('utm_source');
   const utmMedium = searchParams.get('utm_medium');
   const utmCampaign = searchParams.get('utm_campaign');
 
-  const isPublicMode = mode === 'public';
+  // /try-ocr is always public mode
+  const isPublicMode = true;
 
   // State
   const [session, setSession] = useState<SessionData | null>(null);
@@ -98,14 +97,8 @@ function PublicOcrContent() {
   // Initialize session on mount
   useEffect(() => {
     initGA4();
-
-    if (isPublicMode) {
-      initSession();
-    } else {
-      // Redirect to authenticated OCR
-      router.push('/(app)/ocr');
-    }
-  }, [isPublicMode]);
+    initSession();
+  }, []);
 
   const initSession = async () => {
     try {
