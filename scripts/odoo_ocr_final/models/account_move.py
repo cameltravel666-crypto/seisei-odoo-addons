@@ -10,6 +10,7 @@ _logger = logging.getLogger(__name__)
 
 # Batch OCR configuration
 BATCH_OCR_DELAY = 2  # Seconds between each OCR call to avoid rate limiting
+BATCH_OCR_MAX_PER_RUN = 5  # Max records per cron run to prevent timeout
 
 
 class AccountMove(models.Model):
@@ -257,123 +258,154 @@ class AccountMove(models.Model):
     def _create_invoice_lines_from_ocr(self, line_items, is_tax_inclusive=False, extracted=None):
         """Create invoice lines from OCR extracted items.
 
-        Supports:
-        - in_invoice: Vendor Bills (uses expense account)
-        - in_refund: Vendor Credit Notes (uses expense account)
-        - out_invoice: Customer Invoices (uses income account)
-        - out_refund: Customer Credit Notes (uses income account)
-
-        Args:
-            line_items: List of extracted line items
-            is_tax_inclusive: Whether prices include tax (内税/税込)
-            extracted: Full extracted data dict for tax amounts
+        Uses batch creation with check_move_validity=False to avoid
+        concurrent update errors during dynamic line sync.
         """
         created_count = 0
         extracted = extracted or {}
 
         # Determine if this is a purchase (expense) or sale (income) document
-        is_purchase = self.move_type in ('in_invoice', 'in_refund')
-        is_sale = self.move_type in ('out_invoice', 'out_refund')
+        is_purchase = self.move_type in ("in_invoice", "in_refund")
+        is_sale = self.move_type in ("out_invoice", "out_refund")
 
         if not is_purchase and not is_sale:
-            _logger.warning(f'[OCR] Skipping line creation for move_type: {self.move_type}')
+            _logger.warning(f"[OCR] Skipping line creation for move_type: {self.move_type}")
             return 0
 
+        # Collect all line values first, then create in batch
+        lines_to_create = []
+        lines_to_update = []
+
         for item in line_items:
-            product_name = item.get('product_name', '')
+            product_name = item.get("product_name", "")
             if not product_name:
                 continue
 
             # Parse quantity
             try:
-                quantity = float(item.get('quantity', 1) or 1)
+                quantity = float(item.get("quantity", 1) or 1)
             except (ValueError, TypeError):
                 quantity = 1
 
             # Parse price (could be tax-inclusive)
             try:
-                unit_price = float(item.get('unit_price', 0) or 0)
+                unit_price = float(item.get("unit_price", 0) or 0)
             except (ValueError, TypeError):
                 unit_price = 0
 
             # If no unit price but amount exists, calculate it
             if unit_price == 0:
                 try:
-                    amount = float(item.get('amount', 0) or 0)
+                    amount = float(item.get("amount", 0) or 0)
                     if amount > 0 and quantity > 0:
                         unit_price = amount / quantity
                 except (ValueError, TypeError):
                     pass
 
             # Get tax rate for this item (default to 10% if not specified)
-            tax_rate = item.get('tax_rate', 10)
+            tax_rate = item.get("tax_rate", 10)
             try:
                 tax_rate = int(tax_rate) if tax_rate else 10
             except (ValueError, TypeError):
                 tax_rate = 10
 
             # If tax-inclusive, convert to tax-exclusive price
-            # Formula: price_excl = price_incl / (1 + tax_rate/100)
             price_excl = unit_price
             if is_tax_inclusive and unit_price > 0:
                 price_excl = round(unit_price / (1 + tax_rate / 100), 2)
-                _logger.info(f'[OCR] Tax-inclusive conversion: {unit_price} -> {price_excl} (excl. {tax_rate}% tax)')
+                _logger.info(f"[OCR] Tax-inclusive conversion: {unit_price} -> {price_excl} (excl. {tax_rate}% tax)")
 
             # Find or create product
             product = self._find_or_create_product(product_name, price_excl, is_sale=is_sale)
             if not product:
-                _logger.warning(f'[OCR] Could not find/create product: {product_name}')
+                _logger.warning(f"[OCR] Could not find/create product: {product_name}")
                 continue
 
             # Check for existing line with same product
             existing = self.invoice_line_ids.filtered(lambda l: l.product_id.id == product.id)
 
             if existing:
-                # Update existing line quantity
-                existing[0].write({'quantity': existing[0].quantity + quantity})
-                _logger.info(f'[OCR] Updated line: {product_name} (qty: +{quantity})')
+                # Queue update for existing line
+                lines_to_update.append((existing[0], quantity))
+                _logger.info(f"[OCR] Will update line: {product_name} (qty: +{quantity})")
             else:
                 # Get default account based on document type
                 if is_purchase:
-                    # Expense account for vendor bills
                     account = product.property_account_expense_id or \
                               product.categ_id.property_account_expense_categ_id
                     if not account:
-                        account = self.env['ir.property']._get(
-                            'property_account_expense_categ_id', 'product.category'
+                        account = self.env["ir.property"]._get(
+                            "property_account_expense_categ_id", "product.category"
                         )
                     price = price_excl or product.standard_price
                 else:
-                    # Income account for customer invoices
                     account = product.property_account_income_id or \
                               product.categ_id.property_account_income_categ_id
                     if not account:
-                        account = self.env['ir.property']._get(
-                            'property_account_income_categ_id', 'product.category'
+                        account = self.env["ir.property"]._get(
+                            "property_account_income_categ_id", "product.category"
                         )
                     price = price_excl or product.list_price
 
                 line_vals = {
-                    'move_id': self.id,
-                    'product_id': product.id,
-                    'name': product.name,
-                    'quantity': quantity,
-                    'price_unit': price,
-                    'product_uom_id': product.uom_id.id,
+                    "move_id": self.id,
+                    "product_id": product.id,
+                    "name": product.name,
+                    "quantity": quantity,
+                    "price_unit": price,
+                    "product_uom_id": product.uom_id.id,
                 }
 
                 if account:
-                    line_vals['account_id'] = account.id
+                    line_vals["account_id"] = account.id
 
-                # Find and set appropriate tax based on tax_rate
+                # Find and set appropriate tax
                 tax = self._find_tax_by_rate(tax_rate, is_purchase)
                 if tax:
-                    line_vals['tax_ids'] = [(6, 0, [tax.id])]
+                    line_vals["tax_ids"] = [(6, 0, [tax.id])]
 
-                self.env['account.move.line'].create(line_vals)
-                _logger.info(f'[OCR] Created line: {product_name} (qty: {quantity}, price: {price}, tax: {tax_rate}%)')
+                lines_to_create.append(line_vals)
+                _logger.info(f"[OCR] Will create line: {product_name} (qty: {quantity}, price: {price})")
 
             created_count += 1
+
+        # Batch create all new lines with validation disabled
+        if lines_to_create:
+            try:
+                # Disable move validation during line creation to avoid concurrent update
+                self.env["account.move.line"].with_context(
+                    check_move_validity=False,
+                    skip_invoice_sync=True,
+                ).create(lines_to_create)
+                _logger.info(f"[OCR] Batch created {len(lines_to_create)} invoice lines")
+            except Exception as e:
+                _logger.error(f"[OCR] Batch create failed: {e}")
+                # Try creating one by one as fallback
+                for line_vals in lines_to_create:
+                    try:
+                        self.env["account.move.line"].with_context(
+                            check_move_validity=False,
+                            skip_invoice_sync=True,
+                        ).create(line_vals)
+                    except Exception as e2:
+                        _logger.error(f"[OCR] Failed to create line: {e2}")
+
+        # Batch update existing lines
+        for line, add_qty in lines_to_update:
+            try:
+                line.with_context(check_move_validity=False).write({
+                    "quantity": line.quantity + add_qty
+                })
+            except Exception as e:
+                _logger.error(f"[OCR] Failed to update line: {e}")
+
+        # Recompute dynamic lines (taxes, totals) after all changes
+        try:
+            self.with_context(check_move_validity=False)._recompute_dynamic_lines(
+                recompute_all_taxes=True
+            )
+        except Exception as e:
+            _logger.warning(f"[OCR] Dynamic lines recompute warning: {e}")
 
         return created_count
 
@@ -539,17 +571,20 @@ class AccountMove(models.Model):
             _logger.error(f'[OCR] Failed to create supplier: {e}')
             return False
 
-    # ==================== Batch OCR Methods ====================
+    # ==================== Batch OCR Methods (FIXED) ====================
 
     def action_batch_send_to_ocr(self):
         """
-        Batch OCR processing for multiple selected invoices.
-        Queues records for processing and starts the batch job.
+        Queue invoices for background OCR processing.
+
+        FIXED: Returns immediately after queueing.
+        A cron job processes the queue in the background.
+        This prevents HTTP timeout/disconnection issues.
         """
         # Filter records that can be processed
         to_process = self.filtered(
             lambda r: r.message_main_attachment_id and
-                      r.ocr_status != 'processing' and
+                      r.ocr_status not in ('processing', 'done') and
                       r.move_type in ('in_invoice', 'in_refund', 'out_invoice', 'out_refund')
         )
 
@@ -565,23 +600,63 @@ class AccountMove(models.Model):
                 }
             }
 
-        # Mark all as queued for processing
+        # Mark all as queued for background processing
         to_process.write({
             'ocr_status': 'processing',
-            'ocr_error_message': _('Queued for batch processing...'),
+            'ocr_error_message': _('Queued for batch processing... Please wait.'),
         })
 
-        # Commit to save the status before processing
-        self.env.cr.commit()
+        count = len(to_process)
+        _logger.info(f'[Batch OCR] Queued {count} invoices for background processing')
 
-        # Process each record with delay
+        # Return immediately - cron will process the queue
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('Batch OCR Queued'),
+                'message': _('%d invoice(s) queued for OCR processing. Processing will happen in the background. Refresh the page in a few minutes to see results.') % count,
+                'type': 'success',
+                'sticky': True,
+            }
+        }
+
+    @api.model
+    def cron_process_ocr_queue(self):
+        """
+        Cron job to process queued OCR records.
+
+        Runs every 2 minutes and processes up to BATCH_OCR_MAX_PER_RUN records.
+        This prevents HTTP timeouts and ensures reliable processing.
+        """
+        _logger.info('[Batch OCR Cron] Starting queue processing')
+
+        # Find queued records (processing status with queue message)
+        queued = self.search([
+            ('ocr_status', '=', 'processing'),
+            ('message_main_attachment_id', '!=', False),
+            ('move_type', 'in', ('in_invoice', 'in_refund', 'out_invoice', 'out_refund')),
+        ], limit=BATCH_OCR_MAX_PER_RUN, order='write_date asc')
+
+        if not queued:
+            _logger.info('[Batch OCR Cron] No queued records to process')
+            return
+
         success_count = 0
         fail_count = 0
-        total = len(to_process)
+        total = len(queued)
 
-        for idx, record in enumerate(to_process):
+        for idx, record in enumerate(queued):
             try:
-                _logger.info(f'[Batch OCR] Processing {idx + 1}/{total}: Invoice {record.id}')
+                _logger.info(f'[Batch OCR Cron] Processing {idx + 1}/{total}: Invoice {record.id}')
+
+                # Update status to show processing
+                record.write({
+                    'ocr_error_message': _('Processing... (%d/%d)') % (idx + 1, total),
+                })
+                self.env.cr.commit()
+
+                # Process the record
                 record._process_single_ocr()
                 success_count += 1
 
@@ -594,34 +669,21 @@ class AccountMove(models.Model):
 
             except Exception as e:
                 fail_count += 1
-                _logger.error(f'[Batch OCR] Failed invoice {record.id}: {e}')
+                error_msg = str(e)[:500]
+                _logger.error(f'[Batch OCR Cron] Failed invoice {record.id}: {e}')
+
                 record.write({
                     'ocr_status': 'failed',
-                    'ocr_error_message': str(e)[:500],
+                    'ocr_error_message': error_msg,
                 })
                 self.env.cr.commit()
 
-        # Return notification with results
-        message = _('Batch OCR completed: %d succeeded, %d failed out of %d total.') % (
-            success_count, fail_count, total
-        )
-
-        return {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'title': _('Batch OCR Complete'),
-                'message': message,
-                'type': 'success' if fail_count == 0 else 'warning',
-                'sticky': True,
-                'next': {'type': 'ir.actions.client', 'tag': 'reload'},
-            }
-        }
+        _logger.info(f'[Batch OCR Cron] Completed: {success_count} succeeded, {fail_count} failed out of {total}')
 
     def _process_single_ocr(self):
         """
         Process OCR for a single record without UI interaction.
-        Used by batch processing.
+        Used by batch processing and cron job.
         """
         self.ensure_one()
 
