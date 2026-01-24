@@ -102,63 +102,37 @@ export async function GET(
       console.log('[Email Template] Failed to fetch partner email:', e);
     }
 
-    // Try to find purchase order email template
-    let templateSubject = `${order.name} - Purchase Order`;
-    let templateBody = '';
+    // Generate clean, human-readable email content
+    // (Skip Odoo templates as they contain QWeb syntax that needs server-side rendering)
+    const companyName = order.company_id[1] || 'Our Company';
+    const currencySymbol = order.currency_id[1] || 'JPY';
+    const formattedAmount = order.amount_total.toLocaleString('ja-JP');
+    const orderDate = new Date(order.date_order).toLocaleDateString('ja-JP');
 
-    try {
-      const templates = await odoo.searchRead<MailTemplate>(
-        'mail.template',
-        [['model', '=', 'purchase.order']],
-        { fields: ['id', 'name', 'subject', 'body_html'], limit: 1 }
-      );
+    const templateSubject = `${order.name} - 采购订单 / Purchase Order`;
 
-      if (templates.length > 0) {
-        const template = templates[0];
-        // Use template subject if available, replacing placeholders with order info
-        if (template.subject) {
-          templateSubject = template.subject
-            .replace(/\$\{object\.name\}/g, order.name)
-            .replace(/\{\{object\.name\}\}/g, order.name)
-            .replace(/%\(name\)s/g, order.name);
-        }
-        // Use template body if available
-        if (template.body_html) {
-          templateBody = template.body_html
-            .replace(/\$\{object\.name\}/g, order.name)
-            .replace(/\{\{object\.name\}\}/g, order.name)
-            .replace(/%\(name\)s/g, order.name)
-            .replace(/\$\{object\.partner_id\.name\}/g, partnerName)
-            .replace(/\{\{object\.partner_id\.name\}\}/g, partnerName);
-        }
-      }
-    } catch (e) {
-      console.log('[Email Template] Failed to fetch template:', e);
-    }
+    const templateBody = `
+<p>${partnerName} 様</p>
 
-    // If no template body, create a default one
-    if (!templateBody) {
-      const currencySymbol = order.currency_id[1] || 'JPY';
-      const formattedAmount = order.amount_total.toLocaleString('ja-JP');
-      const orderDate = new Date(order.date_order).toLocaleDateString('ja-JP');
+<p>いつもお世話になっております。</p>
 
-      templateBody = `
-<p>Dear ${partnerName},</p>
+<p>添付にて発注書 <strong>${order.name}</strong> をお送りいたします。</p>
 
-<p>Please find attached the purchase order <strong>${order.name}</strong>.</p>
-
-<p><strong>Order Details:</strong></p>
+<p><strong>発注内容:</strong></p>
 <ul>
-  <li>Order Number: ${order.name}</li>
-  <li>Order Date: ${orderDate}</li>
-  <li>Total Amount: ${currencySymbol} ${formattedAmount}</li>
+  <li>発注番号: ${order.name}</li>
+  <li>発注日: ${orderDate}</li>
+  <li>合計金額: ${currencySymbol} ${formattedAmount}</li>
 </ul>
 
-<p>Please confirm receipt of this order and let us know if you have any questions.</p>
+<p>ご確認の上、ご対応のほどよろしくお願いいたします。</p>
 
-<p>Best regards,</p>
-      `.trim();
-    }
+<p>ご不明な点がございましたら、お気軽にお問い合わせください。</p>
+
+<p>よろしくお願いいたします。</p>
+
+<p>${companyName}</p>
+    `.trim();
 
     // Try to get existing attachments for the order
     const attachments: Attachment[] = [];
