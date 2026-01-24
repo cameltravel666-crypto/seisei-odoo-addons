@@ -298,60 +298,69 @@ export class OdooRPC {
     });
   }
 
-  // Get PDF report from Odoo
+  // Get PDF report from Odoo using JSON-RPC (more reliable than direct URL)
   async getReportPdf(reportName: string, ids: number[], lang?: string): Promise<Buffer> {
     if (!this.sessionId) {
       throw new Error('No session available');
     }
 
-    const idsStr = ids.join(',');
+    console.log('[OdooRPC] Generating PDF report via JSON-RPC:', reportName, ids, lang);
 
-    // Build URL with optional language context
-    // Odoo 18 format: /report/pdf/{report_name}/{ids}?context={...}
-    let reportUrl = `${this.config.baseUrl}/report/pdf/${reportName}/${idsStr}`;
-
+    // Build context with language
+    const context: Record<string, unknown> = {};
     if (lang) {
-      const context = JSON.stringify({ lang });
-      reportUrl += `?context=${encodeURIComponent(context)}`;
+      context.lang = lang;
     }
 
-    console.log('[OdooRPC] Fetching PDF report:', reportUrl);
+    try {
+      // Use ir.actions.report render_qweb_pdf method via JSON-RPC
+      // This is more reliable than direct URL access
+      const response = await fetch(`${this.config.baseUrl}/web/dataset/call_kw`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cookie': `session_id=${this.sessionId}`,
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          method: 'call',
+          params: {
+            model: 'ir.actions.report',
+            method: 'render_qweb_pdf',
+            args: [reportName, ids],
+            kwargs: {
+              context,
+            },
+          },
+          id: Date.now(),
+        }),
+      });
 
-    const response = await fetch(reportUrl, {
-      method: 'GET',
-      headers: {
-        'Cookie': `session_id=${this.sessionId}`,
-        'Accept': 'application/pdf',
-      },
-      redirect: 'manual', // Don't follow redirects (detect login redirect)
-    });
+      const data = await response.json();
 
-    // Check for redirect (usually means session expired)
-    if (response.status === 302 || response.status === 303) {
-      const location = response.headers.get('location');
-      console.error('[OdooRPC] PDF request redirected to:', location);
-      throw new Error('Session expired - PDF request was redirected');
-    }
-
-    if (!response.ok) {
-      throw new Error(`Failed to generate PDF report: ${response.status} ${response.statusText}`);
-    }
-
-    const contentType = response.headers.get('content-type');
-    if (!contentType?.includes('application/pdf')) {
-      // Might be an error page or login redirect
-      const text = await response.text();
-      console.error('[OdooRPC] Report response is not PDF:', text.substring(0, 500));
-
-      // Check if it's a login page
-      if (text.includes('login') || text.includes('web/login')) {
-        throw new Error('Session expired - received login page');
+      if (data.error) {
+        console.error('[OdooRPC] PDF generation error:', data.error);
+        const errorMsg = data.error.data?.message || data.error.message || 'PDF generation failed';
+        throw new Error(errorMsg);
       }
-      throw new Error('Report generation failed - received non-PDF response');
-    }
 
-    const arrayBuffer = await response.arrayBuffer();
-    return Buffer.from(arrayBuffer);
+      // Result is [base64_pdf_content, report_type]
+      const result = data.result;
+      if (!result || !result[0]) {
+        throw new Error('No PDF content returned');
+      }
+
+      // Decode base64 PDF content
+      const base64Content = result[0];
+      const pdfBuffer = Buffer.from(base64Content, 'base64');
+
+      console.log('[OdooRPC] PDF generated successfully, size:', pdfBuffer.length);
+      return pdfBuffer;
+
+    } catch (error) {
+      console.error('[OdooRPC] PDF generation failed:', error);
+      throw error;
+    }
   }
 
   // Get base URL for building URLs
