@@ -5,6 +5,7 @@ import { getLocale, getMessages } from 'next-intl/server';
 import { QueryProvider } from "@/providers/query-provider";
 import { ViewportHeight } from "@/components/layout/viewport-height";
 import { SplashScreenHandler } from "@/components/layout/splash-screen-handler";
+import { GA4Script } from "@/components/analytics/ga4-script";
 import "./globals.css";
 
 const inter = Inter({
@@ -69,6 +70,8 @@ export default async function RootLayout({
         `}} />
       </head>
       <body className={`${inter.variable} font-sans antialiased`}>
+        {/* GA4 Analytics */}
+        <GA4Script />
         {/* iOS Safari 100vh 修复：动态设置 --app-vh CSS 变量 */}
         <ViewportHeight />
         {/* Capacitor SplashScreen 控制：防止跳闪 */}

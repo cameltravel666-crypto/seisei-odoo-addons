@@ -61,9 +61,7 @@ let awsSdk: any = null;
 async function loadAwsSdk() {
   if (!awsSdk) {
     try {
-      // @ts-expect-error - AWS SDK is an optional dependency, loaded dynamically
       const s3Module = await import('@aws-sdk/client-s3');
-      // @ts-expect-error - AWS SDK is an optional dependency, loaded dynamically
       const presignerModule = await import('@aws-sdk/s3-request-presigner');
       awsSdk = {
         S3Client: s3Module.S3Client,
