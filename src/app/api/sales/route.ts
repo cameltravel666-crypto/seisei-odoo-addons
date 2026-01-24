@@ -392,8 +392,15 @@ function assignSOsToQueues(
           }
         }
       } else if (so.state === 'sale') {
-        // No picking found but SO is confirmed - treat as pending delivery
-        deliveryStatus = 'pending';
+        // No picking found but SO is confirmed
+        // Check delivery_status field first (service orders have delivery_status = 'full')
+        if (so.delivery_status === 'full') {
+          deliveryStatus = 'delivered';
+        } else if (so.delivery_status === 'partial') {
+          deliveryStatus = 'partial';
+        } else {
+          deliveryStatus = 'pending';
+        }
       }
     } else {
       // Degrade: use delivery_status field or SO state
