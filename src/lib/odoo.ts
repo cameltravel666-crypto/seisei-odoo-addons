@@ -106,11 +106,12 @@ const ODOO_ALLOWLIST: Record<string, string[]> = {
   // Common
   'res.partner': ['search_read', 'read', 'search_count', 'write', 'create'],
   'res.users': ['search_read', 'read'],
-  'res.company': ['search_read', 'read'],
+  'res.company': ['search_read', 'read', 'write'],
+  // OCR Usage Tracking
+  'ocr.file.usage': ['search_read', 'read', 'get_current_usage', 'increment_usage', 'check_quota'],
   // Sheet Forge (OCR File)
   'ocr.file.task': ['search_read', 'read', 'create', 'write', 'unlink', 'search_count', 'action_start_ocr', 'action_fill_template', 'action_reset'],
   'ocr.file.source': ['search_read', 'read', 'create', 'write', 'unlink', 'search_count'],
-  'ocr.file.usage': ['search_read', 'read', 'search_count'],
 };
 
 // Check if model/method is allowed

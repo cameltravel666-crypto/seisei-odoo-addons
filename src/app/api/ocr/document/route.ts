@@ -234,6 +234,15 @@ export async function POST(request: NextRequest) {
     }
     console.log(`[OCR] Recorded ${ocrPages} page(s) of usage for tenant ${session.tenantId}`);
 
+    // 14. Sync usage to Odoo 18's ocr.file.usage model for billing integration
+    try {
+      await odoo.callKw('ocr.file.usage', 'increment_usage', [ocrPages], {});
+      console.log(`[OCR] Synced ${ocrPages} page(s) to Odoo ocr.file.usage`);
+    } catch (syncError) {
+      // Log but don't fail the request - usage is already recorded in BizNexus
+      console.warn('[OCR] Failed to sync usage to Odoo ocr.file.usage:', syncError);
+    }
+
     return NextResponse.json({
       success: true,
       data: result,
