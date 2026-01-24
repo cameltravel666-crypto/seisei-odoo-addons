@@ -599,8 +599,8 @@ class AccountMove(models.Model):
                 }
             }
 
-        # Create batch progress record
-        BatchProgress = self.env['ocr.batch.progress']
+        # Create batch progress record (use sudo to bypass access control)
+        BatchProgress = self.env['ocr.batch.progress'].sudo()
         batch = BatchProgress.create_batch(to_process.ids)
 
         if not batch:
