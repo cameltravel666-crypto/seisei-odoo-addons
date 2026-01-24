@@ -299,20 +299,39 @@ export class OdooRPC {
   }
 
   // Get PDF report from Odoo
-  async getReportPdf(reportName: string, ids: number[]): Promise<Buffer> {
+  async getReportPdf(reportName: string, ids: number[], lang?: string): Promise<Buffer> {
     if (!this.sessionId) {
       throw new Error('No session available');
     }
 
     const idsStr = ids.join(',');
-    const reportUrl = `${this.config.baseUrl}/report/pdf/${reportName}/${idsStr}`;
+
+    // Build URL with optional language context
+    // Odoo 18 format: /report/pdf/{report_name}/{ids}?context={...}
+    let reportUrl = `${this.config.baseUrl}/report/pdf/${reportName}/${idsStr}`;
+
+    if (lang) {
+      const context = JSON.stringify({ lang });
+      reportUrl += `?context=${encodeURIComponent(context)}`;
+    }
+
+    console.log('[OdooRPC] Fetching PDF report:', reportUrl);
 
     const response = await fetch(reportUrl, {
       method: 'GET',
       headers: {
         'Cookie': `session_id=${this.sessionId}`,
+        'Accept': 'application/pdf',
       },
+      redirect: 'manual', // Don't follow redirects (detect login redirect)
     });
+
+    // Check for redirect (usually means session expired)
+    if (response.status === 302 || response.status === 303) {
+      const location = response.headers.get('location');
+      console.error('[OdooRPC] PDF request redirected to:', location);
+      throw new Error('Session expired - PDF request was redirected');
+    }
 
     if (!response.ok) {
       throw new Error(`Failed to generate PDF report: ${response.status} ${response.statusText}`);
@@ -323,6 +342,11 @@ export class OdooRPC {
       // Might be an error page or login redirect
       const text = await response.text();
       console.error('[OdooRPC] Report response is not PDF:', text.substring(0, 500));
+
+      // Check if it's a login page
+      if (text.includes('login') || text.includes('web/login')) {
+        throw new Error('Session expired - received login page');
+      }
       throw new Error('Report generation failed - received non-PDF response');
     }
 

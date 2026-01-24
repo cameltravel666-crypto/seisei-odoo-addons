@@ -116,6 +116,7 @@ export default function PurchaseOrderDetailPage({
   const [isConfirming, setIsConfirming] = useState(false);
   const [isEmailing, setIsEmailing] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [showLangDialog, setShowLangDialog] = useState(false);
   const [showActions, setShowActions] = useState(false);
   const [showLines, setShowLines] = useState(true);
 
@@ -444,13 +445,19 @@ export default function PurchaseOrderDetailPage({
     }
   };
 
-  // Generate and share PDF
-  const handleSharePdf = async () => {
+  // Show language selection dialog before generating PDF
+  const handleSharePdfClick = () => {
+    setShowLangDialog(true);
+  };
+
+  // Generate and share PDF with selected language
+  const handleSharePdf = async (lang: string) => {
     if (!order) return;
 
+    setShowLangDialog(false);
     setIsGeneratingPdf(true);
     try {
-      const res = await fetch(`/api/purchase/${id}/pdf`);
+      const res = await fetch(`/api/purchase/${id}/pdf?lang=${lang}`);
 
       if (!res.ok) {
         const data = await res.json();
@@ -902,7 +909,7 @@ export default function PurchaseOrderDetailPage({
 
               {canSharePdf && (
                 <button
-                  onClick={handleSharePdf}
+                  onClick={handleSharePdfClick}
                   disabled={isGeneratingPdf}
                   className="flex-1 btn bg-gray-800 text-white hover:bg-gray-900 py-3 flex items-center justify-center gap-2 min-h-[44px]"
                 >
@@ -1056,6 +1063,56 @@ export default function PurchaseOrderDetailPage({
                   className="w-full min-h-[44px] py-3 text-red-500 font-medium text-sm hover:bg-red-50 rounded-lg"
                 >
                   {t('common.delete')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Language Selection Dialog for PDF */}
+      {showLangDialog && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/50 z-50"
+            onClick={() => setShowLangDialog(false)}
+          />
+          <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-50 max-w-sm mx-auto">
+            <div className="bg-white rounded-xl shadow-xl overflow-hidden">
+              <div className="p-4 border-b border-gray-100">
+                <h3 className="text-lg font-semibold text-gray-900 text-center">
+                  PDF 语言 / PDF Language
+                </h3>
+              </div>
+              <div className="p-2">
+                <button
+                  onClick={() => handleSharePdf('ja')}
+                  className="w-full p-4 text-left hover:bg-gray-50 rounded-lg flex items-center gap-3"
+                >
+                  <span className="text-2xl">🇯🇵</span>
+                  <span className="font-medium text-gray-900">日本語</span>
+                </button>
+                <button
+                  onClick={() => handleSharePdf('zh')}
+                  className="w-full p-4 text-left hover:bg-gray-50 rounded-lg flex items-center gap-3"
+                >
+                  <span className="text-2xl">🇨🇳</span>
+                  <span className="font-medium text-gray-900">中文</span>
+                </button>
+                <button
+                  onClick={() => handleSharePdf('en')}
+                  className="w-full p-4 text-left hover:bg-gray-50 rounded-lg flex items-center gap-3"
+                >
+                  <span className="text-2xl">🇺🇸</span>
+                  <span className="font-medium text-gray-900">English</span>
+                </button>
+              </div>
+              <div className="p-3 border-t border-gray-100">
+                <button
+                  onClick={() => setShowLangDialog(false)}
+                  className="w-full py-2.5 text-gray-500 font-medium text-sm hover:bg-gray-50 rounded-lg"
+                >
+                  {t('common.cancel')}
                 </button>
               </div>
             </div>

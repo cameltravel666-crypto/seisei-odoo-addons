@@ -9,6 +9,16 @@ interface SaleOrder {
   state: string;
 }
 
+// Supported languages for PDF reports
+const SUPPORTED_LANGS: Record<string, string> = {
+  'zh': 'zh_CN',
+  'zh_CN': 'zh_CN',
+  'ja': 'ja_JP',
+  'ja_JP': 'ja_JP',
+  'en': 'en_US',
+  'en_US': 'en_US',
+};
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -39,6 +49,11 @@ export async function GET(
       );
     }
 
+    // Get language from query parameter, default to Japanese
+    const searchParams = request.nextUrl.searchParams;
+    const langParam = searchParams.get('lang') || 'ja';
+    const lang = SUPPORTED_LANGS[langParam] || 'ja_JP';
+
     const odoo = await getOdooClientForSession(session);
 
     // Fetch order to get the name and state for filename
@@ -53,10 +68,9 @@ export async function GET(
       );
     }
 
-    // Get PDF from Odoo's native report system
-    // For quotes/draft orders: sale.report_saleorder (or sale.action_report_saleorder)
-    // This report works for both quotations and confirmed orders
-    const pdfBuffer = await odoo.getReportPdf('sale.report_saleorder', [orderId]);
+    // Get PDF from Odoo's native report system with language context
+    // Odoo 18 report: sale.report_saleorder
+    const pdfBuffer = await odoo.getReportPdf('sale.report_saleorder', [orderId], lang);
 
     // Generate safe filename based on state
     const prefix = order.state === 'draft' || order.state === 'sent' ? 'Quote' : 'SO';
@@ -73,8 +87,9 @@ export async function GET(
     });
   } catch (error) {
     console.error('[Sales PDF Error]', error);
+    const message = error instanceof Error ? error.message : 'Failed to generate PDF';
     return NextResponse.json(
-      { success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to generate PDF' } },
+      { success: false, error: { code: 'INTERNAL_ERROR', message } },
       { status: 500 }
     );
   }

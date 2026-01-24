@@ -8,6 +8,16 @@ interface PurchaseOrder {
   name: string;
 }
 
+// Supported languages for PDF reports
+const SUPPORTED_LANGS: Record<string, string> = {
+  'zh': 'zh_CN',
+  'zh_CN': 'zh_CN',
+  'ja': 'ja_JP',
+  'ja_JP': 'ja_JP',
+  'en': 'en_US',
+  'en_US': 'en_US',
+};
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -38,6 +48,11 @@ export async function GET(
       );
     }
 
+    // Get language from query parameter, default to Japanese
+    const searchParams = request.nextUrl.searchParams;
+    const langParam = searchParams.get('lang') || 'ja';
+    const lang = SUPPORTED_LANGS[langParam] || 'ja_JP';
+
     const odoo = await getOdooClientForSession(session);
 
     // Fetch order to get the name for filename
@@ -52,10 +67,9 @@ export async function GET(
       );
     }
 
-    // Get PDF from Odoo's native report system
-    // Standard Odoo purchase order report: purchase.report_purchaseorder
-    // Alternative reports: purchase.report_purchasequotation
-    const pdfBuffer = await odoo.getReportPdf('purchase.report_purchaseorder', [orderId]);
+    // Get PDF from Odoo's native report system with language context
+    // Odoo 18 report: purchase.report_purchaseorder
+    const pdfBuffer = await odoo.getReportPdf('purchase.report_purchaseorder', [orderId], lang);
 
     // Generate safe filename
     const filename = `PO_${order.name.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
@@ -71,8 +85,9 @@ export async function GET(
     });
   } catch (error) {
     console.error('[Purchase PDF Error]', error);
+    const message = error instanceof Error ? error.message : 'Failed to generate PDF';
     return NextResponse.json(
-      { success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to generate PDF' } },
+      { success: false, error: { code: 'INTERNAL_ERROR', message } },
       { status: 500 }
     );
   }
