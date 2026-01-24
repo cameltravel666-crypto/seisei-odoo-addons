@@ -75,7 +75,6 @@ export async function POST(
           model: 'purchase.order',
           res_ids: [orderId],
           composition_mode: 'comment',
-          auto_delete_message: false,
         };
 
         // Add template if found
@@ -159,8 +158,7 @@ export async function POST(
             res_ids: [orderId],
             template_id: templates[0].id,
             composition_mode: 'comment',
-            auto_delete_message: false,
-          }]
+            }]
         );
 
         // Send the email
