@@ -420,23 +420,22 @@ function assignSOsToQueues(
 
     if (capabilities.hasInvoiceAccess && partnerId) {
       const partnerInvoices = invoicesMap.get(partnerId) || [];
-      // Try to match by invoice_origin first
+      // Match by invoice_origin - only count invoices that belong to THIS order
       for (const invoice of partnerInvoices) {
         if (invoice.invoice_origin && invoice.invoice_origin.includes(so.name)) {
           hasUnpaidInvoices = true;
           unpaidAmount += invoice.amount_residual;
         }
       }
-      // If no direct match, check if SO is done but partner has unpaid invoices
-      if (!hasUnpaidInvoices && (so.state === 'done' || deliveryStatus === 'delivered')) {
-        for (const invoice of partnerInvoices) {
-          if (invoice.amount_residual > 0) {
-            hasUnpaidInvoices = true;
-            break;
-          }
-        }
+      // If no unpaid invoice found for this order:
+      // - If invoice_status is 'to invoice', it means invoice hasn't been created yet
+      // - If invoice_status is 'invoiced' but no matching unpaid invoice, it means it's paid
+      if (!hasUnpaidInvoices && so.invoice_status === 'to invoice') {
+        // Order needs to be invoiced
+        invoiceStatus = 'pending';
+      } else {
+        invoiceStatus = hasUnpaidInvoices ? 'pending' : 'invoiced';
       }
-      invoiceStatus = hasUnpaidInvoices ? 'pending' : 'invoiced';
     } else {
       // Degrade: use invoice_status field
       if (so.invoice_status === 'invoiced') {
