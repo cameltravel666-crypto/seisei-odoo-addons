@@ -12,6 +12,22 @@ interface PosOrderData {
   pos_reference: string;
 }
 
+interface SaleOrderData {
+  id: number;
+  name: string;
+  amount_total: number;
+  state: string;
+  date_order: string;
+  invoice_status: string;
+}
+
+interface SaleOrderLineData {
+  id: number;
+  product_id: [number, string];
+  product_uom_qty: number;
+  price_subtotal: number;
+}
+
 interface PosOrderLineData {
   id: number;
   product_id: [number, string];
@@ -109,81 +125,112 @@ export async function GET(request: NextRequest) {
 
     const compRange = getComparisonRange(dateRange.from, dateRange.to);
 
-    // Fetch current period orders
-    const orders = await odoo.searchRead<PosOrderData>('pos.order', [
-      ['date_order', '>=', `${dateRange.from} 00:00:00`],
-      ['date_order', '<=', `${dateRange.to} 23:59:59`],
-    ], {
-      fields: ['amount_total', 'amount_paid', 'state', 'date_order', 'pos_reference'],
-    });
+    // Fetch POS orders (if accessible)
+    let posOrders: PosOrderData[] = [];
+    let compPosOrders: PosOrderData[] = [];
+    try {
+      posOrders = await odoo.searchRead<PosOrderData>('pos.order', [
+        ['date_order', '>=', `${dateRange.from} 00:00:00`],
+        ['date_order', '<=', `${dateRange.to} 23:59:59`],
+      ], {
+        fields: ['amount_total', 'amount_paid', 'state', 'date_order', 'pos_reference'],
+      });
 
-    // Fetch comparison period orders
-    const compOrders = await odoo.searchRead<PosOrderData>('pos.order', [
-      ['date_order', '>=', `${compRange.from} 00:00:00`],
-      ['date_order', '<=', `${compRange.to} 23:59:59`],
-      ['state', 'in', ['paid', 'done', 'invoiced']],
-    ], {
-      fields: ['amount_total'],
-    });
+      compPosOrders = await odoo.searchRead<PosOrderData>('pos.order', [
+        ['date_order', '>=', `${compRange.from} 00:00:00`],
+        ['date_order', '<=', `${compRange.to} 23:59:59`],
+        ['state', 'in', ['paid', 'done', 'invoiced']],
+      ], {
+        fields: ['amount_total'],
+      });
+    } catch {
+      // POS module might not be installed
+      console.log('[Dashboard] POS module not accessible, skipping POS orders');
+    }
 
-    // Filter completed orders
-    const completedOrders = orders.filter(o => ['paid', 'done', 'invoiced'].includes(o.state));
-    const cancelledOrders = orders.filter(o => o.state === 'cancel');
+    // Fetch Sales Orders (sale.order)
+    let saleOrders: SaleOrderData[] = [];
+    let compSaleOrders: SaleOrderData[] = [];
+    try {
+      saleOrders = await odoo.searchRead<SaleOrderData>('sale.order', [
+        ['date_order', '>=', `${dateRange.from} 00:00:00`],
+        ['date_order', '<=', `${dateRange.to} 23:59:59`],
+      ], {
+        fields: ['name', 'amount_total', 'state', 'date_order', 'invoice_status'],
+      });
 
-    // Calculate core metrics
-    const totalSales = completedOrders.reduce((sum, o) => sum + o.amount_total, 0);
-    const orderCount = completedOrders.length;
+      compSaleOrders = await odoo.searchRead<SaleOrderData>('sale.order', [
+        ['date_order', '>=', `${compRange.from} 00:00:00`],
+        ['date_order', '<=', `${compRange.to} 23:59:59`],
+        ['state', '=', 'sale'],  // Confirmed orders
+      ], {
+        fields: ['amount_total'],
+      });
+    } catch {
+      // Sale module might not be accessible
+      console.log('[Dashboard] Sale module not accessible, skipping sale orders');
+    }
+
+    // Filter completed POS orders
+    const completedPosOrders = posOrders.filter(o => ['paid', 'done', 'invoiced'].includes(o.state));
+    const cancelledPosOrders = posOrders.filter(o => o.state === 'cancel');
+
+    // Filter confirmed Sale orders (state='sale' means confirmed, 'cancel' means cancelled)
+    const completedSaleOrders = saleOrders.filter(o => o.state === 'sale');
+    const cancelledSaleOrders = saleOrders.filter(o => o.state === 'cancel');
+
+    // Calculate core metrics - combine POS and Sales orders
+    const posSales = completedPosOrders.reduce((sum, o) => sum + o.amount_total, 0);
+    const saleSales = completedSaleOrders.reduce((sum, o) => sum + o.amount_total, 0);
+    const totalSales = posSales + saleSales;
+
+    const posOrderCount = completedPosOrders.length;
+    const saleOrderCount = completedSaleOrders.length;
+    const orderCount = posOrderCount + saleOrderCount;
+
     const avgOrderValue = orderCount > 0 ? totalSales / orderCount : 0;
-    const cancelCount = cancelledOrders.length;
-    const cancelRate = orders.length > 0 ? (cancelCount / orders.length) * 100 : 0;
 
-    // Comparison metrics
-    const compTotalSales = compOrders.reduce((sum, o) => sum + o.amount_total, 0);
-    const compOrderCount = compOrders.length;
+    const cancelCount = cancelledPosOrders.length + cancelledSaleOrders.length;
+    const totalOrders = posOrders.length + saleOrders.length;
+    const cancelRate = totalOrders > 0 ? (cancelCount / totalOrders) * 100 : 0;
+
+    // Comparison metrics - combine POS and Sales
+    const compPosSales = compPosOrders.reduce((sum, o) => sum + o.amount_total, 0);
+    const compSaleSales = compSaleOrders.reduce((sum, o) => sum + o.amount_total, 0);
+    const compTotalSales = compPosSales + compSaleSales;
+    const compOrderCount = compPosOrders.length + compSaleOrders.length;
     const compAvgOrder = compOrderCount > 0 ? compTotalSales / compOrderCount : 0;
 
     const salesChange = compTotalSales > 0 ? ((totalSales - compTotalSales) / compTotalSales) * 100 : 0;
     const orderChange = compOrderCount > 0 ? ((orderCount - compOrderCount) / compOrderCount) * 100 : 0;
     const avgChange = compAvgOrder > 0 ? ((avgOrderValue - compAvgOrder) / compAvgOrder) * 100 : 0;
 
-    // Get order line IDs for top products
-    const orderIds = completedOrders.map(o => o.id);
-    let productRanking: { productId: number; productName: string; totalQty: number; totalAmount: number }[] = [];
+    // Product ranking - combine POS and Sales order lines
+    const productMap = new Map<number, { name: string; qty: number; amount: number }>();
     let categoryRanking: { categoryId: number; categoryName: string; totalAmount: number }[] = [];
     let paymentBreakdown: { method: string; amount: number; count: number }[] = [];
 
-    if (orderIds.length > 0) {
-      // Fetch order lines
-      const orderLines = await odoo.searchRead<PosOrderLineData>('pos.order.line', [
-        ['order_id', 'in', orderIds],
-      ], {
-        fields: ['product_id', 'qty', 'price_subtotal_incl'],
-      });
-
-      // Aggregate by product
-      const productMap = new Map<number, { name: string; qty: number; amount: number }>();
-      for (const line of orderLines) {
-        const [productId, productName] = line.product_id;
-        const existing = productMap.get(productId) || { name: productName, qty: 0, amount: 0 };
-        existing.qty += line.qty;
-        existing.amount += line.price_subtotal_incl;
-        productMap.set(productId, existing);
-      }
-
-      productRanking = Array.from(productMap.entries())
-        .map(([productId, data]) => ({
-          productId,
-          productName: data.name,
-          totalQty: data.qty,
-          totalAmount: data.amount,
-        }))
-        .sort((a, b) => b.totalAmount - a.totalAmount)
-        .slice(0, 10);
-
-      // Fetch payments
+    // Fetch POS order lines for product ranking
+    const posOrderIds = completedPosOrders.map(o => o.id);
+    if (posOrderIds.length > 0) {
       try {
+        const posOrderLines = await odoo.searchRead<PosOrderLineData>('pos.order.line', [
+          ['order_id', 'in', posOrderIds],
+        ], {
+          fields: ['product_id', 'qty', 'price_subtotal_incl'],
+        });
+
+        for (const line of posOrderLines) {
+          const [productId, productName] = line.product_id;
+          const existing = productMap.get(productId) || { name: productName, qty: 0, amount: 0 };
+          existing.qty += line.qty;
+          existing.amount += line.price_subtotal_incl;
+          productMap.set(productId, existing);
+        }
+
+        // Fetch POS payments
         const payments = await odoo.searchRead<PaymentData>('pos.payment', [
-          ['pos_order_id', 'in', orderIds],
+          ['pos_order_id', 'in', posOrderIds],
         ], {
           fields: ['payment_method_id', 'amount'],
         });
@@ -205,27 +252,80 @@ export async function GET(request: NextRequest) {
           }))
           .sort((a, b) => b.amount - a.amount);
       } catch {
-        // pos.payment might not be accessible
+        // POS module might not be accessible
       }
     }
 
-    // Build hourly distribution (for peak hours analysis)
+    // Fetch Sales order lines for product ranking
+    const saleOrderIds = completedSaleOrders.map(o => o.id);
+    if (saleOrderIds.length > 0) {
+      try {
+        const saleOrderLines = await odoo.searchRead<SaleOrderLineData>('sale.order.line', [
+          ['order_id', 'in', saleOrderIds],
+        ], {
+          fields: ['product_id', 'product_uom_qty', 'price_subtotal'],
+        });
+
+        for (const line of saleOrderLines) {
+          const [productId, productName] = line.product_id;
+          const existing = productMap.get(productId) || { name: productName, qty: 0, amount: 0 };
+          existing.qty += line.product_uom_qty;
+          existing.amount += line.price_subtotal;
+          productMap.set(productId, existing);
+        }
+      } catch {
+        // Sale order line might not be accessible
+        console.log('[Dashboard] Sale order lines not accessible');
+      }
+    }
+
+    const productRanking = Array.from(productMap.entries())
+      .map(([productId, data]) => ({
+        productId,
+        productName: data.name,
+        totalQty: data.qty,
+        totalAmount: data.amount,
+      }))
+      .sort((a, b) => b.totalAmount - a.totalAmount)
+      .slice(0, 10);
+
+    // Build hourly distribution (for peak hours analysis) - combine POS and Sales
     const hourlyOrders = new Array(24).fill(0).map((_, hour) => ({
       hour,
       orderCount: 0,
       totalSales: 0,
     }));
 
-    for (const order of completedOrders) {
+    // Add POS orders to hourly distribution
+    for (const order of completedPosOrders) {
       const orderDate = new Date(order.date_order);
       const hour = orderDate.getHours();
       hourlyOrders[hour].orderCount += 1;
       hourlyOrders[hour].totalSales += order.amount_total;
     }
 
-    // Build daily trend
+    // Add Sales orders to hourly distribution
+    for (const order of completedSaleOrders) {
+      const orderDate = new Date(order.date_order);
+      const hour = orderDate.getHours();
+      hourlyOrders[hour].orderCount += 1;
+      hourlyOrders[hour].totalSales += order.amount_total;
+    }
+
+    // Build daily trend - combine POS and Sales
     const dailyMap = new Map<string, { totalSales: number; orderCount: number }>();
-    for (const order of completedOrders) {
+
+    // Add POS orders to daily trend
+    for (const order of completedPosOrders) {
+      const dateKey = order.date_order.split(' ')[0];
+      const existing = dailyMap.get(dateKey) || { totalSales: 0, orderCount: 0 };
+      existing.totalSales += order.amount_total;
+      existing.orderCount += 1;
+      dailyMap.set(dateKey, existing);
+    }
+
+    // Add Sales orders to daily trend
+    for (const order of completedSaleOrders) {
       const dateKey = order.date_order.split(' ')[0];
       const existing = dailyMap.get(dateKey) || { totalSales: 0, orderCount: 0 };
       existing.totalSales += order.amount_total;
