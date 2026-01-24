@@ -305,8 +305,9 @@ export class OdooRPC {
     }
 
     // First, verify session is still valid by making a simple API call
+    // Note: Using res.users search_read which is in the allowlist
     try {
-      await this.callKw('res.users', 'search_count', [[['id', '>', 0]]]);
+      await this.callKw('res.users', 'search_read', [[['id', '=', 1]]], { fields: ['id'], limit: 1 });
     } catch (error) {
       console.error('[OdooRPC] Session validation failed:', error);
       throw new Error('会话已过期，请重新登录 / Session expired, please login again');
