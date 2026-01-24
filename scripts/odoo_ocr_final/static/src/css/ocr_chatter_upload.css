@@ -209,3 +209,202 @@
         opacity: 0;
     }
 }
+
+/* ==================== Batch Progress Widget ==================== */
+.ocr-batch-widget {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 320px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    z-index: 10000;
+    overflow: hidden;
+    animation: batchSlideIn 0.3s ease;
+}
+
+@keyframes batchSlideIn {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.ocr-batch-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+    color: #fff;
+}
+
+.ocr-batch-title {
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ocr-batch-title i {
+    font-size: 16px;
+}
+
+.ocr-batch-close {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+}
+
+.ocr-batch-close:hover {
+    opacity: 1;
+}
+
+.ocr-batch-body {
+    padding: 16px;
+}
+
+.ocr-batch-progress-bar {
+    height: 8px;
+    background: #e5e7eb;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 12px;
+}
+
+.ocr-batch-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #7c3aed, #a78bfa);
+    border-radius: 4px;
+    transition: width 0.5s ease;
+}
+
+.ocr-batch-stats {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.ocr-batch-count {
+    font-size: 18px;
+    color: #374151;
+}
+
+.ocr-batch-count strong {
+    color: #7c3aed;
+    font-size: 22px;
+}
+
+.ocr-batch-eta {
+    font-size: 13px;
+    color: #6b7280;
+    background: #f3f4f6;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.ocr-batch-details {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 8px;
+}
+
+.ocr-batch-success,
+.ocr-batch-failed {
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.ocr-batch-success i {
+    color: #10b981;
+}
+
+.ocr-batch-failed i {
+    color: #ef4444;
+}
+
+.ocr-batch-current {
+    font-size: 11px;
+    color: #9ca3af;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-height: 16px;
+}
+
+.ocr-batch-footer {
+    padding: 12px 16px;
+    background: #f9fafb;
+    border-top: 1px solid #e5e7eb;
+    text-align: right;
+}
+
+.ocr-batch-cancel {
+    font-size: 12px;
+}
+
+/* Complete state */
+.ocr-batch-widget.ocr-batch-complete .ocr-batch-header {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.ocr-batch-widget.ocr-batch-complete .ocr-batch-progress-fill {
+    background: #10b981;
+}
+
+/* Info toast */
+.ocr-toast-info {
+    background: #eff6ff;
+    color: #1e40af;
+    border-left: 4px solid #3b82f6;
+}
+
+.ocr-toast-info i {
+    color: #3b82f6;
+}
+
+/* Dark mode for batch widget */
+.o_dark .ocr-batch-widget {
+    background: #1f2937;
+}
+
+.o_dark .ocr-batch-body {
+    background: #1f2937;
+}
+
+.o_dark .ocr-batch-count {
+    color: #e5e7eb;
+}
+
+.o_dark .ocr-batch-eta {
+    background: #374151;
+    color: #9ca3af;
+}
+
+.o_dark .ocr-batch-current {
+    color: #6b7280;
+}
+
+.o_dark .ocr-batch-footer {
+    background: #111827;
+    border-color: #374151;
+}
+
+.o_dark .ocr-batch-progress-bar {
+    background: #374151;
+}

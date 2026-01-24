@@ -571,15 +571,14 @@ class AccountMove(models.Model):
             _logger.error(f'[OCR] Failed to create supplier: {e}')
             return False
 
-    # ==================== Batch OCR Methods (FIXED) ====================
+    # ==================== Batch OCR Methods (with Progress Tracking) ====================
 
     def action_batch_send_to_ocr(self):
         """
-        Queue invoices for background OCR processing.
+        Queue invoices for background OCR processing with progress tracking.
 
-        FIXED: Returns immediately after queueing.
+        Creates a batch progress record and returns action to open progress dialog.
         A cron job processes the queue in the background.
-        This prevents HTTP timeout/disconnection issues.
         """
         # Filter records that can be processed
         to_process = self.filtered(
@@ -600,77 +599,165 @@ class AccountMove(models.Model):
                 }
             }
 
-        # Mark all as queued for background processing
-        to_process.write({
-            'ocr_status': 'processing',
-            'ocr_error_message': _('Queued for batch processing... Please wait.'),
-        })
+        # Create batch progress record
+        BatchProgress = self.env['ocr.batch.progress']
+        batch = BatchProgress.create_batch(to_process.ids)
+
+        if not batch:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Batch OCR'),
+                    'message': _('Failed to create batch job.'),
+                    'type': 'danger',
+                    'sticky': False,
+                }
+            }
 
         count = len(to_process)
-        _logger.info(f'[Batch OCR] Queued {count} invoices for background processing')
+        _logger.info(f'[Batch OCR] Created batch {batch.id} with {count} invoices')
 
-        # Return immediately - cron will process the queue
+        # Return client action to show progress dialog
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',
             'params': {
-                'title': _('Batch OCR Queued'),
-                'message': _('%d invoice(s) queued for OCR processing. Processing will happen in the background. Refresh the page in a few minutes to see results.') % count,
+                'title': _('Batch OCR Started'),
+                'message': _('%d invoice(s) queued for OCR processing (Batch #%d). Processing in background...') % (count, batch.id),
                 'type': 'success',
                 'sticky': True,
+                'links': [{
+                    'label': _('View Progress'),
+                    'url': f'/web#action=reload',
+                }],
             }
         }
 
     @api.model
     def cron_process_ocr_queue(self):
         """
-        Cron job to process queued OCR records.
+        Cron job to process queued OCR records with progress tracking.
 
-        Runs every 2 minutes and processes up to BATCH_OCR_MAX_PER_RUN records.
-        This prevents HTTP timeouts and ensures reliable processing.
+        Runs every 2 minutes and processes batches in order.
+        Updates batch progress for real-time UI display.
         """
         _logger.info('[Batch OCR Cron] Starting queue processing')
 
-        # Find queued records (processing status with queue message)
-        queued = self.search([
-            ('ocr_status', '=', 'processing'),
-            ('message_main_attachment_id', '!=', False),
-            ('move_type', 'in', ('in_invoice', 'in_refund', 'out_invoice', 'out_refund')),
-        ], limit=BATCH_OCR_MAX_PER_RUN, order='write_date asc')
+        BatchProgress = self.env['ocr.batch.progress']
 
-        if not queued:
-            _logger.info('[Batch OCR Cron] No queued records to process')
+        # Find active batches to process
+        active_batches = BatchProgress.search([
+            ('state', 'in', ('queued', 'processing')),
+        ], order='create_date asc', limit=3)
+
+        if not active_batches:
+            # Fallback: Check for orphan records (processing status but no batch)
+            orphans = self.search([
+                ('ocr_status', '=', 'processing'),
+                ('message_main_attachment_id', '!=', False),
+                ('move_type', 'in', ('in_invoice', 'in_refund', 'out_invoice', 'out_refund')),
+            ], limit=BATCH_OCR_MAX_PER_RUN, order='write_date asc')
+
+            if orphans:
+                _logger.info(f'[Batch OCR Cron] Processing {len(orphans)} orphan records')
+                self._process_orphan_queue(orphans)
+            else:
+                _logger.info('[Batch OCR Cron] No queued records to process')
             return
 
-        success_count = 0
-        fail_count = 0
-        total = len(queued)
-
-        for idx, record in enumerate(queued):
+        # Process each batch
+        for batch in active_batches:
             try:
-                _logger.info(f'[Batch OCR Cron] Processing {idx + 1}/{total}: Invoice {record.id}')
+                self._process_batch(batch)
+            except Exception as e:
+                _logger.error(f'[Batch OCR Cron] Batch {batch.id} failed: {e}')
+                batch.mark_failed(error=str(e))
 
-                # Update status to show processing
+    def _process_batch(self, batch):
+        """Process records in a batch with progress updates."""
+        _logger.info(f'[Batch OCR] Processing batch {batch.id}')
+
+        # Start the batch if not already started
+        if batch.state == 'queued':
+            batch.start_processing()
+
+        # Get unprocessed records from this batch
+        to_process = batch.move_ids.filtered(
+            lambda m: m.ocr_status == 'processing'
+        )
+
+        if not to_process:
+            batch.write({'state': 'done', 'completed_at': fields.Datetime.now()})
+            _logger.info(f'[Batch OCR] Batch {batch.id} completed')
+            return
+
+        # Process up to BATCH_OCR_MAX_PER_RUN records per cron run
+        records_to_process = to_process[:BATCH_OCR_MAX_PER_RUN]
+        total = len(records_to_process)
+
+        for idx, record in enumerate(records_to_process):
+            try:
+                _logger.info(f'[Batch OCR] Batch {batch.id}: Processing {idx + 1}/{total}: Invoice {record.id}')
+
+                # Update status
                 record.write({
-                    'ocr_error_message': _('Processing... (%d/%d)') % (idx + 1, total),
+                    'ocr_error_message': _('Processing... (Batch #%d)') % batch.id,
                 })
                 self.env.cr.commit()
 
                 # Process the record
                 record._process_single_ocr()
-                success_count += 1
 
-                # Commit after each successful processing
+                # Update batch progress
+                batch.update_progress(current_move=record, success=True)
                 self.env.cr.commit()
 
-                # Delay between API calls to avoid rate limiting
+                # Delay between API calls
+                if idx < total - 1:
+                    time.sleep(BATCH_OCR_DELAY)
+
+            except Exception as e:
+                error_msg = str(e)[:500]
+                _logger.error(f'[Batch OCR] Failed invoice {record.id}: {e}')
+
+                record.write({
+                    'ocr_status': 'failed',
+                    'ocr_error_message': error_msg,
+                })
+
+                # Update batch progress with failure
+                batch.update_progress(current_move=record, success=False, error=error_msg)
+                self.env.cr.commit()
+
+        _logger.info(f'[Batch OCR] Batch {batch.id}: Processed {total} records this run')
+
+    def _process_orphan_queue(self, records):
+        """Process orphan records that don't belong to any batch."""
+        success_count = 0
+        fail_count = 0
+        total = len(records)
+
+        for idx, record in enumerate(records):
+            try:
+                _logger.info(f'[Batch OCR Orphan] Processing {idx + 1}/{total}: Invoice {record.id}')
+
+                record.write({
+                    'ocr_error_message': _('Processing... (%d/%d)') % (idx + 1, total),
+                })
+                self.env.cr.commit()
+
+                record._process_single_ocr()
+                success_count += 1
+                self.env.cr.commit()
+
                 if idx < total - 1:
                     time.sleep(BATCH_OCR_DELAY)
 
             except Exception as e:
                 fail_count += 1
                 error_msg = str(e)[:500]
-                _logger.error(f'[Batch OCR Cron] Failed invoice {record.id}: {e}')
+                _logger.error(f'[Batch OCR Orphan] Failed invoice {record.id}: {e}')
 
                 record.write({
                     'ocr_status': 'failed',
@@ -678,7 +765,7 @@ class AccountMove(models.Model):
                 })
                 self.env.cr.commit()
 
-        _logger.info(f'[Batch OCR Cron] Completed: {success_count} succeeded, {fail_count} failed out of {total}')
+        _logger.info(f'[Batch OCR Orphan] Completed: {success_count} succeeded, {fail_count} failed')
 
     def _process_single_ocr(self):
         """

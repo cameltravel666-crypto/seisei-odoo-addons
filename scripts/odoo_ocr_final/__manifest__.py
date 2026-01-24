@@ -1,6 +1,6 @@
 {
     'name': 'Financial OCR Integration',
-    'version': '18.0.11.0.0',
+    'version': '18.0.12.0.0',
     'category': 'Accounting',
     'summary': 'AI-powered OCR for Purchase Orders, Invoices, and Expenses',
     'description': '''
@@ -24,6 +24,8 @@ Features:
 - 8% / 10% tax rate detection
 - Chatter-integrated upload zone
 - Auto-compress images to 100KB
+- Batch OCR with real-time progress tracking
+- Background processing via cron job
     ''',
     'author': 'Seisei',
     'website': 'https://seisei.co.jp',
@@ -39,6 +41,7 @@ Features:
         'web.assets_backend': [
             'odoo_ocr_final/static/src/css/ocr_chatter_upload.css',
             'odoo_ocr_final/static/src/js/ocr_chatter_upload.js',
+            'odoo_ocr_final/static/src/js/ocr_batch_progress.js',
         ],
     },
     'external_dependencies': {

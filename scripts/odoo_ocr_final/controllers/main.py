@@ -116,3 +116,116 @@ class OcrCallbackController(http.Controller):
             content_type='application/json',
             status=200
         )
+
+    # ==================== Batch Progress API ====================
+
+    @http.route('/api/ocr/batch/progress/<int:batch_id>', type='http', auth='user', methods=['GET'], csrf=False)
+    def get_batch_progress(self, batch_id, **kwargs):
+        """
+        Get progress of a batch OCR job.
+
+        Returns:
+            JSON with progress information:
+            {
+                "success": true,
+                "data": {
+                    "batch_id": 1,
+                    "state": "processing",
+                    "total_count": 10,
+                    "processed_count": 3,
+                    "success_count": 3,
+                    "failed_count": 0,
+                    "progress_percent": 30.0,
+                    "current_record": "Invoice #123",
+                    "eta_display": "2m 30s",
+                    "eta_seconds": 150
+                }
+            }
+        """
+        try:
+            BatchProgress = request.env['ocr.batch.progress']
+            batch = BatchProgress.browse(batch_id)
+
+            if not batch.exists():
+                return Response(
+                    json.dumps({'success': False, 'error': 'Batch not found'}),
+                    content_type='application/json',
+                    status=404
+                )
+
+            return Response(
+                json.dumps({'success': True, 'data': batch.get_status()}),
+                content_type='application/json',
+                status=200
+            )
+
+        except Exception as e:
+            _logger.exception(f"[Batch Progress API] Error: {e}")
+            return Response(
+                json.dumps({'success': False, 'error': str(e)}),
+                content_type='application/json',
+                status=500
+            )
+
+    @http.route('/api/ocr/batch/active', type='http', auth='user', methods=['GET'], csrf=False)
+    def get_active_batches(self, **kwargs):
+        """
+        Get all active batch OCR jobs for the current user.
+
+        Returns:
+            JSON list of active batches
+        """
+        try:
+            BatchProgress = request.env['ocr.batch.progress']
+            batches = BatchProgress.get_active_batches(user_id=request.env.user.id)
+
+            return Response(
+                json.dumps({'success': True, 'data': batches}),
+                content_type='application/json',
+                status=200
+            )
+
+        except Exception as e:
+            _logger.exception(f"[Batch Progress API] Error: {e}")
+            return Response(
+                json.dumps({'success': False, 'error': str(e)}),
+                content_type='application/json',
+                status=500
+            )
+
+    @http.route('/api/ocr/batch/cancel/<int:batch_id>', type='http', auth='user', methods=['POST'], csrf=False)
+    def cancel_batch(self, batch_id, **kwargs):
+        """Cancel a batch OCR job."""
+        try:
+            BatchProgress = request.env['ocr.batch.progress']
+            batch = BatchProgress.browse(batch_id)
+
+            if not batch.exists():
+                return Response(
+                    json.dumps({'success': False, 'error': 'Batch not found'}),
+                    content_type='application/json',
+                    status=404
+                )
+
+            # Only allow cancelling own batches
+            if batch.user_id.id != request.env.user.id:
+                return Response(
+                    json.dumps({'success': False, 'error': 'Not authorized'}),
+                    content_type='application/json',
+                    status=403
+                )
+
+            batch.cancel()
+            return Response(
+                json.dumps({'success': True, 'message': 'Batch cancelled'}),
+                content_type='application/json',
+                status=200
+            )
+
+        except Exception as e:
+            _logger.exception(f"[Batch Progress API] Cancel error: {e}")
+            return Response(
+                json.dumps({'success': False, 'error': str(e)}),
+                content_type='application/json',
+                status=500
+            )
