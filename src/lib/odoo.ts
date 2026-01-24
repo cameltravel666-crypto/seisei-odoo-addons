@@ -298,69 +298,69 @@ export class OdooRPC {
     });
   }
 
-  // Get PDF report from Odoo using JSON-RPC (more reliable than direct URL)
+  // Get PDF report from Odoo via direct URL
   async getReportPdf(reportName: string, ids: number[], lang?: string): Promise<Buffer> {
     if (!this.sessionId) {
       throw new Error('No session available');
     }
 
-    console.log('[OdooRPC] Generating PDF report via JSON-RPC:', reportName, ids, lang);
-
-    // Build context with language
-    const context: Record<string, unknown> = {};
-    if (lang) {
-      context.lang = lang;
-    }
-
+    // First, verify session is still valid by making a simple API call
     try {
-      // Use ir.actions.report render_qweb_pdf method via JSON-RPC
-      // This is more reliable than direct URL access
-      const response = await fetch(`${this.config.baseUrl}/web/dataset/call_kw`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Cookie': `session_id=${this.sessionId}`,
-        },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          method: 'call',
-          params: {
-            model: 'ir.actions.report',
-            method: 'render_qweb_pdf',
-            args: [reportName, ids],
-            kwargs: {
-              context,
-            },
-          },
-          id: Date.now(),
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.error) {
-        console.error('[OdooRPC] PDF generation error:', data.error);
-        const errorMsg = data.error.data?.message || data.error.message || 'PDF generation failed';
-        throw new Error(errorMsg);
-      }
-
-      // Result is [base64_pdf_content, report_type]
-      const result = data.result;
-      if (!result || !result[0]) {
-        throw new Error('No PDF content returned');
-      }
-
-      // Decode base64 PDF content
-      const base64Content = result[0];
-      const pdfBuffer = Buffer.from(base64Content, 'base64');
-
-      console.log('[OdooRPC] PDF generated successfully, size:', pdfBuffer.length);
-      return pdfBuffer;
-
+      await this.callKw('res.users', 'search_count', [[['id', '>', 0]]]);
     } catch (error) {
-      console.error('[OdooRPC] PDF generation failed:', error);
-      throw error;
+      console.error('[OdooRPC] Session validation failed:', error);
+      throw new Error('会话已过期，请重新登录 / Session expired, please login again');
     }
+
+    const idsStr = ids.join(',');
+
+    // Build URL with database parameter (required by Odoo 18)
+    // and optional language context
+    const params = new URLSearchParams();
+    params.set('db', this.config.db);
+
+    if (lang) {
+      params.set('context', JSON.stringify({ lang }));
+    }
+
+    const reportUrl = `${this.config.baseUrl}/report/pdf/${reportName}/${idsStr}?${params.toString()}`;
+
+    console.log('[OdooRPC] Fetching PDF report:', reportUrl);
+
+    const response = await fetch(reportUrl, {
+      method: 'GET',
+      headers: {
+        'Cookie': `session_id=${this.sessionId}`,
+        'Accept': 'application/pdf',
+      },
+    });
+
+    // Check response
+    if (!response.ok) {
+      console.error('[OdooRPC] PDF request failed:', response.status, response.statusText);
+      throw new Error(`PDF generation failed: ${response.status}`);
+    }
+
+    const contentType = response.headers.get('content-type');
+
+    // If not PDF, check what we got
+    if (!contentType?.includes('application/pdf')) {
+      const text = await response.text();
+      console.error('[OdooRPC] Non-PDF response:', text.substring(0, 300));
+
+      // Check if it's a login page redirect
+      if (text.includes('login') || text.includes('web/login') || text.includes('oe_login')) {
+        throw new Error('会话已过期，请重新登录 / Session expired, please login again');
+      }
+
+      throw new Error('PDF generation failed - unexpected response');
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const pdfBuffer = Buffer.from(arrayBuffer);
+
+    console.log('[OdooRPC] PDF generated successfully, size:', pdfBuffer.length);
+    return pdfBuffer;
   }
 
   // Get base URL for building URLs
