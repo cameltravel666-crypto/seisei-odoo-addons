@@ -33,14 +33,18 @@ interface VoucherDraft {
   id: string;
   move_type: 'in_invoice' | 'out_invoice' | 'entry';
   partner_name: string | null;
+  partner_vat: string | null;
   invoice_date: string | null;
   amount_total: number | null;
   amount_untaxed: number | null;
   amount_tax: number | null;
   line_items: Array<{
     product_name: string;
+    account_name: string;
     quantity: number;
+    unit: string;
     unit_price: number;
+    tax_rate: string;
     amount: number;
   }>;
   ocr_confidence: number | null;
@@ -94,6 +98,43 @@ function PublicOcrContent() {
     { value: 'expense' as DocType, label: '経費', icon: Receipt },
   ];
 
+  // Compress image using canvas
+  const compressImage = (file: File, maxWidth: number, quality: number): Promise<{ base64: string; size: number }> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let { width, height } = img;
+
+        // Scale down if larger than maxWidth
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width;
+          width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Failed to get canvas context'));
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Convert to base64 JPEG
+        const dataUrl = canvas.toDataURL('image/jpeg', quality);
+        const base64 = dataUrl.split(',')[1];
+        const size = Math.round((base64.length * 3) / 4);
+
+        resolve({ base64, size });
+      };
+      img.onerror = () => reject(new Error('Failed to load image'));
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
   // Initialize session on mount
   useEffect(() => {
     initGA4();
@@ -132,9 +173,10 @@ function PublicOcrContent() {
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
 
-    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+    // Accept images and PDF
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf'];
     if (!validTypes.includes(selectedFile.type)) {
-      setError('JPEG、PNG、WebP、PDFファイルのみ対応しています');
+      setError('対応形式：JPEG、PNG、WebP、GIF、PDF');
       return;
     }
 
@@ -148,7 +190,7 @@ function PublicOcrContent() {
     setOcrResult(null);
     setVoucherDraft(null);
 
-    // Create preview for images
+    // Create preview for images only (not PDF)
     if (selectedFile.type.startsWith('image/')) {
       const url = URL.createObjectURL(selectedFile);
       setPreviewUrl(url);
@@ -180,23 +222,40 @@ function PublicOcrContent() {
     trackOcrStart({ doc_type: docType });
 
     try {
-      // Convert file to base64
-      const arrayBuffer = await file.arrayBuffer();
-      const base64 = Buffer.from(arrayBuffer).toString('base64');
+      let base64: string;
+      let mimeType = file.type;
+      let fileName = file.name;
+
+      // Compress images before upload
+      if (file.type.startsWith('image/') && file.size > 500 * 1024) {
+        // Compress images larger than 500KB
+        const compressed = await compressImage(file, 1200, 0.8);
+        base64 = compressed.base64;
+        mimeType = 'image/jpeg';
+        fileName = file.name.replace(/\.[^.]+$/, '.jpg');
+        console.log(`[OCR] Compressed ${Math.round(file.size/1024)}KB -> ${Math.round(compressed.size/1024)}KB`);
+      } else {
+        // Use original file - convert to base64 in chunks to avoid stack overflow
+        const arrayBuffer = await file.arrayBuffer();
+        const bytes = new Uint8Array(arrayBuffer);
+        let binary = '';
+        const chunkSize = 8192;
+        for (let i = 0; i < bytes.length; i += chunkSize) {
+          const chunk = bytes.subarray(i, i + chunkSize);
+          binary += String.fromCharCode.apply(null, Array.from(chunk));
+        }
+        base64 = btoa(binary);
+      }
 
       // Call OCR API
       const res = await fetch('/api/public/ocr/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          s3Key: `temp/${file.name}`,
           docType,
           imageData: base64,
-          fileMeta: {
-            name: file.name,
-            type: file.type,
-            size: file.size,
-          },
+          fileName,
+          mimeType,
         }),
       });
 
@@ -414,7 +473,7 @@ function PublicOcrContent() {
           ) : (
             <div className="flex items-start gap-4">
               {/* Preview */}
-              {previewUrl && (
+              {previewUrl ? (
                 <div className="w-32 h-32 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
                   <img
                     src={previewUrl}
@@ -422,7 +481,11 @@ function PublicOcrContent() {
                     className="w-full h-full object-cover"
                   />
                 </div>
-              )}
+              ) : file?.type === 'application/pdf' ? (
+                <div className="w-32 h-32 rounded-lg bg-red-50 flex-shrink-0 flex items-center justify-center">
+                  <FileText className="w-12 h-12 text-red-500" />
+                </div>
+              ) : null}
               <div className="flex-1">
                 <p className="font-medium text-gray-900">{file.name}</p>
                 <p className="text-sm text-gray-500">
@@ -484,6 +547,12 @@ function PublicOcrContent() {
                   </p>
                 </div>
                 <div>
+                  <p className="text-sm text-gray-500">登録番号</p>
+                  <p className="font-medium text-gray-900 font-mono">
+                    {voucherDraft.partner_vat || '0'}
+                  </p>
+                </div>
+                <div>
                   <p className="text-sm text-gray-500">日付</p>
                   <p className="font-medium text-gray-900">
                     {ocrResult.date || '-'}
@@ -504,18 +573,54 @@ function PublicOcrContent() {
               </div>
             </div>
 
-            {/* Voucher Draft Preview */}
-            <div className="border rounded-lg p-4 mb-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-3">
-                生成される仕訳
-              </h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">伝票タイプ</span>
-                  <span className="text-gray-900">
-                    {voucherDraft.move_type === 'in_invoice' ? '仕入請求書' : '仕訳伝票'}
-                  </span>
+            {/* Line Items Table */}
+            {voucherDraft.line_items && voucherDraft.line_items.length > 0 && (
+              <div className="border rounded-lg mb-4 overflow-hidden">
+                <div className="bg-gray-50 px-4 py-2 border-b">
+                  <h3 className="text-sm font-medium text-gray-700">明細行</h3>
                 </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 border-b">
+                      <tr>
+                        <th className="text-left px-3 py-2 font-medium text-gray-600">品名</th>
+                        <th className="text-left px-3 py-2 font-medium text-gray-600">勘定科目</th>
+                        <th className="text-right px-3 py-2 font-medium text-gray-600">数量</th>
+                        <th className="text-right px-3 py-2 font-medium text-gray-600">単価</th>
+                        <th className="text-center px-3 py-2 font-medium text-gray-600">税率</th>
+                        <th className="text-right px-3 py-2 font-medium text-gray-600">金額</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {voucherDraft.line_items.map((item, idx) => (
+                        <tr key={idx} className="hover:bg-gray-50">
+                          <td className="px-3 py-2 text-gray-900">{item.product_name}</td>
+                          <td className="px-3 py-2 text-gray-600">{item.account_name}</td>
+                          <td className="px-3 py-2 text-right text-gray-900">
+                            {item.quantity} {item.unit}
+                          </td>
+                          <td className="px-3 py-2 text-right text-gray-900">
+                            ¥{item.unit_price.toLocaleString()}
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs">
+                              {item.tax_rate}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 text-right font-medium text-gray-900">
+                            ¥{item.amount.toLocaleString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Totals */}
+            <div className="border rounded-lg p-4 mb-4">
+              <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-500">税抜金額</span>
                   <span className="text-gray-900">
@@ -523,14 +628,14 @@ function PublicOcrContent() {
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">消費税</span>
+                  <span className="text-gray-500">消費税（8%）</span>
                   <span className="text-gray-900">
                     ¥{(voucherDraft.amount_tax || 0).toLocaleString()}
                   </span>
                 </div>
-                <div className="flex justify-between font-medium">
+                <div className="flex justify-between font-medium pt-2 border-t">
                   <span className="text-gray-700">合計</span>
-                  <span className="text-gray-900">
+                  <span className="text-gray-900 text-lg">
                     ¥{(voucherDraft.amount_total || 0).toLocaleString()}
                   </span>
                 </div>
