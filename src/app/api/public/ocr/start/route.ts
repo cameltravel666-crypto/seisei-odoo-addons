@@ -1,6 +1,7 @@
 /**
  * Public OCR Start API
  * POST: Start OCR processing for public (anonymous) users
+ * Uses the centralized OCR service managed by Odoo
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -13,10 +14,10 @@ import {
   storeJob,
   ANON_SESSION_COOKIE,
 } from '@/lib/public-session';
-import { callOcrService, OcrResult } from '@/lib/ocr';
+import { callCentralOcrService } from '@/lib/ocr-service-client';
 
 const startRequestSchema = z.object({
-  s3Key: z.string().min(1),
+  s3Key: z.string().min(1).optional(),
   docType: z.enum(['receipt', 'vendor_invoice', 'expense']).default('receipt'),
   fileMeta: z.object({
     name: z.string(),
@@ -24,7 +25,8 @@ const startRequestSchema = z.object({
     size: z.number(),
   }).optional(),
   // For direct upload (base64 image)
-  imageData: z.string().optional(),
+  imageData: z.string().min(1),
+  mimeType: z.string().optional(),
 });
 
 // Extended OCR result for voucher draft
@@ -46,10 +48,17 @@ interface VoucherDraft {
   status: 'draft';
 }
 
+interface OcrExtracted {
+  merchant?: string;
+  date?: string;
+  amount_total?: number;
+  confidence?: number;
+}
+
 /**
  * Generate voucher draft from OCR result
  */
-function generateVoucherDraft(ocrResult: OcrResult, docType: string): VoucherDraft {
+function generateVoucherDraft(ocrResult: OcrExtracted, docType: string): VoucherDraft {
   const voucherId = crypto.randomUUID();
 
   // Map doc type to move type
@@ -80,7 +89,7 @@ function generateVoucherDraft(ocrResult: OcrResult, docType: string): VoucherDra
       unit_price: amountUntaxed,
       amount: amountUntaxed,
     }] : [],
-    ocr_confidence: ocrResult.confidence,
+    ocr_confidence: ocrResult.confidence || null,
     status: 'draft',
   };
 }
@@ -98,7 +107,7 @@ export async function POST(request: NextRequest) {
           success: false,
           error: {
             code: 'NO_SESSION',
-            message: 'Anonymous session required. Call /api/public/session first.',
+            message: 'セッションがありません。ページを再読み込みしてください。',
           },
         },
         { status: 401 }
@@ -112,7 +121,7 @@ export async function POST(request: NextRequest) {
           success: false,
           error: {
             code: 'INVALID_SESSION',
-            message: 'Session expired or invalid. Please refresh the page.',
+            message: 'セッションが無効です。ページを再読み込みしてください。',
           },
         },
         { status: 401 }
@@ -126,7 +135,7 @@ export async function POST(request: NextRequest) {
           success: false,
           error: {
             code: 'QUOTA_EXCEEDED',
-            message: 'Daily quota exceeded (3/day). Create a free account to continue.',
+            message: '本日の無料枠を使い切りました（3回/日）。無料アカウントを作成すると続けてご利用いただけます。',
             quotaExceeded: true,
           },
         },
@@ -144,25 +153,22 @@ export async function POST(request: NextRequest) {
           success: false,
           error: {
             code: 'VALIDATION_ERROR',
-            message: parsed.error.issues[0].message,
+            message: '画像データが必要です。',
           },
         },
         { status: 400 }
       );
     }
 
-    const { s3Key, docType, fileMeta, imageData } = parsed.data;
+    const { docType, imageData, mimeType } = parsed.data;
 
     // Generate job ID
     const jobId = crypto.randomUUID();
 
-    // For MVP, we'll process synchronously
-    // In production, this would be async with a queue
-
     // Store initial job state
     storeJob(sessionId, {
       id: jobId,
-      s3Key,
+      s3Key: '',
       docType,
       status: 'processing',
       createdAt: new Date(),
@@ -170,41 +176,56 @@ export async function POST(request: NextRequest) {
     });
 
     try {
-      let ocrResult: OcrResult;
+      // Call the centralized OCR service
+      const ocrResult = await callCentralOcrService({
+        imageData,
+        mimeType: mimeType || 'image/jpeg',
+        tenantId: 'public', // Use 'public' tenant for anonymous users
+      });
 
-      if (imageData) {
-        // Direct base64 image processing
-        const imageBuffer = Buffer.from(imageData, 'base64');
-        ocrResult = await callOcrService(imageBuffer);
-      } else {
-        // For S3 files, we would fetch from S3 first
-        // For MVP, return an error asking for direct upload
+      if (!ocrResult.success) {
+        // Update job with error
+        storeJob(sessionId, {
+          id: jobId,
+          s3Key: '',
+          docType,
+          status: 'error',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+
         return NextResponse.json(
           {
             success: false,
             error: {
-              code: 'S3_NOT_SUPPORTED_YET',
-              message: 'Please include imageData (base64) for OCR processing',
+              code: 'OCR_FAILED',
+              message: 'OCR処理に失敗しました。別の画像でお試しください。',
+            },
+            data: {
+              jobId,
+              status: 'error',
             },
           },
-          { status: 400 }
+          { status: 500 }
         );
       }
 
       // Increment quota after successful processing
       incrementQuota(sessionId);
 
+      const extracted = ocrResult.extracted || {};
+
       // Generate voucher draft from OCR result
-      const voucherDraft = generateVoucherDraft(ocrResult, docType);
+      const voucherDraft = generateVoucherDraft(extracted, docType);
 
       // Update job with results
       storeJob(sessionId, {
         id: jobId,
-        s3Key,
+        s3Key: '',
         docType,
         status: 'done',
         ocrResult: {
-          ...ocrResult,
+          ...extracted,
           voucherDraft,
         },
         createdAt: new Date(),
@@ -220,10 +241,10 @@ export async function POST(request: NextRequest) {
           status: 'done',
           processingTimeMs: processingTime,
           ocrResult: {
-            merchant: ocrResult.merchant,
-            date: ocrResult.date,
-            amount_total: ocrResult.amount_total,
-            confidence: ocrResult.confidence,
+            merchant: extracted.merchant || null,
+            date: extracted.date || null,
+            amount_total: extracted.amount_total || null,
+            confidence: extracted.confidence || null,
           },
           voucherDraft,
         },
@@ -232,7 +253,7 @@ export async function POST(request: NextRequest) {
       // Update job with error
       storeJob(sessionId, {
         id: jobId,
-        s3Key,
+        s3Key: '',
         docType,
         status: 'error',
         createdAt: new Date(),
@@ -246,7 +267,7 @@ export async function POST(request: NextRequest) {
           success: false,
           error: {
             code: 'OCR_FAILED',
-            message: ocrError instanceof Error ? ocrError.message : 'OCR processing failed',
+            message: 'OCR処理に失敗しました。しばらくしてからお試しください。',
           },
           data: {
             jobId,
@@ -259,14 +280,12 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('[Public OCR Start API] Error:', error);
 
-    const message = error instanceof Error ? error.message : 'Failed to start OCR';
-
     return NextResponse.json(
       {
         success: false,
         error: {
           code: 'INTERNAL_ERROR',
-          message,
+          message: 'エラーが発生しました。しばらくしてからお試しください。',
         },
       },
       { status: 500 }
