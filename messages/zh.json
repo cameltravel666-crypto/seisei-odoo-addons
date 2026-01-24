@@ -452,7 +452,9 @@
     "filterAll": "全部",
     "filterOverdueOnly": "仅逾期",
     "awaitingReceipt": "待收货",
-    "received": "已收货"
+    "received": "已收货",
+    "selectSupplierFirst": "请先选择供应商",
+    "addProductsFirst": "请添加商品"
   },
   "sales": {
     "noItems": "暂无销售单",
@@ -526,7 +528,9 @@
     "sharePdf": "分享PDF",
     "emailSent": "邮件已发送",
     "emailFailed": "邮件发送失败",
-    "pdfFailed": "PDF生成失败"
+    "pdfFailed": "PDF生成失败",
+    "selectCustomerFirst": "请先选择客户",
+    "addProductsFirst": "请添加商品"
   },
   "expenses": {
     "noItems": "暂无费用记录",

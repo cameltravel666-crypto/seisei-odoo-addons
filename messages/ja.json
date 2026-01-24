@@ -452,7 +452,9 @@
     "filterAll": "すべて",
     "filterOverdueOnly": "延滞のみ",
     "awaitingReceipt": "入荷待ち",
-    "received": "入荷済み"
+    "received": "入荷済み",
+    "selectSupplierFirst": "仕入先を選択してください",
+    "addProductsFirst": "商品を追加してください"
   },
   "sales": {
     "noItems": "販売注文がありません",
@@ -526,7 +528,9 @@
     "sharePdf": "PDF共有",
     "emailSent": "メールを送信しました",
     "emailFailed": "メール送信に失敗しました",
-    "pdfFailed": "PDF生成に失敗しました"
+    "pdfFailed": "PDF生成に失敗しました",
+    "selectCustomerFirst": "顧客を選択してください",
+    "addProductsFirst": "商品を追加してください"
   },
   "expenses": {
     "noItems": "経費データがありません",

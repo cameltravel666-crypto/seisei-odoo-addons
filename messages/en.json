@@ -452,7 +452,9 @@
     "filterAll": "All",
     "filterOverdueOnly": "Overdue Only",
     "awaitingReceipt": "Awaiting Receipt",
-    "received": "Received"
+    "received": "Received",
+    "selectSupplierFirst": "Please select a supplier first",
+    "addProductsFirst": "Please add products"
   },
   "sales": {
     "noItems": "No Sales Orders",
@@ -526,7 +528,9 @@
     "sharePdf": "Share PDF",
     "emailSent": "Email sent successfully",
     "emailFailed": "Failed to send email",
-    "pdfFailed": "Failed to generate PDF"
+    "pdfFailed": "Failed to generate PDF",
+    "selectCustomerFirst": "Please select a customer first",
+    "addProductsFirst": "Please add products"
   },
   "expenses": {
     "noItems": "No Expenses",

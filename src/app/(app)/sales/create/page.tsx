@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { ArrowLeft, Plus, Minus, Check } from 'lucide-react';
+import { ArrowLeft, Plus, Minus, Check, Search, ShoppingCart, Package } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Loading } from '@/components/ui/loading';
 import type { ApiResponse } from '@/types';
@@ -282,6 +282,7 @@ export default function CreateSalesOrderPage() {
         </label>
         <div className="relative">
           <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
               value={customerSearch}
@@ -295,7 +296,7 @@ export default function CreateSalesOrderPage() {
                 fetchCustomers(customerSearch);
               }}
               placeholder={t('sales.searchCustomer')}
-              className="input w-full py-2 text-sm"
+              className="input w-full pl-9 py-2 text-sm"
             />
             {selectedCustomer && (
               <Check className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-600" />
@@ -338,9 +339,23 @@ export default function CreateSalesOrderPage() {
 
       {/* Product Lines Section */}
       <div className="bg-white rounded-lg border border-gray-200 mb-3">
-        {/* Compact Add Product Row */}
+        {/* Header with count */}
+        <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100 bg-gray-50">
+          <div className="flex items-center gap-2">
+            <Package className="w-4 h-4 text-gray-500" />
+            <span className="text-sm font-medium text-gray-700">{t('sales.orderLines')}</span>
+          </div>
+          {orderLines.length > 0 && (
+            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">
+              {orderLines.length} {t('common.items')}
+            </span>
+          )}
+        </div>
+
+        {/* Add Product Row */}
         <div className="p-3 border-b border-gray-100">
           <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
               value={productSearch}
@@ -353,31 +368,39 @@ export default function CreateSalesOrderPage() {
                 fetchProducts(productSearch);
               }}
               placeholder={t('sales.addProduct')}
-              className="input w-full pr-16 py-2 text-sm"
+              className="input w-full pl-9 pr-12 py-2.5 text-sm"
             />
             <button
               onClick={() => fetchProducts(productSearch)}
-              className="absolute right-1 top-1/2 -translate-y-1/2 px-3 py-1 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
             >
               <Plus className="w-4 h-4" />
             </button>
           </div>
           {showProductDropdown && (
-            <div className="absolute z-20 left-3 right-3 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+            <div className="absolute z-20 left-3 right-3 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
               {isLoadingProducts ? (
-                <div className="p-3 text-center text-gray-500 text-sm">{t('common.loading')}</div>
+                <div className="p-4 text-center text-gray-500 text-sm">{t('common.loading')}</div>
               ) : products.length === 0 ? (
-                <div className="p-3 text-center text-gray-500 text-sm">{t('common.noData')}</div>
+                <div className="p-4 text-center text-gray-500 text-sm">{t('common.noData')}</div>
               ) : (
                 products.map((product) => (
                   <button
                     key={product.id}
                     onClick={() => handleAddProduct(product)}
-                    className="w-full px-3 py-2 text-left hover:bg-gray-50 border-b border-gray-100 last:border-0"
+                    className="w-full px-4 py-3 text-left hover:bg-blue-50 border-b border-gray-100 last:border-0 transition-colors"
                   >
-                    <div className="flex justify-between items-center">
-                      <span className="font-medium text-gray-900 text-sm truncate">{product.name}</span>
-                      <span className="text-gray-600 text-sm ml-2">{formatJPY(product.price)}</span>
+                    <div className="flex justify-between items-start gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-gray-900 text-sm">{product.name}</div>
+                        {product.code && (
+                          <div className="text-xs text-gray-500 mt-0.5">{product.code}</div>
+                        )}
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <div className="font-semibold text-gray-900 text-sm">{formatJPY(product.price)}</div>
+                        <div className="text-xs text-gray-500">{product.uom}</div>
+                      </div>
                     </div>
                   </button>
                 ))
@@ -386,10 +409,12 @@ export default function CreateSalesOrderPage() {
           )}
         </div>
 
-        {/* Order Lines List - Summary View */}
+        {/* Order Lines List */}
         {orderLines.length === 0 ? (
-          <div className="text-center py-12 text-gray-400">
-            <div className="text-sm">{t('sales.noProducts')}</div>
+          <div className="text-center py-16 text-gray-400">
+            <ShoppingCart className="w-12 h-12 mx-auto mb-3 opacity-30" />
+            <div className="text-sm font-medium">{t('sales.noProducts')}</div>
+            <div className="text-xs mt-1 text-gray-400">{t('sales.addProduct')}</div>
           </div>
         ) : (
           <div className="divide-y divide-gray-100">
@@ -422,24 +447,33 @@ export default function CreateSalesOrderPage() {
                     onTouchStart={(e) => handleTouchStart(e, line.productId)}
                     onTouchMove={(e) => handleTouchMove(e, line.productId)}
                     onTouchEnd={handleTouchEnd}
-                    className={`px-3 py-3 bg-white cursor-pointer active:bg-gray-50 transition-transform duration-200 ${
+                    className={`px-4 py-3 bg-white cursor-pointer active:bg-gray-50 transition-transform duration-200 ${
                       isSwiped ? '-translate-x-20' : 'translate-x-0'
                     }`}
                   >
-                    {/* Row 1: Product Name + Subtotal */}
-                    <div className="flex justify-between items-start gap-2 mb-0.5">
+                    <div className="flex justify-between items-start gap-3">
+                      {/* Left: Product info */}
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium text-gray-900 text-sm line-clamp-2">
+                        <div className="font-medium text-gray-900 text-base leading-snug line-clamp-2">
                           {line.productName || t('sales.noProducts')}
                         </div>
+                        <div className="flex items-center gap-3 mt-1.5 text-sm text-gray-500">
+                          <span className="inline-flex items-center gap-1">
+                            <span className="text-gray-400">{t('sales.quantity')}:</span>
+                            <span className="font-medium text-gray-700">{line.quantity}</span>
+                            <span className="text-gray-400">{line.uom}</span>
+                          </span>
+                          <span className="text-gray-300">×</span>
+                          <span className="inline-flex items-center gap-1">
+                            <span className="text-gray-400">@</span>
+                            <span className="font-medium text-gray-700">{formatJPY(line.priceUnit)}</span>
+                          </span>
+                        </div>
                       </div>
-                      <div className="text-right flex-shrink-0">
-                        <div className="font-bold text-gray-900">{formatJPY(subtotal)}</div>
+                      {/* Right: Subtotal */}
+                      <div className="text-right flex-shrink-0 pt-0.5">
+                        <div className="text-lg font-bold text-gray-900">{formatJPY(subtotal)}</div>
                       </div>
-                    </div>
-                    {/* Row 2: Quantity × Unit Price */}
-                    <div className="text-xs text-gray-500">
-                      {t('sales.quantity')} {line.quantity} × {t('sales.unitPrice')} {formatJPY(line.priceUnit)}
                     </div>
                   </div>
                 </div>
@@ -449,26 +483,35 @@ export default function CreateSalesOrderPage() {
         )}
       </div>
 
-      {/* Lightweight Sticky Bottom Bar */}
-      <div className="fixed bottom-16 md:bottom-0 left-0 right-0 md:left-64 bg-white border-t border-gray-200 z-40">
-        <div className="flex items-center justify-between px-4 h-14">
-          <div className="flex items-baseline gap-2">
-            <span className="text-xs text-gray-500">{t('order.total')}</span>
-            <span className="text-lg font-bold text-gray-900">{formatJPY(totalAmount)}</span>
+      {/* Sticky Bottom Bar */}
+      <div className="fixed bottom-16 md:bottom-0 left-0 right-0 md:left-64 bg-white border-t border-gray-200 shadow-lg z-40">
+        <div className="flex items-center justify-between px-4 py-3">
+          {/* Left: Total amount */}
+          <div className="flex flex-col">
+            <span className="text-xs text-gray-500 mb-0.5">{t('order.total')}</span>
+            <span className="text-xl font-bold text-gray-900">{formatJPY(totalAmount)}</span>
           </div>
-          <div className="flex flex-col items-end gap-1">
+          {/* Right: Action button */}
+          <div className="flex flex-col items-end gap-1.5">
             {!selectedCustomer && (
-              <span className="text-xs text-amber-600">{t('sales.selectCustomerFirst') || '请先选择客户'}</span>
+              <span className="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded">{t('sales.selectCustomerFirst')}</span>
             )}
             {selectedCustomer && orderLines.length === 0 && (
-              <span className="text-xs text-amber-600">{t('sales.addProductsFirst') || '请先添加商品'}</span>
+              <span className="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded">{t('sales.addProductsFirst')}</span>
             )}
             <button
               onClick={handleSubmit}
               disabled={!selectedCustomer || orderLines.length === 0 || isSubmitting}
-              className="btn btn-primary px-5 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn btn-primary px-6 py-2.5 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              {isSubmitting ? <Loading text="" /> : t('sales.createOrder')}
+              {isSubmitting ? (
+                <Loading text="" />
+              ) : (
+                <>
+                  <Check className="w-4 h-4" />
+                  {t('sales.createOrder')}
+                </>
+              )}
             </button>
           </div>
         </div>
