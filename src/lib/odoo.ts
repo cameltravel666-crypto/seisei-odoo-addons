@@ -26,6 +26,8 @@ export interface OdooError {
 
 // Allowlist of permitted model/method combinations
 const ODOO_ALLOWLIST: Record<string, string[]> = {
+  // Reports
+  'ir.actions.report': ['_render_qweb_pdf'],
   // POS
   'product.template': ['search_read', 'read', 'write', 'search_count', 'create'],
   'product.product': ['search_read', 'read', 'write', 'search_count'],
@@ -298,14 +300,14 @@ export class OdooRPC {
     });
   }
 
-  // Get PDF report from Odoo via direct URL
+  // Get PDF report from Odoo with language context
+  // Uses /report/download endpoint which properly handles context parameter
   async getReportPdf(reportName: string, ids: number[], lang?: string): Promise<Buffer> {
     if (!this.sessionId) {
       throw new Error('No session available');
     }
 
     // First, verify session is still valid by making a simple API call
-    // Note: Using res.users search_read which is in the allowlist
     try {
       await this.callKw('res.users', 'search_read', [[['id', '=', 1]]], { fields: ['id'], limit: 1 });
     } catch (error) {
@@ -313,30 +315,87 @@ export class OdooRPC {
       throw new Error('会话已过期，请重新登录 / Session expired, please login again');
     }
 
+    console.log('[OdooRPC] Generating PDF report:', reportName, 'ids:', ids, 'lang:', lang);
+
     const idsStr = ids.join(',');
 
-    // Build URL with database parameter (required by Odoo 18)
-    // and optional language context
-    const params = new URLSearchParams();
-    params.set('db', this.config.db);
+    // Method 1: Try /report/download endpoint with context parameter
+    // This is the endpoint Odoo web client uses and properly handles context
+    try {
+      const reportPdfUrl = `/report/pdf/${reportName}/${idsStr}`;
+      const downloadData = JSON.stringify([reportPdfUrl, 'qweb-pdf']);
+      const contextParam = lang ? JSON.stringify({ lang }) : '';
 
-    if (lang) {
-      params.set('context', JSON.stringify({ lang }));
+      const params = new URLSearchParams();
+      params.set('data', downloadData);
+      if (contextParam) {
+        params.set('context', contextParam);
+      }
+
+      const downloadUrl = `${this.config.baseUrl}/report/download?${params.toString()}`;
+      console.log('[OdooRPC] Trying /report/download:', downloadUrl);
+
+      const response = await fetch(downloadUrl, {
+        method: 'GET',
+        headers: {
+          'Cookie': `session_id=${this.sessionId}`,
+          'Accept': 'application/pdf,*/*',
+        },
+        redirect: 'manual',
+      });
+
+      if (response.ok) {
+        const contentType = response.headers.get('content-type');
+        if (contentType?.includes('application/pdf') || contentType?.includes('application/octet-stream')) {
+          const arrayBuffer = await response.arrayBuffer();
+          const pdfBuffer = Buffer.from(arrayBuffer);
+          console.log('[OdooRPC] PDF generated via /report/download, size:', pdfBuffer.length, 'bytes');
+          return pdfBuffer;
+        }
+      }
+      console.warn('[OdooRPC] /report/download method did not return PDF, trying direct URL');
+    } catch (err1) {
+      console.warn('[OdooRPC] /report/download failed:', err1);
     }
 
-    const reportUrl = `${this.config.baseUrl}/report/pdf/${reportName}/${idsStr}?${params.toString()}`;
+    // Method 2: Try custom API endpoint first (if vendor_ops_core module is installed)
+    // Then fall back to standard Odoo endpoint
+    const params = new URLSearchParams();
+    params.set('db', this.config.db);
+    if (lang) {
+      params.set('lang', lang);
+    }
+    const queryString = params.toString();
 
-    console.log('[OdooRPC] Fetching PDF report:', reportUrl);
+    // Try custom API endpoint first (supports language context)
+    const customApiUrl = `${this.config.baseUrl}/api/report/pdf/${reportName}/${idsStr}?${queryString}`;
+    console.log('[OdooRPC] Trying custom API:', customApiUrl);
 
-    const response = await fetch(reportUrl, {
+    let response = await fetch(customApiUrl, {
       method: 'GET',
       headers: {
         'Cookie': `session_id=${this.sessionId}`,
         'Accept': 'application/pdf',
       },
+      redirect: 'follow',
     });
 
-    // Check response
+    // If custom API fails (404), fall back to standard Odoo endpoint
+    if (response.status === 404) {
+      console.log('[OdooRPC] Custom API not available, using standard Odoo endpoint');
+      const standardUrl = `${this.config.baseUrl}/report/pdf/${reportName}/${idsStr}?${queryString}`;
+      console.log('[OdooRPC] Fetching PDF from:', standardUrl);
+
+      response = await fetch(standardUrl, {
+        method: 'GET',
+        headers: {
+          'Cookie': `session_id=${this.sessionId}`,
+          'Accept': 'application/pdf',
+        },
+        redirect: 'follow',
+      });
+    }
+
     if (!response.ok) {
       console.error('[OdooRPC] PDF request failed:', response.status, response.statusText);
       throw new Error(`PDF generation failed: ${response.status}`);
@@ -344,23 +403,21 @@ export class OdooRPC {
 
     const contentType = response.headers.get('content-type');
 
-    // If not PDF, check what we got
     if (!contentType?.includes('application/pdf')) {
       const text = await response.text();
-      console.error('[OdooRPC] Non-PDF response:', text.substring(0, 300));
+      console.error('[OdooRPC] Non-PDF response (first 500 chars):', text.substring(0, 500));
 
-      // Check if it's a login page redirect
       if (text.includes('login') || text.includes('web/login') || text.includes('oe_login')) {
         throw new Error('会话已过期，请重新登录 / Session expired, please login again');
       }
 
-      throw new Error('PDF generation failed - unexpected response');
+      throw new Error('PDF generation failed - unexpected response type: ' + contentType);
     }
 
     const arrayBuffer = await response.arrayBuffer();
     const pdfBuffer = Buffer.from(arrayBuffer);
 
-    console.log('[OdooRPC] PDF generated successfully, size:', pdfBuffer.length);
+    console.log('[OdooRPC] PDF generated successfully, size:', pdfBuffer.length, 'bytes');
     return pdfBuffer;
   }
 
