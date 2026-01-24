@@ -210,9 +210,9 @@ export async function POST(request: NextRequest) {
         // Post the payment
         await odoo.callKw('account.payment', 'action_post', [[paymentId]]);
 
-        // Try to reconcile with invoices
+        // Try to reconcile with invoices using js_assign_outstanding_line
         try {
-          // Get the payment's move lines
+          // Get the payment's move lines (receivable/payable)
           const payment = await odoo.searchRead<{
             id: number;
             move_id: [number, string] | false;
@@ -223,25 +223,41 @@ export async function POST(request: NextRequest) {
           if (payment.length > 0 && payment[0].move_id) {
             const paymentMoveId = payment[0].move_id[0];
 
-            // Get receivable/payable lines from payment and invoice
+            // Get the receivable/payable line from the payment move
             const accountType = isCustomerInvoice ? 'asset_receivable' : 'liability_payable';
 
-            const moveLines = await odoo.searchRead<{ id: number }>(
+            const paymentLines = await odoo.searchRead<{ id: number }>(
               'account.move.line',
               [
-                ['move_id', 'in', [paymentMoveId, ...invoiceIds]],
+                ['move_id', '=', paymentMoveId],
                 ['account_id.account_type', '=', accountType],
                 ['reconciled', '=', false],
-                ['company_id', '=', companyId],  // Ensure same company
               ],
               { fields: ['id'] }
             );
 
-            if (moveLines.length >= 2) {
-              const lineIds = moveLines.map(l => l.id);
-              await odoo.callKw('account.move.line', 'reconcile', [lineIds], {
-                context: { allowed_company_ids: [companyId] }
-              });
+            if (paymentLines.length > 0) {
+              const paymentLineId = paymentLines[0].id;
+
+              // Use js_assign_outstanding_line on each invoice to reconcile
+              // This method is designed for web client use and works via XML-RPC
+              // Note: Method returns None which causes XML-RPC serialization error, but reconciliation still works
+              for (const invId of invoiceIds) {
+                try {
+                  await odoo.callKw('account.move', 'js_assign_outstanding_line', [[invId], paymentLineId], {
+                    context: { allowed_company_ids: [companyId] }
+                  });
+                  console.log(`[Payment Register] Reconciled invoice ${invId} with payment line ${paymentLineId}`);
+                } catch (assignError) {
+                  // Check if error is just "cannot marshal None" - this means method succeeded but returned None
+                  const errorMsg = String(assignError);
+                  if (errorMsg.includes('cannot marshal None') || errorMsg.includes('dump_nil')) {
+                    console.log(`[Payment Register] Reconciled invoice ${invId} (None return is expected)`);
+                  } else {
+                    console.log(`[Payment Register] js_assign_outstanding_line failed for invoice ${invId}:`, assignError);
+                  }
+                }
+              }
             }
           }
         } catch (reconcileError) {
