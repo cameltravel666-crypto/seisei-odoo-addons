@@ -30,6 +30,38 @@ interface EmailComposeModalProps {
   onSuccess?: () => void;
 }
 
+// Convert HTML to plain text for display
+function htmlToPlainText(html: string): string {
+  return html
+    // Replace <br> and </p> with newlines
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<\/li>/gi, '\n')
+    // Replace list items with bullet points
+    .replace(/<li>/gi, '• ')
+    // Remove all other HTML tags
+    .replace(/<[^>]+>/g, '')
+    // Decode HTML entities
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    // Clean up multiple newlines
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+// Convert plain text to HTML for sending
+function plainTextToHtml(text: string): string {
+  return text
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 0)
+    .map(line => `<p>${line}</p>`)
+    .join('\n');
+}
+
 export function EmailComposeModal({
   isOpen,
   onClose,
@@ -64,7 +96,8 @@ export function EmailComposeModal({
     if (templateData) {
       setRecipient(templateData.recipient || partnerEmail || '');
       setSubject(templateData.subject || '');
-      setBody(templateData.body || '');
+      // Convert HTML to plain text for editing
+      setBody(htmlToPlainText(templateData.body || ''));
       setAttachments(templateData.attachments || []);
       setAttachmentIds(templateData.attachments?.map(a => a.id) || []);
     }
@@ -90,7 +123,8 @@ export function EmailComposeModal({
         body: JSON.stringify({
           recipient,
           subject,
-          body,
+          // Convert plain text back to HTML for sending
+          body: plainTextToHtml(body),
           attachment_ids: attachmentIds,
         }),
       });
