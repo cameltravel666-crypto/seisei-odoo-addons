@@ -456,8 +456,11 @@ function assignSOsToQueues(
     } else if (so.state === 'cancel') {
       // Skip cancelled orders
       continue;
+    } else if (hasUnpaidInvoices) {
+      // Delivered but has unpaid invoices -> awaiting payment (待收款)
+      queue = 'to_invoice';
     } else {
-      // state is 'sale' with delivered, or 'done'
+      // Fully delivered and paid -> completed (已完成)
       queue = 'completed';
     }
 
