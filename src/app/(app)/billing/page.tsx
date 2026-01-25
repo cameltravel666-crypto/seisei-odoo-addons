@@ -210,18 +210,13 @@ export default function BillingOcrPage() {
       try {
         const imageData = await fileToBase64(selectedFile);
 
-        const docTypeMap: Record<OcrDocumentType, string> = {
-          purchase: 'vendor_invoice',
-          sale: 'receipt',
-          expense: 'expense',
-        };
-
-        const response = await fetch('/api/public/ocr/start', {
+        // Use authenticated OCR endpoint (records usage to Odoo 19 for billing)
+        const response = await fetch('/api/billing/ocr-scan', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body: JSON.stringify({
-            docType: docTypeMap[selectedType],
+            docType: selectedType, // Use our doc type directly
             fileName: selectedFile.name,
             mimeType: selectedFile.type,
             imageData,
