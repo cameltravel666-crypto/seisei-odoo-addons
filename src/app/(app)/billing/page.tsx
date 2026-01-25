@@ -193,6 +193,7 @@ export default function BillingOcrPage() {
       };
 
       // Step 2: Auto-write to Odoo module
+      // Note: Convert null to undefined for Zod validation (optional() accepts undefined, not null)
       const writeResponse = await fetch('/api/billing/ocr', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -200,12 +201,12 @@ export default function BillingOcrPage() {
         body: JSON.stringify({
           docType: processedFile.docType,
           date: ocrResult.invoiceDate || new Date().toISOString().split('T')[0],
-          counterparty: ocrResult.partnerName,
+          counterparty: ocrResult.partnerName || undefined,
           total: ocrResult.amountTotal || 0,
-          tax: ocrResult.amountTax,
-          invoiceRegNo: ocrResult.partnerVat,
-          invoiceNumber: ocrResult.invoiceNumber,
-          lineItems: ocrResult.lineItems,
+          tax: ocrResult.amountTax ?? undefined,
+          invoiceRegNo: ocrResult.partnerVat || undefined,
+          invoiceNumber: ocrResult.invoiceNumber || undefined,
+          lineItems: ocrResult.lineItems?.length ? ocrResult.lineItems : undefined,
           createAs: 'invoice',
         }),
       });
