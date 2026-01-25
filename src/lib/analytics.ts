@@ -169,3 +169,71 @@ export function trackSaveSuccess(params: { target: string }) {
     conversion: true,
   });
 }
+
+// ============================================
+// Event Types for Export Feature
+// ============================================
+
+/**
+ * Track export target selection
+ */
+export function trackExportTargetSelect(params: {
+  target: 'freee' | 'moneyforward' | 'yayoi';
+  doc_type?: string;
+}) {
+  track('export_target_select', params);
+}
+
+/**
+ * Track export preview generation
+ */
+export function trackExportPreviewGenerate(params: {
+  target: 'freee' | 'moneyforward' | 'yayoi';
+  rows_count: number;
+  has_warnings: boolean;
+}) {
+  track('export_preview_generate', params);
+}
+
+/**
+ * Track export download click
+ */
+export function trackExportDownloadClick(params: {
+  target: 'freee' | 'moneyforward' | 'yayoi';
+  is_authenticated: boolean;
+}) {
+  track('export_download_click', params);
+}
+
+/**
+ * Track export download success - Conversion event
+ */
+export function trackExportDownloadSuccess(params: {
+  target: 'freee' | 'moneyforward' | 'yayoi';
+  file_format: string;
+  file_size_kb?: number;
+}) {
+  track('export_download_success', {
+    ...params,
+    conversion: true,
+  });
+}
+
+/**
+ * Track auth gate shown (export flow)
+ */
+export function trackExportAuthGateShow(params: {
+  target: 'freee' | 'moneyforward' | 'yayoi';
+}) {
+  track('export_auth_gate_show', params);
+}
+
+/**
+ * Track paywall gate shown (export flow)
+ */
+export function trackExportPaywallShow(params: {
+  target: 'freee' | 'moneyforward' | 'yayoi';
+  reason: 'no_subscription' | 'quota_exceeded';
+}) {
+  track('export_paywall_show', params);
+}

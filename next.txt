@@ -1,177 +1,148 @@
-# Claude Code 指令：Seisei BizNexus 引流 MVP（Landing + Public OCR + Claim + GA4）
+你是 Claude Code（资深全栈架构/实施工程师）。请基于以下现状与目标，为 Seisei BizNexus 实施“OCR 识别 → 会计软件导入模板导出”的完整工程改造，并直接输出可执行的任务拆解、代码改动点、API 契约、数据结构、UI 方案与验收标准。
 
-你是资深全栈工程师。请在不破坏现有业务的前提下，实现一个端到端 MVP：
-- seisei.tokyo 增加一个公开落地页（Receipt/Invoice OCR → Voucher Draft）
-- 落地页 CTA 跳转到 biznexus.seisei.tokyo 的 public OCR 模式
-- public OCR 支持未登录上传真实文件（TEN-PUBLIC），生成 OCR 结果与凭证草稿（Odoo Invoicing: account.move 草稿）
-- 点击“保存/继续”触发登录；登录成功后 Claim：把 TEN-PUBLIC 的处理结果迁移/复制到用户租户，并创建用户租户下的 account.move 草稿
-- 完成后跳转到 biznexus /billing 的详情页（票据中心详情）
-- 同时完成 GA4 跨域/事件埋点（seisei → biznexus 的归因不断裂），核心 KPI 事件为 save_success
+# 0. 项目背景（现状）
+- 已有：单张发票/收据识别体验（Try OCR 落地页）与识别结果展示。
+- 订阅/权限：通过 Stripe 订阅，权限已配置完毕（不需要你重建 Stripe 产品）。
+- 定价体系：展示在 https://seisei.tokyo/pricing（基础计划 + 追加模块结构）。当前“追加模块”在财务/会计类已包含「現金出納帳」「会計Pro」「会計エンタープライズ」等。请把本次“导出能力”作为可控的模块/权限能力融入现有结构（不要求你改定价页内容，但要保证产品内的模块/权限可以挂载到该体系）。参考：定价页模块结构与展示。 
+- 计费中间件：前端/服务端需要调用 Odoo 19 的“中央服务”进行：
+  1) entitlement（订阅权限）校验
+  2) usage（识别用量）扣减与超额计费：每月 30 张免费，超出 20 日元/张（已存在）
+- 存储：识别文件/导出文件需要可追踪、可下载（建议 S3 + 签名 URL）。
+- 目标导出：优先支持日本主流财务软件的“仕訳导入/仕訳帳导入”模板导出，可由用户选择：
+  - freee
+  - マネーフォワード（MFクラウド会計）
+  - 弥生会計
+  （Phase2：奉行/PCA/TKC 等先留扩展接口即可）
 
-========================
-0. 约束与既有系统
-========================
-- Frontend: Next.js 16.1 App Router (src/app), React 19, TS5, Tailwind v4, Zustand, TanStack Query, Zod
-- Auth: 自研 JWT (jose), Google OAuth 自研, 邮箱+密码登录（Next.js 调 Odoo JSON-RPC /web/session/authenticate）
-- OCR: Odoo 模型 ocr.file.task / ocr.file.source / ocr.file.usage (check_quota, increment_usage)
-- Storage: S3 presigned upload; key rule: [tenantId]/[category]/[yyyy]/[mm]/[uuid].[ext]
-- Public tenant 固定: TEN-PUBLIC
-- public 配额: 每 anon_session 每日 3 次
-- “票据中心”实现：基于 Odoo Invoicing/account.move 草稿；产品页入口 https://biznexus.seisei.tokyo/billing
-- 完成后跳转：票据中心详情（在 /billing 下的详情路由）
+# 1. 目标（必须达成）
+A) 落地页（Try OCR）漏斗升级（强获客、强转化）
+- 未登录也允许上传并完成 1 张识别（保持低摩擦）。
+- 识别完成后新增“导出预览（Preview）”区：用户可选择目标软件（freee/MF/弥生），并看到与模板列名一致的 3~10 行预览表格（或 1~2 行也可，但列名必须准确）。
+- “下载导出文件（Download Export）”作为价值闸门：
+  - 未登录：弹出登录/注册（继续/返回不丢失识别结果）
+  - 已登录但无导出权限：弹出升级/订阅引导（跳转到既有订阅流程）
+  - 已登录且有权限：生成并下载对应模板文件（CSV/TXT）
 
-========================
-1. 交付物概览（必须完成）
-========================
-A) seisei.tokyo
-1) 新增落地页：/tools/receipt-to-voucher (日文为主，可保留 EN/中文占位)
-2) CTA 按钮跳转到：
-   https://biznexus.seisei.tokyo/ocr?mode=public&type=receipt&utm_source=seisei&utm_medium=site&utm_campaign=ocr_mvp
+B) 系统内模块能力（留存与扩展）
+- 在系统内（登录后）提供“凭证列表 / OCR Inbox”页面：查看已识别的票据、状态、可重复导出、可批量导出（批量可作为 Phase1.5 或 Phase2，但至少预留结构）。
+- 每条凭证具备：来源（try-ocr/系统内上传）、识别结构化结果、导出历史（导出过哪些模板、时间、下载人）。
 
-B) biznexus.seisei.tokyo
-3) /ocr 页面支持 mode=public, type=receipt|vendor_invoice 等
-4) Public 模式未登录可上传文件，tenant 固定 TEN-PUBLIC
-5) Public 模式调用 Odoo：
-   - check_quota / increment_usage（按 anon_session 粒度）
-   - 创建 ocr.file.source + ocr.file.task，启动识别
-   - 将识别结果用于生成凭证草稿（account.move draft）【MVP 可先在 TEN-PUBLIC 下生成草稿 move】
-6) 结果页显示凭证草稿预览；点击“保存并继续”触发登录（Google 或密码）
-7) 登录成功后执行 Claim：
-   - 以用户 tenant 创建新的 account.move 草稿（复制 TEN-PUBLIC 草稿 move 的关键字段或用同一结构化结果再生成一次）
-   - 附件：将 public S3 object copy 到用户 tenant key
-8) 保存成功后跳转到 /billing 的详情页（如 /billing/[id] 或 /billing?open=ID 以现有路由为准）
-9) GA4 事件埋点：seisei + biznexus 全链路
-   - 转化事件：save_success
-   - 诊断事件：public_session_start, upload_success, ocr_parse_success, voucher_generate_success, claim_success, auth_success
+C) 统一权限 + 用量计费
+- OCR 识别用量：继续使用 Odoo 19 中央服务作为唯一事实来源扣减/计费（30 免费/月，超出 20 日元/张）。
+- 导出下载权限：通过 entitlement 校验控制（Preview 允许，Download 受控）。
+- 所有入口一致：try-ocr 与系统内上传都走相同的 document/usage/entitlement 模型。
 
-========================
-2. 技术设计（必须实现）
-========================
-2.1 匿名会话（anon_session）
-- 新建 cookie: anon_session_id（uuid）
-- 新建 API:
-  - GET/POST /api/public/session: 创建或返回现有 anon_session，并返回 quota_remaining（每日3次）
-- anon_session 计数存储：优先使用 Odoo 的 ocr.file.usage（TEN-PUBLIC + anon_session_id 作为 usage key）
-  - 若 ocr.file.usage 不支持 anon_session 粒度，则在 Next.js 新增一个轻量 KV 存储（sqlite/redis/内存 + TODO）：
-    anon_sessions(id, date, quota_used, ip_hash, ua_hash)
+# 2. 非目标（本期不做）
+- 不重做 Stripe 产品与价格；只对接既有订阅/权限。
+- 不实现复杂会计全链路（采购/应付/审批工作流）——只做到“识别→生成仕訳→模板导出”闭环。
+- 不要求把所有税区分/科目表自动100%匹配：允许用户在导出前进行轻量修正（Minimal Edit），但必须保证导出文件格式正确、可导入率高。
 
-2.2 S3 上传（public）
-- 复用现有 presigned URL 逻辑，但 tenantId 固定为 TEN-PUBLIC，category=documents 或 ocr
-- 新建 API: POST /api/public/presign
-  input: fileName, fileType, size, docType
-  output: presignedUrl, s3Key, expiresIn
-- 保存 s3Key 与 job 关联（anon_session_id + job_id）
+# 3. 总体设计（你需要输出）
+请输出完整设计与实现方案，至少包括：
 
-2.3 Odoo 调用（public）
-- 新建 API: POST /api/public/ocr/start
-  input: anon_session_id, s3Key, docType, fileMeta
-  actions:
-   1) check_quota (TEN-PUBLIC + anon_session_id) -> reject if exceed 3/day
-   2) create ocr.file.source with s3Key
-   3) create ocr.file.task with source + docType + start
-   4) increment_usage
-  output: odoo_task_id, job_id
-- 新建 API: GET /api/public/ocr/status?job_id=...
-  - poll task status until parsed + draft ready
-- 生成凭证草稿（MVP）
-  - 如果当前系统已在 ocr.file.task 流程中生成 account.move draft，则读取该 move 并返回预览
-  - 否则：用结构化结果直接创建 account.move 草稿（TEN-PUBLIC）：
-    account.move.create({ move_type:'entry' or 'in_invoice' based on docType, invoice_date, partner_id(optional), line_ids, tax... })
-  - 返回 draft_move_id 与预览 JSON
+## 3.1 领域模型（建议落地到 DB）
+- Document（凭证/票据）
+- OcrResult（结构化识别结果）
+- CanonicalJournal（标准化仕訳中间格式，建议 JSON + 可展开行）
+- ExportJob / ExportFile（导出记录：target=freee|mf|yayoi，文件路径，checksum，创建人，创建时间）
+- UsageLedger（可选：本地缓存用量事件，但最终以 Odoo 中央服务为准）
+- EntitlementCache（可选：短缓存，避免每次点击都打中央服务；需要 TTL 与回源）
 
-2.4 Auth + Claim
-- public 模式下允许看到结果，但保存按钮触发登录
-- 登录成功后，调用 POST /api/auth/claim
-  input: anon_session_id, job_id, desired_target='billing'
-  actions:
-   1) 获取 public job 对应的 draft_move（TEN-PUBLIC）与 s3Key
-   2) 将 S3 object copy 到用户 tenant key:
-      TEN-XXX/document/yyyy/mm/uuid.ext
-   3) 在用户 tenant 创建新的 account.move 草稿（优先复用 public draft_move 的字段；若不安全则用结构化结果再生成一次）
-   4) 将附件关联到该 account.move（按你现有附件机制：ir.attachment 或自研）
-  output: new_move_id
-- response: redirect to /billing detail page:
-  - 若现有为 /billing/[id] 则 push(`/billing/${new_move_id}`)
-  - 若现有为 /billing?open=id 则 push(`/billing?open=${new_move_id}`)
+说明字段定义、主键、索引（按 tenant_id / user_id / created_at / status）。
 
-========================
-3. 前端改动点（文件级）
-========================
-3.1 seisei.tokyo（营销站）
-- 新增页面：
-  - src/app/tools/receipt-to-voucher/page.tsx
-内容要求：
-  - 日文标题：領収書・請求書をスキャンして仕訳を自動作成
-  - 3 步说明：アップロード → 自動抽出 → 仕訳下書き
-  - CTA 按钮：無料で試す（3回/日）
-  - CTA 链接带 UTM 到 biznexus /ocr?mode=public&type=receipt...
-  - 埋点：cta_click（见 GA 部分）
+## 3.2 API 契约（前后端对齐）
+至少提供：
+- POST /api/ocr/recognize (已有则复用)：返回 document_id + 结构化结果摘要
+- GET /api/documents/:id : 获取 document + ocr + canonical + 导出历史
+- POST /api/export/preview : 入参 {document_id, target}，出参 {columns, rowsSample, warnings}
+- POST /api/export/download : 入参 {document_id, target}，流程：
+  1) 校验登录
+  2) entitlement 校验（导出权限）
+  3) 必要时触发 canonical 生成/修正
+  4) 生成文件 -> S3 -> 返回签名下载 URL（或直接 stream）
+  5) 记录 ExportFile
+- POST /api/entitlements/check : （可选）封装对 Odoo 中央服务的校验
+- POST /api/usage/consume : （可选）封装识别用量扣减（若 recognize 已做则不重复）
 
-3.2 biznexus 产品站
-- 修改 /ocr 页面（如 src/app/ocr/page.tsx 或相关子路由）
-  - 解析 searchParams: mode, type, utm_*
-  - public 模式：
-     - 首次进入调用 /api/public/session，获取 anon_session_id 与 quota_remaining
-     - 上传按钮调用 /api/public/presign -> 直传 S3 -> /api/public/ocr/start
-     - 轮询 /api/public/ocr/status 获取结果 + draft 预览
-     - “保存并继续”按钮：若未登录弹登录；登录成功后调用 /api/auth/claim
-  - 非 public 模式（已登录）：保持原逻辑不变
-  - UI 文案（日文）：
-     - 免费提示：無料で1日3回お試しできます（保存は登録後）
-     - 保存按钮：保存して続行（無料登録）
-     - 次のアクション：仕入請求書/経費への変換は v2（MVP 先只做 billing 草稿）
+要求：所有 API 给出 request/response JSON schema、错误码规范（401/403/422/429/500），以及前端对应的用户提示文案。
 
-- 新增一个轻量登录弹窗组件（若已有则复用）：
-  - 支持 Google OAuth 与邮箱密码
-  - 登录成功触发 auth_success 事件，并继续 claim
+## 3.3 导出器（Exporter）实现
+实现 canonical -> target template 的插件化架构：
+- exporters/freee.ts
+- exporters/moneyforward.ts
+- exporters/yayoi.ts
 
-========================
-4. GA4 埋点（必须）
-========================
-采用 gtag 或 GTM，但事件命名必须一致。实现一个通用函数 track(eventName, params)。
+每个 exporter 必须包含：
+- columns(): string[]  （模板列名）
+- buildRows(canonical): string[][] （生成行）
+- validate(canonical): warnings[] （缺税区分/贷借不平衡/金额为0等）
+- fileFormat: csv or txt，encoding（日本环境建议 Shift_JIS 可选；至少提供 UTF-8 + BOM 方案并可配置）
 
-事件列表：
-A) seisei.tokyo
-- cta_click: {cta_id:'lp_receipt_to_voucher', dest_type:'public_ocr', doc_type:'receipt'}
+注意点：
+- freee：需要输出符合其“仕訳CSV模板”的列结构（包含 [明細行] 常量列的处理）。
+- MoneyForward：需要支持“仕訳帳”导入常见列（至少：取引No/取引日/借方科目/贷方科目/税区分/金額/摘要；其它列可先留空）。
+- 弥生：需要支持“識別フラグ”表达单行/多行仕訳（本期先实现单行仕訳即可，但接口要允许多行扩展）。
 
-B) biznexus public OCR
-- public_session_start: {doc_type, utm_source, utm_medium, utm_campaign}
-- ocr_start: {doc_type}
-- upload_success: {file_type, file_size_kb, num_pages}
-- ocr_parse_success: {processing_time_ms, confidence}
-- voucher_generate_success: {latency_ms, has_tax_split}
-- save_click: {target:'billing'}
-- auth_start: {method:'google'|'password'}
-- auth_success: {method}
-- claim_success: {target:'billing'}
-- save_success: {target:'billing'}   <-- 标记为 conversion
+说明：由于我们不在本 prompt 中提供各厂商完整字段表，请你将“列定义”写成可配置映射（json/ts 常量），并在代码中加 TODO 与注释，便于后续补齐字段。重点是架构可扩展与端到端跑通。
 
-要求：
-- 在 mode=public 首次 session 创建后触发 public_session_start
-- 在关键步骤响应成功时触发各事件
+## 3.4 Canonical（标准中间格式）生成策略
+从 OCR 结果生成 canonical 仕訳（最小可用）：
+- 默认：借方=消耗品費/会議費/旅費交通費 等候选（可按票据类型/关键词做启发式）
+- 贷方=現金/普通預金/クレジットカード 等（可从支付方式推断）
+- 税区分/税率：从票面10%/8%/対象外推断；无法推断则标记 warning 并要求用户在导出前选择
+- 摘要：商户名 + 简述
 
-========================
-5. 验收标准（必须）
-========================
-1) seisei.tokyo 落地页可访问，CTA 正确跳转至 biznexus public OCR，并保留 UTM
-2) 未登录用户可在 public 模式上传（TEN-PUBLIC），完成 OCR，并看到 draft 预览
-3) public 每日 3 次限制生效，超限显示友好提示 + 引导注册
-4) 点击保存触发登录；登录成功后 claim 创建用户 tenant 的 account.move 草稿并复制附件
-5) 页面跳转到 /billing 详情页并能看到该草稿记录
-6) GA4 可看到 save_success 转化，并能通过 source/medium 追踪到 seisei.tokyo
+需要提供“导出前最小编辑（Minimal Edit）”：
+- UI 允许用户改：日期、科目（借/贷）、税区分、摘要、部门（可选）
+- 修改结果写回 canonical（并记录修改人/时间）
 
-========================
-6. 实施顺序建议
-========================
-- 先做 seisei 落地页 + 跳转 + GA cta_click
-- 再做 biznexus public session + presign + ocr.start/status
-- 再做结果预览 + 保存触发登录
-- 最后做 claim + billing 详情跳转
-- 全程补齐 GA 事件
+## 3.5 前端改造（Next.js 假设；若你的技术栈不同请适配）
+需要输出：
+- Try OCR 页面改造：
+  - ExportTargetSelector（freee/MF/弥生）
+  - ExportPreviewTable（列名+样例行）
+  - Download CTA（AuthGate + PaywallGate）
+  - 登录弹窗/升级弹窗的交互流程（不丢失识别结果）
+- 系统内页面新增：
+  - /documents（OCR Inbox 列表）
+  - /documents/:id（详情+预览+导出+历史）
+- 权限与状态展示：
+  - 展示“本月剩余免费识别张数/超额单价”
+  - 导出权限状态（可导出哪些目标）
 
-开始编码前先扫描现有代码，找到：
-- 现有 /ocr 页面与上传逻辑
-- 现有 presign 逻辑位置
-- 现有登录弹窗/登录页面与 JWT 签发逻辑
-- /billing 页面详情路由结构
-并尽量复用现有组件与函数，避免重写。
+## 3.6 对接 Odoo 19 中央服务（计费/权限）
+请输出一套清晰的对接方式（不需要你写 Odoo 端业务逻辑，但要写调用方式与本地封装）：
+- Entitlement 校验：checkExportEntitlement(user, tenant, target)
+- Usage 扣减：consumeOcrUsage(user, tenant, document_id)
+- 重试与熔断：中央服务异常时，预览可以继续（读缓存），下载必须严格校验（Fail Closed）。
+
+## 3.7 安全与合规
+- 文件下载：S3 私有桶 + 短时效 signed URL
+- 敏感字段：票据图片与导出文件都属于财务数据，必须记录 audit log（至少：谁在何时导出了哪个 document 的哪种模板）
+- 速率限制：避免被滥用（Try OCR 未登录也要有基础 rate limit）
+- 数据保留策略：导出文件可设置 7/30/90 天保留（可配置）
+
+## 3.8 可观测性与验收标准
+- 埋点事件：upload_started, ocr_success, exporter_selected, preview_loaded, download_clicked, auth_completed, paywall_view, export_generated, export_downloaded
+- 关键指标：preview->signup, signup->first_download, download_success_rate
+- 自动化测试：exporters 单元测试（给 3 个 canonical fixture），API 契约测试，前端 e2e（至少 try-ocr 流程）
+
+# 4. 输出要求（Claude 交付物）
+请直接输出以下内容（必须具体到文件路径/函数签名/伪代码/任务顺序）：
+1) 架构图（ASCII） + 数据流
+2) DB/数据结构定义（Prisma/SQL/TypeORM 任一，按现有项目栈）
+3) API 契约（OpenAPI-like 简化版即可）
+4) 前端组件拆分与路由（含状态机：未登录/无权限/有权限）
+5) 导出器代码骨架（TypeScript 伪代码或可直接运行的实现）
+6) Odoo 中央服务对接封装（client.ts）
+7) 分阶段实施计划：
+   - Phase0：最小跑通（preview + download gate）
+   - Phase1：系统内 inbox + 导出历史
+   - Phase2：批量导出 + 规则映射
+8) 每个 Phase 的验收清单（Given/When/Then）
+
+# 5. 约束（不要问我问题，做合理假设）
+- 假设前端为 Next.js（App Router）+ TypeScript
+- 假设后端为 Next.js API route 或独立 Node 服务（你自行选择最贴合现状的方式，但要一致）
+- 假设我们已有用户系统与 tenant 概念
+- 任何不确定项请用“合理默认 + TODO”处理，不要反问。

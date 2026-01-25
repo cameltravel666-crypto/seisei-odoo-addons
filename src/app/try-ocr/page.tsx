@@ -15,7 +15,9 @@ import {
   LogIn,
   ArrowRight,
   Info,
+  FileDown,
 } from 'lucide-react';
+import { ExportPanel } from '@/components/export';
 import {
   initGA4,
   trackPublicSessionStart,
@@ -642,18 +644,20 @@ function PublicOcrContent() {
               </div>
             </div>
 
-            {/* Save Button */}
-            <button
-              onClick={handleSaveClick}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition"
-            >
-              保存して続行（無料登録）
-              <ArrowRight className="w-5 h-5" />
-            </button>
-
-            <p className="text-center text-sm text-gray-500 mt-3">
-              無料登録後、仕入請求書として保存されます
-            </p>
+            {/* Export Section */}
+            <div className="border-t pt-4 mt-4">
+              <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                <FileDown className="w-5 h-5 text-blue-600" />
+                会計ソフト向けにエクスポート
+              </h3>
+              <p className="text-sm text-gray-600 mb-4">
+                認識結果を各会計ソフトのインポート形式でダウンロードできます。
+              </p>
+              <ExportPanel
+                documentId={jobId || voucherDraft.id}
+                isAuthenticated={false}
+              />
+            </div>
           </div>
         )}
 
