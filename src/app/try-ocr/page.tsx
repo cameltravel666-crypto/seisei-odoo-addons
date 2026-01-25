@@ -408,7 +408,7 @@ export default function TryOcrPage() {
               ログイン
             </Link>
             <Link
-              href="/login"
+              href="/register"
               className="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
             >
               無料登録
@@ -922,7 +922,7 @@ export default function TryOcrPage() {
             )}
           </p>
           <p className="mt-1">
-            <Link href="/login" className="text-blue-600 hover:underline">
+            <Link href="/register" className="text-blue-600 hover:underline">
               無料登録
             </Link>
             すると毎月30回まで無料
@@ -954,7 +954,7 @@ export default function TryOcrPage() {
                 ログイン
               </Link>
               <Link
-                href="/login"
+                href="/register"
                 className="block w-full text-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium"
               >
                 無料登録
