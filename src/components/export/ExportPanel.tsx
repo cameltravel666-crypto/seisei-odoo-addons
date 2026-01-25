@@ -8,9 +8,35 @@ import { AuthGate } from './AuthGate';
 import { PaywallGate } from './PaywallGate';
 import type { ExportTarget, CanonicalJournal, ExportWarning } from '@/types/export';
 
+// VoucherDraft from OCR result
+interface VoucherDraft {
+  id: string;
+  move_type: string;
+  partner_name: string | null;
+  partner_vat: string | null;
+  invoice_date: string | null;
+  invoice_number?: string | null;
+  amount_total: number | null;
+  amount_untaxed: number | null;
+  amount_tax: number | null;
+  line_items: Array<{
+    product_name: string;
+    account_name: string;
+    quantity: number;
+    unit: string;
+    unit_price: number;
+    tax_rate: string;
+    amount: number;
+  }>;
+  ocr_confidence: number | null;
+  status: string;
+}
+
 export interface ExportPanelProps {
   documentId: string;
   canonical?: CanonicalJournal;
+  voucherDraft?: VoucherDraft;
+  docType?: 'receipt' | 'vendor_invoice' | 'expense';
   isAuthenticated?: boolean;
   onCanonicalChange?: (canonical: CanonicalJournal) => void;
   className?: string;
@@ -80,6 +106,8 @@ const EXPORT_TARGETS: Record<ExportTarget, {
 export function ExportPanel({
   documentId,
   canonical: initialCanonical,
+  voucherDraft,
+  docType = 'receipt',
   isAuthenticated: propIsAuthenticated,
   onCanonicalChange,
   className = '',
@@ -135,6 +163,8 @@ export function ExportPanel({
           documentId,
           target,
           canonical: initialCanonical,
+          voucherDraft,
+          docType,
         }),
       });
 
@@ -163,7 +193,8 @@ export function ExportPanel({
     const isAuthenticated = propIsAuthenticated ?? entitlement?.isAuthenticated ?? false;
 
     if (!isAuthenticated) {
-      setShowAuthGate(true);
+      // Redirect directly to login page
+      window.location.href = `/login?redirect=${encodeURIComponent('/try-ocr')}&job=${documentId}`;
       return;
     }
 
@@ -201,7 +232,7 @@ export function ExportPanel({
         const errorData = await res.json();
 
         if (errorData.error?.code === 'AUTH_REQUIRED') {
-          setShowAuthGate(true);
+          window.location.href = `/login?redirect=${encodeURIComponent('/try-ocr')}&job=${documentId}`;
           return;
         }
 

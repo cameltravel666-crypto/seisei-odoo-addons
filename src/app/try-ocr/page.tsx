@@ -348,7 +348,7 @@ function PublicOcrContent() {
               ログイン
             </Link>
             <Link
-              href="/register"
+              href="/login"
               className="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
             >
               無料登録
@@ -655,6 +655,8 @@ function PublicOcrContent() {
               </p>
               <ExportPanel
                 documentId={jobId || voucherDraft.id}
+                voucherDraft={voucherDraft}
+                docType={docType}
                 isAuthenticated={false}
               />
             </div>

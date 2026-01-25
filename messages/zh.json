@@ -39,7 +39,8 @@
     "amount": "金额",
     "creating": "创建中...",
     "confirmDelete": "确定要删除吗？",
-    "optional": "可选"
+    "optional": "可选",
+    "viewAll": "查看全部"
   },
   "auth": {
     "login": "登录",

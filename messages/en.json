@@ -39,7 +39,8 @@
     "amount": "Amount",
     "creating": "Creating...",
     "confirmDelete": "Are you sure you want to delete?",
-    "optional": "Optional"
+    "optional": "Optional",
+    "viewAll": "View All"
   },
   "auth": {
     "login": "Login",

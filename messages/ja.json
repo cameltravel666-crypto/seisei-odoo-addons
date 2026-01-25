@@ -39,7 +39,8 @@
     "amount": "金額",
     "creating": "作成中...",
     "confirmDelete": "削除しますか？",
-    "optional": "任意"
+    "optional": "任意",
+    "viewAll": "すべて表示"
   },
   "auth": {
     "login": "ログイン",

@@ -18,6 +18,8 @@ const previewRequestSchema = z.object({
   documentId: z.string().min(1),
   target: z.enum(['freee', 'moneyforward', 'yayoi']),
   canonical: z.any().optional(), // 用户编辑后的数据
+  voucherDraft: z.any().optional(), // OCR结果的VoucherDraft
+  docType: z.enum(['receipt', 'vendor_invoice', 'expense']).optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -42,7 +44,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { documentId, target, canonical: userCanonical } = parsed.data;
+    const { documentId, target, canonical: userCanonical, voucherDraft, docType } = parsed.data;
 
     // 验证导出目标
     if (!isValidTarget(target)) {
@@ -64,6 +66,12 @@ export async function POST(request: NextRequest) {
     if (userCanonical) {
       // 使用用户编辑后的数据
       canonical = userCanonical as CanonicalJournal;
+    } else if (voucherDraft) {
+      // 使用前端传递的voucherDraft生成canonical
+      canonical = generateCanonicalJournal(
+        voucherDraft as OcrVoucherDraft,
+        (docType || 'receipt') as 'receipt' | 'vendor_invoice' | 'expense'
+      );
     } else if (sessionId) {
       // 从会话中获取OCR结果
       const job = getJob(sessionId, documentId);
@@ -112,13 +120,29 @@ export async function POST(request: NextRequest) {
       : new Date().toISOString().slice(0, 10).replace(/-/g, '');
     const fileName = `${target}_journal_${date}.${config.fileFormat}`;
 
+    // Transform columns from string[] to { key, label }[]
+    const transformedColumns = preview.columns.map((col, idx) => ({
+      key: `col_${idx}`,
+      label: col,
+      labelJa: col,
+    }));
+
+    // Transform rows from string[][] to Record<string, string | number>[]
+    const transformedRows = preview.rows.map(row => {
+      const rowObj: Record<string, string | number> = {};
+      preview.columns.forEach((col, idx) => {
+        rowObj[`col_${idx}`] = row[idx] ?? '';
+      });
+      return rowObj;
+    });
+
     return NextResponse.json({
       success: true,
       data: {
         target,
         targetInfo: EXPORT_TARGETS[target as ExportTarget],
-        columns: preview.columns,
-        rowsSample: preview.rows,
+        columns: transformedColumns,
+        rowsSample: transformedRows,
         totalRows: preview.rows.length,
         warnings: preview.warnings,
         encoding: config.defaultEncoding,
