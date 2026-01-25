@@ -155,9 +155,6 @@ export default function BillingOcrPage() {
 
   // Process single file: OCR + Auto-write to Odoo
   const processFile = async (processedFile: ProcessedFile): Promise<ProcessedFile> => {
-    // Update status to processing
-    let updated = { ...processedFile, status: 'processing' as const };
-
     try {
       // Step 1: OCR
       const imageData = await fileToBase64(processedFile.file);
@@ -195,11 +192,7 @@ export default function BillingOcrPage() {
         confidence: voucherDraft.ocr_confidence,
       };
 
-      updated = { ...updated, status: 'ocr_done', ocrResult };
-
       // Step 2: Auto-write to Odoo module
-      updated = { ...updated, status: 'writing' };
-
       const writeResponse = await fetch('/api/billing/ocr', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -223,24 +216,25 @@ export default function BillingOcrPage() {
         throw new Error(writeData.error?.message || '書き込みに失敗しました');
       }
 
-      const odooRecord = {
-        id: writeData.data.id,
-        name: writeData.data.name,
-        type: writeData.data.type,
-        url: getOdooRecordUrl(processedFile.docType, writeData.data.type, writeData.data.id),
+      return {
+        ...processedFile,
+        status: 'done',
+        ocrResult,
+        odooRecord: {
+          id: writeData.data.id,
+          name: writeData.data.name,
+          type: writeData.data.type,
+          url: getOdooRecordUrl(processedFile.docType, writeData.data.type, writeData.data.id),
+        },
       };
 
-      updated = { ...updated, status: 'done', odooRecord };
-
     } catch (error) {
-      updated = {
-        ...updated,
+      return {
+        ...processedFile,
         status: 'error',
         error: error instanceof Error ? error.message : '処理に失敗しました',
       };
     }
-
-    return updated;
   };
 
   // Process all pending files
