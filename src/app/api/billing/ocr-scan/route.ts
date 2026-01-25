@@ -3,8 +3,8 @@
  * POST: Perform OCR using Odoo 18 and record usage to Odoo 19 for billing
  *
  * This endpoint:
- * 1. Uses Odoo 18's mature OCR functionality
- * 2. Records usage to local DB (TenantUsageEvent)
+ * 1. Checks quota from Odoo 19 (vendor.ops.tenant)
+ * 2. Uses Odoo 18's mature OCR functionality
  * 3. Records usage to Odoo 19 for billing
  */
 
@@ -13,7 +13,6 @@ import { z } from 'zod';
 import crypto from 'crypto';
 import { getSession } from '@/lib/auth';
 import { getOdooClientForSession } from '@/lib/odoo';
-import { entitlementsService } from '@/lib/entitlements-service';
 import { getOdoo19Client } from '@/lib/odoo19';
 import { prisma } from '@/lib/db';
 
@@ -80,75 +79,6 @@ const ACCOUNT_NAMES_JA: Record<string, string> = {
 };
 
 // ============================================
-// Record usage to Odoo 19
-// ============================================
-
-async function recordUsageToOdoo19(
-  tenantId: string,
-  tenantName: string,
-  odoo19PartnerId: number | null
-): Promise<void> {
-  try {
-    const odoo19 = getOdoo19Client();
-    await odoo19.authenticate();
-
-    // Get or create partner in Odoo 19
-    let partnerId = odoo19PartnerId;
-    if (!partnerId) {
-      partnerId = await odoo19.createOrGetPartner({
-        name: tenantName,
-      });
-    }
-
-    // Get current billing period
-    const now = new Date();
-    const periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-
-    // Get billing rules
-    const rules = await odoo19.getBillingRules();
-    const ocrRule = rules.find(r => r.productCode === 'METERED-OCR');
-
-    // Get current usage count
-    const usageCount = await prisma.tenantUsageEvent.count({
-      where: {
-        tenantId,
-        featureKey: 'ocr',
-        status: 'SUCCEEDED',
-        createdAt: { gte: periodStart, lte: periodEnd },
-      },
-    });
-
-    // Calculate billable
-    const freeQuota = ocrRule?.freeQuota || 30;
-    const billableQty = Math.max(0, usageCount - freeQuota);
-    const unitPrice = ocrRule?.overagePrice || 20;
-
-    if (billableQty > 0) {
-      // Record to Odoo 19
-      await odoo19.recordUsageToOdoo({
-        tenantId,
-        tenantName,
-        partnerId,
-        featureKey: 'ocr',
-        periodStart,
-        periodEnd,
-        totalUsed: usageCount,
-        freeQuota,
-        billableQty,
-        unitPrice,
-        totalAmount: billableQty * unitPrice,
-      });
-
-      console.log(`[Billing] Recorded ${billableQty} billable OCR uses to Odoo 19 for tenant ${tenantId}`);
-    }
-  } catch (error) {
-    console.error('[Billing] Failed to record usage to Odoo 19:', error);
-    // Don't fail the OCR request if billing recording fails
-  }
-}
-
-// ============================================
 // API Handler
 // ============================================
 
@@ -173,16 +103,45 @@ export async function POST(request: NextRequest) {
 
     const { tenantId, userId } = session;
 
-    // Check if OCR usage is allowed
-    const canUse = await entitlementsService.canUseFeature(tenantId, 'ocr');
-    if (!canUse.allowed) {
+    // Get tenant code for Odoo 19
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { tenantCode: true, name: true },
+    });
+
+    if (!tenant?.tenantCode) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: 'TENANT_NOT_FOUND',
+            message: 'テナント情報が見つかりません',
+          },
+        },
+        { status: 404 }
+      );
+    }
+
+    // Check OCR quota from Odoo 19
+    const odoo19 = getOdoo19Client();
+    const quota = await odoo19.getOcrQuota(tenant.tenantCode);
+
+    console.log(`[Billing OCR] Quota check for ${tenant.tenantCode}:`, quota);
+
+    if (!quota.allowed) {
       return NextResponse.json(
         {
           success: false,
           error: {
             code: 'QUOTA_EXCEEDED',
             message: '無料枠を使い切りました。お支払い方法を設定して続けてご利用ください。',
-            reason: canUse.reason,
+            reason: quota.reason,
+            usage: {
+              imageCount: quota.imageCount,
+              freeRemaining: quota.freeRemaining,
+              billableCount: quota.billableCount,
+              totalCost: quota.totalCost,
+            },
           },
         },
         { status: 429 }
@@ -209,7 +168,6 @@ export async function POST(request: NextRequest) {
     const { docType, fileName, mimeType, imageData } = parsed.data;
     const moveType = DOC_TYPE_MAP[docType] || 'in_invoice';
     const jobId = crypto.randomUUID();
-    const idempotencyKey = `ocr_${tenantId}_${jobId}`;
 
     // Get Odoo 18 client for the tenant
     const odoo = await getOdooClientForSession(session);
@@ -249,12 +207,12 @@ export async function POST(request: NextRequest) {
     // Poll for OCR completion (max 60 seconds)
     const MAX_WAIT_MS = 60000;
     const POLL_INTERVAL_MS = 2000;
-    const startTime = Date.now();
+    const ocrStartTime = Date.now();
     let ocrStatus = 'pending';
 
     console.log(`[Billing OCR] Waiting for OCR to complete...`);
 
-    while (Date.now() - startTime < MAX_WAIT_MS) {
+    while (Date.now() - ocrStartTime < MAX_WAIT_MS) {
       const [statusCheck] = await odoo.searchRead<{
         ocr_status: string;
       }>('account.move', [['id', '=', moveId]], {
@@ -385,31 +343,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Record usage to local DB
-    await entitlementsService.recordUsage({
-      tenantId,
-      featureKey: 'ocr',
-      idempotencyKey,
-      status: 'SUCCEEDED',
-      meta: {
-        jobId,
-        moveId,
-        docType,
-        userId,
-      },
-    });
-
-    // Record usage to Odoo 19 (async, don't wait)
-    const tenant = await prisma.tenant.findUnique({
-      where: { id: tenantId },
-      select: { name: true, odoo19PartnerId: true },
-    });
-
-    if (tenant) {
-      recordUsageToOdoo19(tenantId, tenant.name, tenant.odoo19PartnerId).catch(err => {
-        console.error('[Billing] Async Odoo 19 recording failed:', err);
-      });
-    }
+    // Record usage to Odoo 19 (this is the REAL billing)
+    const usageResult = await odoo19.recordOcrUsage(tenant.tenantCode, 1);
+    console.log(`[Billing OCR] Recorded usage to Odoo 19:`, usageResult);
 
     // Calculate totals
     let amountUntaxed = invoice.amount_untaxed || 0;
@@ -472,6 +408,11 @@ export async function POST(request: NextRequest) {
           confidence: voucherDraft.ocr_confidence,
         },
         voucherDraft,
+        billing: {
+          imageCount: usageResult.newImageCount,
+          billableCount: usageResult.newBillableCount,
+          totalCost: usageResult.newTotalCost,
+        },
       },
     });
   } catch (error) {

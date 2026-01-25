@@ -764,6 +764,176 @@ export class Odoo19Client {
       return null;
     }
   }
+
+  // ============================================
+  // OCR Billing Methods (vendor.ops.tenant)
+  // ============================================
+
+  /**
+   * Get OCR quota for a tenant from Odoo 19
+   * Returns current usage, remaining quota, and whether OCR is allowed
+   */
+  async getOcrQuota(tenantCode: string): Promise<{
+    allowed: boolean;
+    tenantId: number | null;
+    imageCount: number;
+    freeRemaining: number;
+    billableCount: number;
+    totalCost: number;
+    yearMonth: string;
+    reason?: string;
+  }> {
+    await this.ensureAuth();
+
+    try {
+      const tenants = await this.searchRead<{
+        id: number;
+        ocr_image_count: number;
+        ocr_free_remaining: number;
+        ocr_billable_count: number;
+        ocr_total_cost: number;
+        ocr_year_month: string;
+      }>(
+        'vendor.ops.tenant',
+        [['code', '=', tenantCode]],
+        ['ocr_image_count', 'ocr_free_remaining', 'ocr_billable_count', 'ocr_total_cost', 'ocr_year_month'],
+        { limit: 1 }
+      );
+
+      if (tenants.length === 0) {
+        console.log(`[Odoo19] Tenant ${tenantCode} not found`);
+        return {
+          allowed: false,
+          tenantId: null,
+          imageCount: 0,
+          freeRemaining: 0,
+          billableCount: 0,
+          totalCost: 0,
+          yearMonth: '',
+          reason: 'TENANT_NOT_FOUND',
+        };
+      }
+
+      const tenant = tenants[0];
+      // Allow if free quota remaining, or if already billable (has payment method assumed)
+      const allowed = tenant.ocr_free_remaining > 0 || tenant.ocr_billable_count > 0;
+
+      return {
+        allowed,
+        tenantId: tenant.id,
+        imageCount: tenant.ocr_image_count,
+        freeRemaining: tenant.ocr_free_remaining,
+        billableCount: tenant.ocr_billable_count,
+        totalCost: tenant.ocr_total_cost,
+        yearMonth: tenant.ocr_year_month,
+        reason: allowed ? undefined : 'QUOTA_EXCEEDED',
+      };
+    } catch (error) {
+      console.error('[Odoo19] Error getting OCR quota:', error);
+      // Allow on error to not block users
+      return {
+        allowed: true,
+        tenantId: null,
+        imageCount: 0,
+        freeRemaining: 30,
+        billableCount: 0,
+        totalCost: 0,
+        yearMonth: '',
+        reason: 'ERROR',
+      };
+    }
+  }
+
+  /**
+   * Record OCR usage to Odoo 19 vendor.ops.tenant
+   * Increments image count and updates billing fields
+   */
+  async recordOcrUsage(tenantCode: string, count: number = 1): Promise<{
+    success: boolean;
+    newImageCount: number;
+    newBillableCount: number;
+    newTotalCost: number;
+    error?: string;
+  }> {
+    await this.ensureAuth();
+
+    const FREE_QUOTA = 30;
+    const PRICE_PER_IMAGE = 20; // JPY
+
+    try {
+      // Get current tenant data
+      const tenants = await this.searchRead<{
+        id: number;
+        ocr_image_count: number;
+        ocr_billable_count: number;
+        ocr_total_cost: number;
+        ocr_year_month: string;
+      }>(
+        'vendor.ops.tenant',
+        [['code', '=', tenantCode]],
+        ['ocr_image_count', 'ocr_billable_count', 'ocr_total_cost', 'ocr_year_month'],
+        { limit: 1 }
+      );
+
+      if (tenants.length === 0) {
+        return {
+          success: false,
+          newImageCount: 0,
+          newBillableCount: 0,
+          newTotalCost: 0,
+          error: 'Tenant not found',
+        };
+      }
+
+      const tenant = tenants[0];
+      const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+
+      // Check if month changed - reset counts
+      let newImageCount = tenant.ocr_image_count;
+      let newBillableCount = tenant.ocr_billable_count;
+      let newTotalCost = tenant.ocr_total_cost;
+
+      if (tenant.ocr_year_month !== currentMonth) {
+        // New month - reset counters
+        newImageCount = count;
+        newBillableCount = Math.max(0, count - FREE_QUOTA);
+        newTotalCost = newBillableCount * PRICE_PER_IMAGE;
+      } else {
+        // Same month - increment
+        newImageCount = tenant.ocr_image_count + count;
+        newBillableCount = Math.max(0, newImageCount - FREE_QUOTA);
+        newTotalCost = newBillableCount * PRICE_PER_IMAGE;
+      }
+
+      // Update tenant
+      const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
+      await this.write('vendor.ops.tenant', [tenant.id], {
+        ocr_image_count: newImageCount,
+        ocr_billable_count: newBillableCount,
+        ocr_total_cost: newTotalCost,
+        ocr_year_month: currentMonth,
+        ocr_last_sync: now,
+      });
+
+      console.log(`[Odoo19] Recorded OCR usage for ${tenantCode}: ${newImageCount} images, ${newBillableCount} billable, ¥${newTotalCost}`);
+
+      return {
+        success: true,
+        newImageCount,
+        newBillableCount,
+        newTotalCost,
+      };
+    } catch (error) {
+      console.error('[Odoo19] Error recording OCR usage:', error);
+      return {
+        success: false,
+        newImageCount: 0,
+        newBillableCount: 0,
+        newTotalCost: 0,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
 }
 
 // Singleton instance
