@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import {
   FileText,
@@ -123,14 +123,58 @@ export default function TryOcrPage() {
   const [preview, setPreview] = useState<PreviewResult | null>(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [sessionReady, setSessionReady] = useState(false);
+  const [quotaRemaining, setQuotaRemaining] = useState<number | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Initialize session on mount
+  useEffect(() => {
+    const initSession = async () => {
+      try {
+        const response = await fetch('/api/public/session', {
+          method: 'GET',
+          credentials: 'include',
+        });
+        const data = await response.json();
+        if (data.success) {
+          setSessionReady(true);
+          setQuotaRemaining(data.data.quotaRemaining);
+        } else {
+          console.error('Failed to initialize session:', data.error);
+        }
+      } catch (error) {
+        console.error('Session init error:', error);
+      }
+    };
+    initSession();
+  }, []);
+
+  // Helper to convert file to base64
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        // Remove data URL prefix (e.g., "data:image/jpeg;base64,")
+        const base64 = result.split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
 
   // Handlers
   const handleFileSelect = useCallback(
     async (selectedFile: File) => {
       if (!selectedType) {
         alert('書類タイプを選択してください');
+        return;
+      }
+
+      if (!sessionReady) {
+        alert('セッションを初期化中です。しばらくお待ちください。');
         return;
       }
 
@@ -141,81 +185,91 @@ export default function TryOcrPage() {
       setPreview(null);
 
       try {
-        // Upload and recognize
-        const formData = new FormData();
-        formData.append('file', selectedFile);
-        formData.append('type', selectedType);
+        // Convert file to base64
+        const imageData = await fileToBase64(selectedFile);
 
+        // Map doc type for API
+        const docTypeMap: Record<OcrDocumentType, string> = {
+          purchase: 'vendor_invoice',
+          sale: 'receipt',
+          expense: 'expense',
+        };
+
+        // Send OCR request (Odoo 18 OCR is synchronous)
         const response = await fetch('/api/public/ocr/start', {
           method: 'POST',
-          body: formData,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            docType: docTypeMap[selectedType],
+            fileName: selectedFile.name,
+            mimeType: selectedFile.type,
+            imageData,
+          }),
         });
 
         const data = await response.json();
 
         if (!response.ok || !data.success) {
+          // Update quota if exceeded
+          if (data.error?.code === 'QUOTA_EXCEEDED') {
+            setQuotaRemaining(0);
+          }
           throw new Error(data.error?.message || 'OCR処理に失敗しました');
         }
 
-        // Poll for result
+        // Odoo OCR returns immediately with results
+        const voucherDraft = data.data.voucherDraft;
         const jobId = data.data.jobId;
-        let attempts = 0;
-        const maxAttempts = 30;
 
-        while (attempts < maxAttempts) {
-          await new Promise((resolve) => setTimeout(resolve, 2000));
+        // Determine tax rate from line items or default to 10%
+        const taxRate = voucherDraft.line_items?.[0]?.tax_rate
+          ? parseInt(voucherDraft.line_items[0].tax_rate) || 10
+          : 10;
 
-          const statusResponse = await fetch(`/api/public/ocr/status?jobId=${jobId}`);
-          const statusData = await statusResponse.json();
+        const result: OcrResult = {
+          documentId: jobId,
+          extractedSummary: {
+            date: voucherDraft.invoice_date || null,
+            counterparty: voucherDraft.partner_name || null,
+            total: voucherDraft.amount_total || null,
+            taxRate: taxRate,
+            tax: voucherDraft.amount_tax || null,
+            invoiceRegNo: voucherDraft.partner_vat || null,
+          },
+          canonicalJournal: {
+            txn_date: voucherDraft.invoice_date || new Date().toISOString().split('T')[0],
+            description: voucherDraft.line_items?.[0]?.product_name || '取引',
+            counterparty_name: voucherDraft.partner_name,
+            amount_gross: voucherDraft.amount_total || 0,
+            amount_tax: voucherDraft.amount_tax,
+            tax_rate: taxRate,
+            tax_included: true,
+            debit: {
+              account_name: getDefaultDebitAccount(selectedType),
+              tax_category: `課税仕入${taxRate}%`,
+            },
+            credit: {
+              account_name: getDefaultCreditAccount(selectedType),
+            },
+            invoice_reg_no: voucherDraft.partner_vat,
+            warnings: [],
+          },
+          warnings: [],
+        };
 
-          if (statusData.data?.status === 'completed') {
-            const result: OcrResult = {
-              documentId: jobId,
-              extractedSummary: {
-                date: statusData.data.result?.voucherDraft?.journal_date || null,
-                counterparty: statusData.data.result?.voucherDraft?.partner_name || null,
-                total: statusData.data.result?.voucherDraft?.amount_total || null,
-                taxRate: statusData.data.result?.voucherDraft?.tax_rate || null,
-                tax: statusData.data.result?.voucherDraft?.amount_tax || null,
-                invoiceRegNo: statusData.data.result?.voucherDraft?.invoice_registration_number || null,
-              },
-              canonicalJournal: {
-                txn_date: statusData.data.result?.voucherDraft?.journal_date || new Date().toISOString().split('T')[0],
-                description: statusData.data.result?.voucherDraft?.description || '',
-                counterparty_name: statusData.data.result?.voucherDraft?.partner_name,
-                amount_gross: statusData.data.result?.voucherDraft?.amount_total || 0,
-                amount_tax: statusData.data.result?.voucherDraft?.amount_tax,
-                tax_rate: statusData.data.result?.voucherDraft?.tax_rate,
-                tax_included: true,
-                debit: {
-                  account_name: getDefaultDebitAccount(selectedType),
-                  tax_category: statusData.data.result?.voucherDraft?.tax_rate ? `課税仕入${statusData.data.result.voucherDraft.tax_rate}%` : undefined,
-                },
-                credit: {
-                  account_name: getDefaultCreditAccount(selectedType),
-                },
-                invoice_reg_no: statusData.data.result?.voucherDraft?.invoice_registration_number,
-                warnings: [],
-              },
-              warnings: statusData.data.result?.warnings || [],
-            };
+        setOcrResult(result);
+        setEditedJournal(result.canonicalJournal);
 
-            setOcrResult(result);
-            setEditedJournal(result.canonicalJournal);
-
-            // Auto-load preview
-            loadPreview(jobId, exportTarget, result.canonicalJournal);
-            break;
-          } else if (statusData.data?.status === 'failed') {
-            throw new Error(statusData.data?.error || 'OCR処理に失敗しました');
-          }
-
-          attempts++;
+        // Update remaining quota
+        if (quotaRemaining !== null) {
+          setQuotaRemaining(Math.max(0, quotaRemaining - 1));
         }
 
-        if (attempts >= maxAttempts) {
-          throw new Error('OCR処理がタイムアウトしました');
-        }
+        // Auto-load preview
+        loadPreview(jobId, exportTarget, result.canonicalJournal);
       } catch (error) {
         console.error('OCR error:', error);
         alert(error instanceof Error ? error.message : 'OCR処理に失敗しました');
@@ -223,7 +277,7 @@ export default function TryOcrPage() {
         setIsUploading(false);
       }
     },
-    [selectedType, exportTarget]
+    [selectedType, exportTarget, sessionReady, quotaRemaining]
   );
 
   const loadPreview = async (
@@ -233,14 +287,22 @@ export default function TryOcrPage() {
   ) => {
     setIsLoadingPreview(true);
     try {
+      // Convert target to uppercase for API
+      const targetMap: Record<ExportTarget, string> = {
+        freee: 'FREEE',
+        moneyforward: 'MONEYFORWARD',
+        yayoi: 'YAYOI',
+      };
+
       const response = await fetch('/api/export/preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           documentId,
-          target,
-          voucherDraft: journal || editedJournal,
-          docType: selectedType === 'purchase' ? 'vendor_invoice' : selectedType === 'sale' ? 'receipt' : 'expense',
+          target: targetMap[target],
+          canonical: journal || editedJournal,
+          docType: selectedType,
         }),
       });
 
@@ -692,7 +754,14 @@ export default function TryOcrPage() {
 
         {/* Info */}
         <div className="text-center text-sm text-gray-500 mt-8">
-          <p>無料で1日3回お試しできます</p>
+          <p>
+            無料で1日3回お試しできます
+            {quotaRemaining !== null && (
+              <span className="ml-2 text-blue-600">
+                （残り{quotaRemaining}回）
+              </span>
+            )}
+          </p>
           <p className="mt-1">
             <Link href="/register" className="text-blue-600 hover:underline">
               無料登録
