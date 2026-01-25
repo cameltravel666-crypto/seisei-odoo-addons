@@ -161,6 +161,7 @@ model Tenant {
   stores             Store[]
   invitations        Invitation[]
   files              File[]
+  ocrDocuments       OcrDocument[]
 
   @@map("tenants")
 }
@@ -1106,4 +1107,195 @@ model Payment {
   invoice Invoice @relation(fields: [invoiceId], references: [id])
 
   @@map("payments")
+}
+
+// ============================================
+// OCR Document Workflow (v2 - 極簡三モジュール)
+// ============================================
+
+enum OcrDocumentType {
+  PURCHASE // 採購 OCR（供應商發票/收據）-> Purchase Order
+  SALE     // 銷售 OCR（對外開票/訂單類）-> Sale Order
+  EXPENSE  // 費用 OCR（領收書/交通費）-> Expense
+}
+
+enum OcrDocumentStatus {
+  UPLOADED     // 已上傳，待識別
+  RECOGNIZING  // 識別中
+  RECOGNIZED   // 識別完成
+  EDITING      // 編輯中（用戶修改 canonical）
+  READY        // 準備就緒（可導出/寫入）
+  EXPORTED     // 已導出 CSV
+  WRITTEN_BACK // 已寫入 Odoo18
+  FAILED       // 處理失敗
+}
+
+enum ExportTarget {
+  FREEE        // freee
+  MONEYFORWARD // MoneyForward（MFクラウド会計）
+  YAYOI        // 弥生会計
+}
+
+enum ExportEncoding {
+  UTF8_BOM   // UTF-8 with BOM (Excel 兼容)
+  SHIFT_JIS  // Shift_JIS (弥生)
+}
+
+enum WritebackStatus {
+  SUCCESS
+  FAILED
+}
+
+// OCR 文檔主表
+model OcrDocument {
+  id        String            @id @default(cuid())
+  tenantId  String?           @map("tenant_id") // null for anonymous
+  userId    String?           @map("user_id")   // null for anonymous
+  type      OcrDocumentType
+  status    OcrDocumentStatus @default(UPLOADED)
+
+  // Source file (S3)
+  sourceFileS3Key  String  @map("source_file_s3_key")
+  sourceFileMime   String  @map("source_file_mime")
+  sourceFileName   String? @map("source_file_name")
+  sourceFileSize   BigInt? @map("source_file_size")
+
+  // Anonymous tracking
+  anonymousSessionId String? @map("anonymous_session_id") // For anonymous users
+
+  // Error tracking
+  errorMessage String? @map("error_message") @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tenant           Tenant?           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ocrResults       OcrResult[]
+  canonicalJournal CanonicalJournal?
+  writebackLogs    WritebackLog[]
+  exportFiles      ExportFile[]
+
+  @@index([tenantId, type])
+  @@index([tenantId, status])
+  @@index([anonymousSessionId])
+  @@map("ocr_documents")
+}
+
+// OCR 識別結果
+model OcrResult {
+  id         String @id @default(cuid())
+  documentId String @map("document_id")
+
+  // Raw OCR response
+  rawJson Json @map("raw_json")
+
+  // Extracted structured fields
+  extractedFieldsJson Json @map("extracted_fields_json")
+
+  // Provider info
+  provider String @default("gemini") // gemini, azure, etc.
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  document OcrDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@map("ocr_results")
+}
+
+// Canonical Journal (統一中間格式)
+model CanonicalJournal {
+  id         String @id @default(cuid())
+  documentId String @unique @map("document_id")
+  tenantId   String? @map("tenant_id")
+
+  // Core journal data (CanonicalJournal JSON)
+  journalJson Json @map("journal_json")
+
+  // Version control for edits
+  version   Int      @default(1)
+  updatedBy String?  @map("updated_by") // user_id who made last edit
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  document OcrDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("canonical_journals")
+}
+
+// Writeback Log (Odoo18 寫入記錄)
+model WritebackLog {
+  id         String @id @default(cuid())
+  documentId String @map("document_id")
+  tenantId   String @map("tenant_id")
+  userId     String @map("user_id")
+
+  // Odoo18 record info
+  odooModel    String @map("odoo_model")    // purchase.order, sale.order, hr.expense
+  odooRecordId Int    @map("odoo_record_id")
+  odooUrl      String? @map("odoo_url")     // Direct link to record
+
+  // Status
+  status    WritebackStatus
+  errorJson Json?           @map("error_json")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  document OcrDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@index([tenantId, userId])
+  @@map("writeback_logs")
+}
+
+// Export File (導出的 CSV 文件)
+model ExportFile {
+  id         String @id @default(cuid())
+  documentId String @map("document_id")
+  tenantId   String @map("tenant_id")
+  userId     String @map("user_id")
+
+  // Export target & encoding
+  target   ExportTarget
+  encoding ExportEncoding @default(UTF8_BOM)
+
+  // S3 location
+  s3Key    String @map("s3_key")
+  filename String
+  checksum String? // SHA-256
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  document OcrDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@index([tenantId, userId])
+  @@map("export_files")
+}
+
+// Audit Event (通用審計日誌 - OCR 專用)
+model OcrAuditEvent {
+  id        String  @id @default(cuid())
+  tenantId  String? @map("tenant_id")
+  userId    String? @map("user_id")
+
+  eventName    String @map("event_name") // ocr.recognize, export.preview, export.download, writeback.create
+  payloadJson  Json?  @map("payload_json")
+
+  // Request context
+  ip        String?
+  userAgent String? @map("user_agent")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId])
+  @@index([eventName])
+  @@map("ocr_audit_events")
 }

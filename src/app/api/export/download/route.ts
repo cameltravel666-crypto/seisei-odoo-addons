@@ -2,39 +2,93 @@
  * Export Download API
  * POST: 生成并下载导出文件
  *
+ * 使用新的極簡三モジュール导出系统
+ *
  * 流程：
  * 1. 校验登录
  * 2. entitlement 校验（导出权限）
  * 3. 生成文件
- * 4. 上传到 S3（可选）
- * 5. 返回下载链接或直接流式传输
- * 6. 记录 ExportJob（审计）
+ * 4. 返回下载流
+ * 5. 记录审计日志
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { getExporter, isValidTarget } from '@/lib/exporters';
-import { generateCanonicalJournal, type OcrVoucherDraft } from '@/lib/canonical-generator';
+import { generateExport, getAvailableTargets } from '@/lib/ocr/exporters';
+import type { CanonicalJournal, ExportTarget, ExportEncoding } from '@/lib/ocr/types';
+import { generateCanonicalJournal as generateFromOcrResult } from '@/lib/ocr/canonical-generator';
 import { getSession } from '@/lib/auth';
 import {
-  validateSession,
   getJob,
   ANON_SESSION_COOKIE,
 } from '@/lib/public-session';
-import type { ExportTarget, CanonicalJournal, ExportEncoding } from '@/types/export';
+
+// ============================================
+// Schema & Types
+// ============================================
 
 const downloadRequestSchema = z.object({
   documentId: z.string().min(1),
-  target: z.enum(['freee', 'moneyforward', 'yayoi']),
+  target: z.enum(['FREEE', 'MONEYFORWARD', 'YAYOI']),
   canonical: z.any().optional(),
-  encoding: z.enum(['utf-8', 'shift-jis', 'utf-8-bom']).optional(),
+  ocrResult: z.any().optional(),
+  docType: z.enum(['purchase', 'sale', 'expense']).optional(),
+  encoding: z.enum(['UTF8_BOM', 'SHIFT_JIS']).optional(),
 });
 
-// TODO: 从 Odoo 中央服务检查导出权限
+// ============================================
+// Helper Functions
+// ============================================
+
+function isValidTarget(target: string): target is ExportTarget {
+  return getAvailableTargets().includes(target as ExportTarget);
+}
+
+// Map lowercase docType to uppercase OcrDocumentType
+function mapDocType(docType: 'purchase' | 'sale' | 'expense'): 'PURCHASE' | 'SALE' | 'EXPENSE' {
+  const mapping: Record<string, 'PURCHASE' | 'SALE' | 'EXPENSE'> = {
+    purchase: 'PURCHASE',
+    sale: 'SALE',
+    expense: 'EXPENSE',
+  };
+  return mapping[docType] || 'EXPENSE';
+}
+
+// Convert OCR result to CanonicalJournal
+function ocrResultToCanonical(
+  ocrResult: Record<string, unknown>,
+  docType: 'purchase' | 'sale' | 'expense'
+): CanonicalJournal {
+  // Extract fields from OCR result to OcrExtractedFields format
+  const extracted = {
+    date: (ocrResult.invoice_date as string) ||
+      (ocrResult.date as string) ||
+      new Date().toISOString().slice(0, 10),
+    total: (ocrResult.amount_total as number) ||
+      (ocrResult.total as number) ||
+      0,
+    tax: (ocrResult.amount_tax as number) ||
+      (ocrResult.tax as number),
+    counterparty: (ocrResult.partner_name as string) ||
+      (ocrResult.counterparty as string) ||
+      (ocrResult.merchant as string),
+    invoice_reg_no: (ocrResult.partner_vat as string) ||
+      (ocrResult.invoice_reg_no as string),
+    description: (ocrResult.description as string),
+    tax_rate: (ocrResult.tax_rate as number) || 10,
+    payment_method: (ocrResult.payment_method as string),
+    doc_no: (ocrResult.doc_no as string) ||
+      (ocrResult.invoice_number as string),
+  };
+
+  // Use the canonical generator from /lib/ocr
+  return generateFromOcrResult(mapDocType(docType), extracted);
+}
+
+// Check export entitlement
 async function checkExportEntitlement(
   userId: string | undefined,
-  tenantId: string | undefined,
-  target: ExportTarget
+  tenantId: string | undefined
 ): Promise<{
   allowed: boolean;
   reason?: 'not_logged_in' | 'no_subscription' | 'quota_exceeded' | 'feature_disabled';
@@ -45,13 +99,13 @@ async function checkExportEntitlement(
   }
 
   // TODO: 调用 Odoo 19 中央服务检查订阅权限
-  // const entitlement = await odoo19Client.checkEntitlement(tenantId, 'export_journal');
+  // const entitlement = await centralClient.checkEntitlement(tenantId, 'export_journal');
 
-  // 临时：登录用户都允许导出（后续需要对接订阅系统）
+  // 临时：登录用户都允许导出
   return { allowed: true };
 }
 
-// TODO: 记录导出到审计日志
+// Record export to audit log
 async function recordExportAudit(
   documentId: string,
   target: ExportTarget,
@@ -59,7 +113,7 @@ async function recordExportAudit(
   tenantId?: string,
   fileName?: string
 ): Promise<void> {
-  // TODO: 写入审计日志
+  // TODO: 写入审计日志到数据库
   console.log('[Export Audit]', {
     documentId,
     target,
@@ -69,6 +123,10 @@ async function recordExportAudit(
     timestamp: new Date().toISOString(),
   });
 }
+
+// ============================================
+// API Handler
+// ============================================
 
 export async function POST(request: NextRequest) {
   try {
@@ -87,13 +145,14 @@ export async function POST(request: NextRequest) {
           error: {
             code: 'VALIDATION_ERROR',
             message: '無効なリクエストです',
+            details: parsed.error.issues,
           },
         },
         { status: 400 }
       );
     }
 
-    const { documentId, target, canonical: userCanonical, encoding } = parsed.data;
+    const { documentId, target, canonical: userCanonical, ocrResult, docType, encoding } = parsed.data;
 
     // 3. 验证导出目标
     if (!isValidTarget(target)) {
@@ -112,12 +171,10 @@ export async function POST(request: NextRequest) {
     // 4. 检查权限
     const entitlement = await checkExportEntitlement(
       session?.odooUserId?.toString(),
-      session?.tenantId,
-      target as ExportTarget
+      session?.tenantId
     );
 
     if (!entitlement.allowed) {
-      // 根据原因返回不同响应
       if (entitlement.reason === 'not_logged_in') {
         return NextResponse.json(
           {
@@ -159,15 +216,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 5. 获取文档数据
+    // 5. 获取/生成 CanonicalJournal
     let canonical: CanonicalJournal;
 
     if (userCanonical) {
       canonical = userCanonical as CanonicalJournal;
+    } else if (ocrResult) {
+      canonical = ocrResultToCanonical(
+        ocrResult as Record<string, unknown>,
+        docType || 'expense'
+      );
     } else if (sessionId) {
       const job = getJob(sessionId, documentId);
 
-      if (!job || !job.ocrResult?.voucherDraft) {
+      if (!job || !job.ocrResult) {
         return NextResponse.json(
           {
             success: false,
@@ -180,88 +242,75 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      canonical = generateCanonicalJournal(
-        job.ocrResult.voucherDraft as OcrVoucherDraft,
-        job.docType as 'receipt' | 'vendor_invoice' | 'expense'
+      const sessionDocType = job.docType === 'vendor_invoice' ? 'purchase' :
+                            job.docType === 'receipt' ? 'expense' :
+                            (job.docType as 'purchase' | 'sale' | 'expense') || 'expense';
+
+      canonical = ocrResultToCanonical(
+        job.ocrResult as Record<string, unknown>,
+        sessionDocType
       );
     } else {
       return NextResponse.json(
         {
           success: false,
           error: {
-            code: 'DOCUMENT_NOT_FOUND',
-            message: 'ドキュメントが見つかりません',
-          },
-        },
-        { status: 404 }
-      );
-    }
-
-    // 6. 验证仕訳数据
-    if (!canonical.isBalanced) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: '借方と貸方が一致しません。修正してから再度お試しください。',
+            code: 'NO_DATA',
+            message: 'canonical または ocrResult が必要です',
           },
         },
         { status: 400 }
       );
     }
 
-    // 7. 获取导出器并生成文件
-    const exporter = getExporter(target as ExportTarget);
-    const result = exporter.export(canonical, encoding as ExportEncoding | undefined);
+    // 6. 使用新的導出系统生成文件
+    const result = generateExport(
+      canonical,
+      documentId,
+      target,
+      encoding as ExportEncoding | undefined
+    );
 
-    // 8. 检查是否有错误级别的警告
-    const hasErrors = result.warnings.some(w => w.severity === 'error');
-    if (hasErrors) {
+    // 7. 检查验证结果
+    if (!result.validation.valid) {
       return NextResponse.json(
         {
           success: false,
           error: {
             code: 'EXPORT_VALIDATION_FAILED',
             message: 'エクスポートデータにエラーがあります',
-            warnings: result.warnings.filter(w => w.severity === 'error'),
+            blocking_errors: result.validation.blocking_errors,
           },
         },
         { status: 400 }
       );
     }
 
-    // 9. 记录审计日志
+    // 8. 记录审计日志
     await recordExportAudit(
       documentId,
-      target as ExportTarget,
+      target,
       session?.odooUserId?.toString(),
       session?.tenantId,
-      result.fileName
+      result.filename
     );
 
-    // 10. 返回文件（直接流式传输）
-    // TODO: 可选上传到 S3 并返回签名 URL
-
-    // 处理编码
-    // Note: For Shift-JIS encoding, we would need iconv-lite
-    // Currently using UTF-8 for all exports
+    // 9. 返回文件
     const encoder = new TextEncoder();
     const encoded = encoder.encode(result.content);
     const fileBuffer = new Uint8Array(encoded);
 
-    // 设置响应头
     const responseHeaders = new Headers();
-    responseHeaders.set('Content-Type', `${result.mimeType}; charset=${result.encoding}`);
+    responseHeaders.set('Content-Type', result.contentType);
     responseHeaders.set(
       'Content-Disposition',
-      `attachment; filename="${encodeURIComponent(result.fileName)}"`
+      `attachment; filename="${encodeURIComponent(result.filename)}"`
     );
     responseHeaders.set('Content-Length', fileBuffer.length.toString());
 
-    // 添加警告到响应头（供前端显示）
-    if (result.warnings.length > 0) {
-      responseHeaders.set('X-Export-Warnings', JSON.stringify(result.warnings));
+    // 添加警告到响应头
+    if (result.validation.warnings.length > 0) {
+      responseHeaders.set('X-Export-Warnings', JSON.stringify(result.validation.warnings));
     }
 
     return new Response(fileBuffer, {
