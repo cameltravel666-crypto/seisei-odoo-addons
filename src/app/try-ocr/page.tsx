@@ -25,6 +25,18 @@ import {
 
 type OcrDocumentType = 'purchase' | 'sale' | 'expense';
 type ExportTarget = 'freee' | 'moneyforward' | 'yayoi';
+type ExportMode = 'detailed' | 'summary'; // 明細 vs 汇总
+
+// Line item from OCR
+interface OcrLineItem {
+  product_name: string;
+  account_name: string;
+  quantity: number;
+  unit: string;
+  unit_price: number;
+  tax_rate: string;
+  amount: number;
+}
 
 interface OcrResult {
   documentId: string;
@@ -35,7 +47,9 @@ interface OcrResult {
     taxRate: number | null;
     tax: number | null;
     invoiceRegNo: string | null;
+    invoiceNumber: string | null;
   };
+  lineItems: OcrLineItem[]; // 明细行
   canonicalJournal: {
     txn_date: string;
     description: string;
@@ -56,6 +70,7 @@ interface PreviewResult {
   columns: { key: string; label: string }[];
   rowsSample: Record<string, string | number>[];
   warnings: string[];
+  totalRows: number;
 }
 
 // ============================================
@@ -125,6 +140,8 @@ export default function TryOcrPage() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
   const [quotaRemaining, setQuotaRemaining] = useState<number | null>(null);
+  const [exportMode, setExportMode] = useState<ExportMode>('summary'); // 默认汇总模式
+  const [showLineItems, setShowLineItems] = useState(false); // 展开明细
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -224,9 +241,20 @@ export default function TryOcrPage() {
         const voucherDraft = data.data.voucherDraft;
         const jobId = data.data.jobId;
 
+        // Extract line items from Odoo response
+        const lineItems: OcrLineItem[] = (voucherDraft.line_items || []).map((item: OcrLineItem) => ({
+          product_name: item.product_name || '',
+          account_name: item.account_name || getDefaultDebitAccount(selectedType),
+          quantity: item.quantity || 1,
+          unit: item.unit || '個',
+          unit_price: item.unit_price || 0,
+          tax_rate: item.tax_rate || '10%',
+          amount: item.amount || 0,
+        }));
+
         // Determine tax rate from line items or default to 10%
-        const taxRate = voucherDraft.line_items?.[0]?.tax_rate
-          ? parseInt(voucherDraft.line_items[0].tax_rate) || 10
+        const taxRate = lineItems[0]?.tax_rate
+          ? parseInt(lineItems[0].tax_rate) || 10
           : 10;
 
         const result: OcrResult = {
@@ -238,10 +266,12 @@ export default function TryOcrPage() {
             taxRate: taxRate,
             tax: voucherDraft.amount_tax || null,
             invoiceRegNo: voucherDraft.partner_vat || null,
+            invoiceNumber: voucherDraft.invoice_number || null,
           },
+          lineItems, // 明细行数据
           canonicalJournal: {
             txn_date: voucherDraft.invoice_date || new Date().toISOString().split('T')[0],
-            description: voucherDraft.line_items?.[0]?.product_name || '取引',
+            description: lineItems[0]?.product_name || '取引',
             counterparty_name: voucherDraft.partner_name,
             amount_gross: voucherDraft.amount_total || 0,
             amount_tax: voucherDraft.amount_tax,
@@ -268,8 +298,8 @@ export default function TryOcrPage() {
           setQuotaRemaining(Math.max(0, quotaRemaining - 1));
         }
 
-        // Auto-load preview
-        loadPreview(jobId, exportTarget, result.canonicalJournal);
+        // Auto-load preview with current export mode
+        loadPreview(jobId, exportTarget, exportMode, result.canonicalJournal, lineItems);
       } catch (error) {
         console.error('OCR error:', error);
         alert(error instanceof Error ? error.message : 'OCR処理に失敗しました');
@@ -283,7 +313,9 @@ export default function TryOcrPage() {
   const loadPreview = async (
     documentId: string,
     target: ExportTarget,
-    journal?: OcrResult['canonicalJournal']
+    mode: ExportMode,
+    journal?: OcrResult['canonicalJournal'],
+    items?: OcrLineItem[]
   ) => {
     setIsLoadingPreview(true);
     try {
@@ -302,6 +334,8 @@ export default function TryOcrPage() {
           documentId,
           target: targetMap[target],
           canonical: journal || editedJournal,
+          lineItems: items || ocrResult?.lineItems || [],
+          exportMode: mode, // 'detailed' | 'summary'
           docType: selectedType,
         }),
       });
@@ -313,6 +347,7 @@ export default function TryOcrPage() {
           columns: data.data.columns,
           rowsSample: data.data.rowsSample,
           warnings: data.data.warnings || [],
+          totalRows: data.data.totalRows || data.data.rowsSample?.length || 0,
         });
       }
     } catch (error) {
@@ -505,8 +540,27 @@ export default function TryOcrPage() {
               3. 認識結果
             </h2>
             <div className="bg-white rounded-xl border border-gray-200 p-4">
-              {/* Summary */}
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+              {/* Invoice Registration Number - Prominent Display */}
+              {ocrResult.extractedSummary.invoiceRegNo && ocrResult.extractedSummary.invoiceRegNo !== '0' ? (
+                <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <p className="text-xs text-green-600 font-medium">適格請求書発行事業者</p>
+                  <p className="text-lg font-mono font-bold text-green-700">
+                    {ocrResult.extractedSummary.invoiceRegNo}
+                  </p>
+                </div>
+              ) : (
+                <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-amber-500" />
+                    <p className="text-sm text-amber-700 font-medium">
+                      インボイス登録番号が見つかりません
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Summary Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                 <div>
                   <p className="text-xs text-gray-500">日付</p>
                   <p className="font-medium">
@@ -520,23 +574,33 @@ export default function TryOcrPage() {
                   </p>
                 </div>
                 <div>
+                  <p className="text-xs text-gray-500">請求書番号</p>
+                  <p className="font-medium text-sm">
+                    {ocrResult.extractedSummary.invoiceNumber || '-'}
+                  </p>
+                </div>
+                <div>
                   <p className="text-xs text-gray-500">合計金額</p>
-                  <p className="font-medium">
+                  <p className="font-medium text-lg text-blue-600">
                     {ocrResult.extractedSummary.total
                       ? `¥${ocrResult.extractedSummary.total.toLocaleString()}`
                       : '-'}
                   </p>
                 </div>
+              </div>
+
+              {/* Tax Summary */}
+              <div className="grid grid-cols-3 gap-4 mb-4 p-3 bg-gray-50 rounded-lg">
                 <div>
-                  <p className="text-xs text-gray-500">税率</p>
+                  <p className="text-xs text-gray-500">税抜金額</p>
                   <p className="font-medium">
-                    {ocrResult.extractedSummary.taxRate
-                      ? `${ocrResult.extractedSummary.taxRate}%`
+                    {ocrResult.extractedSummary.total && ocrResult.extractedSummary.tax
+                      ? `¥${(ocrResult.extractedSummary.total - ocrResult.extractedSummary.tax).toLocaleString()}`
                       : '-'}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">税額</p>
+                  <p className="text-xs text-gray-500">消費税（{ocrResult.extractedSummary.taxRate || 10}%）</p>
                   <p className="font-medium">
                     {ocrResult.extractedSummary.tax
                       ? `¥${ocrResult.extractedSummary.tax.toLocaleString()}`
@@ -544,12 +608,66 @@ export default function TryOcrPage() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">登録番号</p>
-                  <p className="font-medium text-xs">
-                    {ocrResult.extractedSummary.invoiceRegNo || '-'}
+                  <p className="text-xs text-gray-500">税込合計</p>
+                  <p className="font-medium">
+                    {ocrResult.extractedSummary.total
+                      ? `¥${ocrResult.extractedSummary.total.toLocaleString()}`
+                      : '-'}
                   </p>
                 </div>
               </div>
+
+              {/* Line Items Section */}
+              {ocrResult.lineItems.length > 0 && (
+                <div className="mb-4">
+                  <button
+                    onClick={() => setShowLineItems(!showLineItems)}
+                    className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900 mb-2"
+                  >
+                    {showLineItems ? (
+                      <ChevronUp className="w-4 h-4" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4" />
+                    )}
+                    明細行（{ocrResult.lineItems.length}件）
+                  </button>
+
+                  {showLineItems && (
+                    <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-3 py-2 text-left font-medium text-gray-600">品名</th>
+                            <th className="px-3 py-2 text-right font-medium text-gray-600">数量</th>
+                            <th className="px-3 py-2 text-right font-medium text-gray-600">単価</th>
+                            <th className="px-3 py-2 text-center font-medium text-gray-600">税率</th>
+                            <th className="px-3 py-2 text-right font-medium text-gray-600">金額</th>
+                            <th className="px-3 py-2 text-left font-medium text-gray-600">勘定科目</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {ocrResult.lineItems.map((item, idx) => (
+                            <tr key={idx} className="border-t border-gray-100">
+                              <td className="px-3 py-2 text-gray-900">{item.product_name || '-'}</td>
+                              <td className="px-3 py-2 text-right text-gray-600">
+                                {item.quantity} {item.unit}
+                              </td>
+                              <td className="px-3 py-2 text-right text-gray-600">
+                                ¥{item.unit_price.toLocaleString()}
+                              </td>
+                              <td className="px-3 py-2 text-center text-gray-600">{item.tax_rate}</td>
+                              <td className="px-3 py-2 text-right font-medium text-gray-900">
+                                ¥{item.amount.toLocaleString()}
+                              </td>
+                              <td className="px-3 py-2 text-gray-600">{item.account_name}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Warnings */}
               {ocrResult.warnings.length > 0 && (
@@ -573,7 +691,7 @@ export default function TryOcrPage() {
                 ) : (
                   <ChevronDown className="w-4 h-4" />
                 )}
-                {showEdit ? '編集を閉じる' : '編集する'}
+                {showEdit ? '仕訳編集を閉じる' : '仕訳を編集する'}
               </button>
 
               {/* Edit Form */}
@@ -644,7 +762,7 @@ export default function TryOcrPage() {
                   <button
                     onClick={() => {
                       if (ocrResult) {
-                        loadPreview(ocrResult.documentId, exportTarget);
+                        loadPreview(ocrResult.documentId, exportTarget, exportMode, editedJournal || undefined, ocrResult.lineItems);
                       }
                     }}
                     className="col-span-2 mt-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm"
@@ -664,6 +782,47 @@ export default function TryOcrPage() {
               4. エクスポート
             </h2>
             <div className="bg-white rounded-xl border border-gray-200 p-4">
+              {/* Export Mode Selection */}
+              <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                <p className="text-sm font-medium text-gray-700 mb-2">出力形式:</p>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="exportMode"
+                      value="summary"
+                      checked={exportMode === 'summary'}
+                      onChange={() => {
+                        setExportMode('summary');
+                        loadPreview(ocrResult.documentId, exportTarget, 'summary', editedJournal || undefined, ocrResult.lineItems);
+                      }}
+                      className="w-4 h-4 text-blue-600"
+                    />
+                    <span className="text-sm">
+                      <span className="font-medium">汇总模式</span>
+                      <span className="text-gray-500 ml-1">（1行：借方科目・総金額・総税額）</span>
+                    </span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="exportMode"
+                      value="detailed"
+                      checked={exportMode === 'detailed'}
+                      onChange={() => {
+                        setExportMode('detailed');
+                        loadPreview(ocrResult.documentId, exportTarget, 'detailed', editedJournal || undefined, ocrResult.lineItems);
+                      }}
+                      className="w-4 h-4 text-blue-600"
+                    />
+                    <span className="text-sm">
+                      <span className="font-medium">明細模式</span>
+                      <span className="text-gray-500 ml-1">（明細ごと：借方科目・金額・税額）</span>
+                    </span>
+                  </label>
+                </div>
+              </div>
+
               {/* Target Selection */}
               <div className="flex items-center gap-3 mb-4">
                 <label className="text-sm text-gray-600">出力先:</label>
@@ -672,7 +831,7 @@ export default function TryOcrPage() {
                   onChange={(e) => {
                     const target = e.target.value as ExportTarget;
                     setExportTarget(target);
-                    loadPreview(ocrResult.documentId, target);
+                    loadPreview(ocrResult.documentId, target, exportMode, editedJournal || undefined, ocrResult.lineItems);
                   }}
                   className="flex-1 max-w-xs px-3 py-2 border rounded-lg text-sm"
                 >
