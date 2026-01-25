@@ -246,6 +246,48 @@ export async function POST(request: NextRequest) {
     console.log(`[Billing OCR] Calling action_send_to_ocr for move ${moveId}`);
     await odoo.callKw('account.move', 'action_send_to_ocr', [[moveId]], {});
 
+    // Poll for OCR completion (max 60 seconds)
+    const MAX_WAIT_MS = 60000;
+    const POLL_INTERVAL_MS = 2000;
+    const startTime = Date.now();
+    let ocrStatus = 'pending';
+
+    console.log(`[Billing OCR] Waiting for OCR to complete...`);
+
+    while (Date.now() - startTime < MAX_WAIT_MS) {
+      const [statusCheck] = await odoo.searchRead<{
+        ocr_status: string;
+      }>('account.move', [['id', '=', moveId]], {
+        fields: ['ocr_status'],
+      });
+
+      ocrStatus = statusCheck?.ocr_status || 'pending';
+      console.log(`[Billing OCR] OCR status: ${ocrStatus}`);
+
+      if (ocrStatus === 'done' || ocrStatus === 'failed' || ocrStatus === 'not_needed') {
+        break;
+      }
+
+      // Wait before next poll
+      await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS));
+    }
+
+    if (ocrStatus === 'pending' || ocrStatus === 'processing') {
+      console.log(`[Billing OCR] OCR timed out after ${MAX_WAIT_MS}ms`);
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: 'OCR_TIMEOUT',
+            message: 'OCR処理がタイムアウトしました。しばらくしてから再度お試しください。',
+          },
+        },
+        { status: 504 }
+      );
+    }
+
+    console.log(`[Billing OCR] OCR completed with status: ${ocrStatus}`);
+
     // Read back OCR results
     const [invoice] = await odoo.searchRead<{
       id: number;
