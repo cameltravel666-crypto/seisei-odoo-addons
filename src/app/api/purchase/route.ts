@@ -98,6 +98,16 @@ export async function GET(request: NextRequest) {
     const odoo = await getOdooClientForSession(session);
     const today = new Date().toISOString().split('T')[0];
 
+    console.log(`[Purchase API] Session tenant: ${session.tenantId}, today: ${today}`);
+
+    // Debug: Count total purchase orders in this Odoo instance
+    try {
+      const totalPOCount = await odoo.searchCount('purchase.order', []);
+      console.log(`[Purchase API] Total POs in Odoo (no filter): ${totalPOCount}`);
+    } catch (e) {
+      console.log(`[Purchase API] Could not count total POs: ${e}`);
+    }
+
     // Capability detection
     const capabilities = await detectCapabilities(odoo);
 
@@ -110,11 +120,49 @@ export async function GET(request: NextRequest) {
       dateDomain.push(['date_order', '<=', `${dateTo} 23:59:59`]);
     }
 
-    // Fetch all POs in date range for queue assignment
-    const allPOs = await odoo.searchRead<PurchaseOrder>('purchase.order', dateDomain, {
-      fields: ['name', 'partner_id', 'date_order', 'amount_total', 'state', 'picking_ids', 'receipt_status', 'invoice_status'],
-      order: sortBy === 'amount' ? 'amount_total desc' : 'date_order desc',
-    });
+    // Always fetch ALL draft orders (state in draft/sent) regardless of date filter
+    // Draft orders should always be visible in to_confirm queue
+    // Also fetch orders within the date range for other queue assignments
+    let allPOs: PurchaseOrder[] = [];
+
+    // Fetch both: orders in date range AND all draft orders in parallel
+    const [datedPOs, draftPOs] = await Promise.all([
+      odoo.searchRead<PurchaseOrder>('purchase.order', dateDomain, {
+        fields: ['name', 'partner_id', 'date_order', 'amount_total', 'state', 'picking_ids', 'receipt_status', 'invoice_status'],
+        order: sortBy === 'amount' ? 'amount_total desc' : 'date_order desc',
+      }),
+      odoo.searchRead<PurchaseOrder>('purchase.order', [['state', 'in', ['draft', 'sent']]], {
+        fields: ['name', 'partner_id', 'date_order', 'amount_total', 'state', 'picking_ids', 'receipt_status', 'invoice_status'],
+        order: sortBy === 'amount' ? 'amount_total desc' : 'date_order desc',
+      }),
+    ]);
+
+    console.log(`[Purchase API] Queue: ${queue}, DateFrom: ${dateFrom}, DateTo: ${dateTo}`);
+    console.log(`[Purchase API] Dated POs: ${datedPOs.length}, Draft POs: ${draftPOs.length}`);
+
+    // Debug: Log all draft PO names and states
+    if (draftPOs.length > 0) {
+      console.log(`[Purchase API] Draft PO names:`, draftPOs.slice(0, 20).map(po => `${po.name}:${po.state}`).join(', '));
+    }
+
+    // Merge and deduplicate by ID
+    const poMap = new Map<number, PurchaseOrder>();
+    for (const po of datedPOs) {
+      poMap.set(po.id, po);
+    }
+    for (const po of draftPOs) {
+      poMap.set(po.id, po);
+    }
+    allPOs = Array.from(poMap.values());
+
+    console.log(`[Purchase API] Total unique POs after merge: ${allPOs.length}`);
+
+    // Re-sort after merging
+    if (sortBy === 'amount') {
+      allPOs.sort((a, b) => b.amount_total - a.amount_total);
+    } else {
+      allPOs.sort((a, b) => b.date_order.localeCompare(a.date_order));
+    }
 
     // Get picking status map if we have access
     let pickingStatusMap: Map<string, { received: boolean; pendingPickings: StockPicking[] }> = new Map();
@@ -134,6 +182,8 @@ export async function GET(request: NextRequest) {
 
     // Assign each PO to a queue
     const queueAssignments = assignPOsToQueues(allPOs, pickingStatusMap, billsMap, capabilities, today);
+
+    console.log(`[Purchase API] Queue assignments: to_confirm=${queueAssignments.to_confirm.length}, to_receive=${queueAssignments.to_receive.length}, completed=${queueAssignments.completed.length}`);
 
     // Calculate KPIs
     const kpi = calculateKPIs(queueAssignments, allUnpaidBills, today, capabilities);
