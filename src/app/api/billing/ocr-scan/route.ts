@@ -360,11 +360,11 @@ export async function POST(request: NextRequest) {
     // Record usage to Odoo 19 (async, don't wait)
     const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
-      select: { name: true, odooPartnerId: true },
+      select: { name: true, odoo19PartnerId: true },
     });
 
     if (tenant) {
-      recordUsageToOdoo19(tenantId, tenant.name, tenant.odooPartnerId).catch(err => {
+      recordUsageToOdoo19(tenantId, tenant.name, tenant.odoo19PartnerId).catch(err => {
         console.error('[Billing] Async Odoo 19 recording failed:', err);
       });
     }
