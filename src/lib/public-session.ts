@@ -178,10 +178,23 @@ export function getSessionJobs(sessionId: string): PublicJobData[] {
 }
 
 /**
- * Validate session exists
+ * Validate session exists - recreate if missing (e.g., after server restart)
  */
 export function validateSession(sessionId: string): boolean {
-  return sessionStore.has(sessionId);
+  if (sessionStore.has(sessionId)) {
+    return true;
+  }
+
+  // Session doesn't exist (maybe server restarted) - recreate it
+  // This allows the user to continue without needing to refresh
+  sessionStore.set(sessionId, {
+    createdAt: new Date(),
+    quotaByDate: new Map(),
+    jobs: new Map(),
+  });
+
+  console.log(`[Public Session] Recreated missing session: ${sessionId.substring(0, 8)}...`);
+  return true;
 }
 
 /**

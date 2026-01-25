@@ -2,6 +2,7 @@
  * Public OCR Start API
  * POST: Start OCR processing for public (anonymous) users
  * Uses Odoo 18's OCR functionality via public tenant
+ * Records usage to Odoo 19 for billing under TEN-MKQZYN00
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -15,6 +16,10 @@ import {
   ANON_SESSION_COOKIE,
 } from '@/lib/public-session';
 import { getPublicOdooClient, resetPublicOdooClient } from '@/lib/odoo-public';
+import { getOdoo19Client } from '@/lib/odoo19';
+
+// Default tenant for public OCR billing
+const PUBLIC_BILLING_TENANT = 'TEN-MKQZYN00';
 
 const startRequestSchema = z.object({
   docType: z.enum(['receipt', 'vendor_invoice', 'expense']).default('receipt'),
@@ -312,6 +317,16 @@ export async function POST(request: NextRequest) {
 
       // Increment quota after successful processing
       incrementQuota(sessionId);
+
+      // Record usage to Odoo 19 for billing (under TEN-MKQZYN00)
+      try {
+        const odoo19 = getOdoo19Client();
+        const usageResult = await odoo19.recordOcrUsage(PUBLIC_BILLING_TENANT, 1);
+        console.log(`[Public OCR] Recorded usage to Odoo 19 for ${PUBLIC_BILLING_TENANT}:`, usageResult);
+      } catch (billingError) {
+        // Don't fail OCR if billing fails - just log the error
+        console.error('[Public OCR] Failed to record billing to Odoo 19:', billingError);
+      }
 
       // Calculate totals from line items if Odoo hasn't calculated them yet
       let amountUntaxed = invoice.amount_untaxed || 0;
