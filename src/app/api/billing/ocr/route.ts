@@ -498,6 +498,10 @@ export async function POST(request: NextRequest) {
     const parsed = ocrWriteRequestSchema.safeParse(body);
 
     if (!parsed.success) {
+      console.error('[Billing OCR Write] Validation failed:', {
+        issues: parsed.error.issues,
+        receivedBody: JSON.stringify(body, null, 2),
+      });
       return NextResponse.json(
         {
           success: false,
