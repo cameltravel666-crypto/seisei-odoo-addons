@@ -194,6 +194,8 @@ export default function BillingOcrPage() {
 
       // Step 2: Auto-write to Odoo module
       // Note: Convert null to undefined for Zod validation (optional() accepts undefined, not null)
+      // Use 'order' for purchase/sale to create orders (not invoices/bills)
+      const createAs = processedFile.docType === 'expense' ? 'invoice' : 'order';
       const writeResponse = await fetch('/api/billing/ocr', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -207,7 +209,7 @@ export default function BillingOcrPage() {
           invoiceRegNo: ocrResult.partnerVat || undefined,
           invoiceNumber: ocrResult.invoiceNumber || undefined,
           lineItems: ocrResult.lineItems?.length ? ocrResult.lineItems : undefined,
-          createAs: 'invoice',
+          createAs,
         }),
       });
 
