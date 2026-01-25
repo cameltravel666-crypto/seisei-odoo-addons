@@ -1,7 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import { X, Scan, Edit3 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { OcrScannerModal } from './OcrScannerModal';
 
 export interface CreateEntryModalProps {
   isOpen: boolean;
@@ -19,20 +21,64 @@ export function CreateEntryModal({
   category,
 }: CreateEntryModalProps) {
   const router = useRouter();
+  const [showOcrScanner, setShowOcrScanner] = useState(false);
 
-  if (!isOpen) return null;
+  if (!isOpen && !showOcrScanner) return null;
+
+  // Map category to OCR doc type
+  const getDefaultDocType = () => {
+    switch (category) {
+      case 'sales':
+        return 'sale' as const;
+      case 'purchase':
+        return 'purchase' as const;
+      case 'expense':
+        return 'expense' as const;
+      default:
+        return undefined;
+    }
+  };
 
   const handleOcrClick = () => {
-    // TODO: OCRページへ遷移（カテゴリ情報を渡す）
-    router.push(`/ocr${category ? `?category=${category}` : ''}`);
+    setShowOcrScanner(true);
+  };
+
+  const handleOcrClose = () => {
+    setShowOcrScanner(false);
     onClose();
+  };
+
+  const handleOcrSuccess = (result: { id: number; name: string; type: string }) => {
+    console.log('OCR write success:', result);
+    // Could navigate to the created record or refresh the list
   };
 
   const handleManualClick = () => {
-    // TODO: 手入力フォームへ遷移（開発中）
-    console.log('Manual entry - coming soon');
+    // Navigate to manual entry form based on category
+    if (category === 'sales') {
+      router.push('/billing/sales/new');
+    } else if (category === 'purchase') {
+      router.push('/billing/purchase/new');
+    } else if (category === 'expense') {
+      router.push('/billing/expense/new');
+    } else {
+      // Default: stay on modal
+      console.log('Manual entry - coming soon');
+    }
     onClose();
   };
+
+  // Show OCR Scanner if opened
+  if (showOcrScanner) {
+    return (
+      <OcrScannerModal
+        isOpen={true}
+        onClose={handleOcrClose}
+        defaultDocType={getDefaultDocType()}
+        onSuccess={handleOcrSuccess}
+      />
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">

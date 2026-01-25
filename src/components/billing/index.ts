@@ -4,3 +4,4 @@ export { CreateEntryModal } from './CreateEntryModal';
 export type { CreateEntryModalProps } from './CreateEntryModal';
 export { LoginCTARequestModal } from './LoginCTARequestModal';
 export type { LoginCTARequestModalProps } from './LoginCTARequestModal';
+export { OcrScannerModal } from './OcrScannerModal';
