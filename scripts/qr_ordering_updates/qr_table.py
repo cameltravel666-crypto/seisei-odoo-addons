@@ -192,10 +192,13 @@ class QrTable(models.Model):
             'qr_ordering.base_url',
             default='https://demo.nagashiro.top'
         )
+        # 获取当前数据库名，用于多租户环境
+        db_name = self.env.cr.dbname
         for record in self:
             if record.qr_token:
-                record.qr_url = f"{qr_base_url}/qr/order/{record.qr_token}"
-                record.qr_url_v2 = f"{qr_base_url}/qr/order/{record.qr_token}?menu_ui_v2=1"
+                # URL 必须包含 db 参数，否则多租户环境下无法识别数据库
+                record.qr_url = f"{qr_base_url}/qr/order/{record.qr_token}?db={db_name}"
+                record.qr_url_v2 = f"{qr_base_url}/qr/order/{record.qr_token}?db={db_name}&menu_ui_v2=1"
             else:
                 record.qr_url = False
                 record.qr_url_v2 = False
