@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    
+    <!-- Main Menu -->
+    <menuitem id="qr_ordering_menu_root"
+        name="QR Ordering / 扫码点餐"
+        web_icon="qr_ordering,static/description/icon.png"
+        sequence="60"/>
+    
+    <!-- Orders Menu -->
+    <menuitem id="qr_ordering_menu_orders"
+        name="Orders / 订单"
+        parent="qr_ordering_menu_root"
+        sequence="10"/>
+    
+    <menuitem id="qr_ordering_menu_orders_all"
+        name="All Orders / 所有订单"
+        parent="qr_ordering_menu_orders"
+        action="qr_order_action"
+        sequence="10"/>
+    
+    <menuitem id="qr_ordering_menu_sessions"
+        name="Sessions / 会话"
+        parent="qr_ordering_menu_orders"
+        action="qr_session_action"
+        sequence="20"/>
+    
+    <!-- Tables Menu -->
+    <menuitem id="qr_ordering_menu_tables"
+        name="Tables / 餐桌"
+        parent="qr_ordering_menu_root"
+        action="qr_table_action"
+        sequence="20"/>
+    
+    <!-- Configuration Menu -->
+    <menuitem id="qr_ordering_menu_config"
+        name="Configuration / 配置"
+        parent="qr_ordering_menu_root"
+        sequence="90"/>
+    
+    <menuitem id="qr_ordering_menu_tags"
+        name="Product Tags / 菜品标签"
+        parent="qr_ordering_menu_config"
+        action="qr_product_tag_action"
+        sequence="10"/>
+    
+</odoo>
+
+
+

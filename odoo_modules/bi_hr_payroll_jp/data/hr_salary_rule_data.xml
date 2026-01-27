@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <data noupdate="1">
+        <!-- Japan Payroll Salary Structure -->
+        <record id="structure_japan_payroll" model="hr.payroll.structure">
+            <field name="name">Japan Payroll / 日本給与</field>
+            <field name="code">JP_PAYROLL</field>
+            <field name="rule_ids" eval="[(6, 0, [])]"/>
+        </record>
+
+        <!-- ========================================== -->
+        <!-- Social Insurance Deduction Rules -->
+        <!-- ========================================== -->
+
+        <!-- Health Insurance / 健康保険 -->
+        <record id="rule_health_insurance" model="hr.salary.rule">
+            <field name="name">Health Insurance / 健康保険</field>
+            <field name="code">JP_HEALTH_INS</field>
+            <field name="category_id" ref="category_social_insurance"/>
+            <field name="struct_id" ref="structure_japan_payroll"/>
+            <field name="sequence">100</field>
+            <field name="condition_select">none</field>
+            <field name="amount_select">code</field>
+            <field name="amount_python_compute">
+result = -payslip.health_insurance_amount if payslip.health_insurance_amount else 0
+            </field>
+            <field name="note">健康保険料（被保険者負担分）/ Health insurance premium (employee portion)</field>
+        </record>
+
+        <!-- Care Insurance / 介護保険 -->
+        <record id="rule_care_insurance" model="hr.salary.rule">
+            <field name="name">Care Insurance / 介護保険</field>
+            <field name="code">JP_CARE_INS</field>
+            <field name="category_id" ref="category_social_insurance"/>
+            <field name="struct_id" ref="structure_japan_payroll"/>
+            <field name="sequence">110</field>
+            <field name="condition_select">python</field>
+            <field name="condition_python">
+result = payslip.is_care_insurance_applicable
+            </field>
+            <field name="amount_select">code</field>
+            <field name="amount_python_compute">
+result = -payslip.care_insurance_amount if payslip.care_insurance_amount else 0
+            </field>
+            <field name="note">介護保険料（40歳以上65歳未満）/ Care insurance premium (ages 40-64)</field>
+        </record>
+
+        <!-- Pension Insurance / 厚生年金 -->
+        <record id="rule_pension_insurance" model="hr.salary.rule">
+            <field name="name">Pension Insurance / 厚生年金</field>
+            <field name="code">JP_PENSION_INS</field>
+            <field name="category_id" ref="category_social_insurance"/>
+            <field name="struct_id" ref="structure_japan_payroll"/>
+            <field name="sequence">120</field>
+            <field name="condition_select">none</field>
+            <field name="amount_select">code</field>
+            <field name="amount_python_compute">
+result = -payslip.pension_amount if payslip.pension_amount else 0
+            </field>
+            <field name="note">厚生年金保険料（被保険者負担分）/ Pension insurance premium (employee portion)</field>
+        </record>
+
+        <!-- Employment Insurance / 雇用保険 -->
+        <record id="rule_employment_insurance" model="hr.salary.rule">
+            <field name="name">Employment Insurance / 雇用保険</field>
+            <field name="code">JP_EMPLOY_INS</field>
+            <field name="category_id" ref="category_social_insurance"/>
+            <field name="struct_id" ref="structure_japan_payroll"/>
+            <field name="sequence">130</field>
+            <field name="condition_select">none</field>
+            <field name="amount_select">code</field>
+            <field name="amount_python_compute">
+result = -payslip.employment_insurance_amount if payslip.employment_insurance_amount else 0
+            </field>
+            <field name="note">雇用保険料（被保険者負担分）/ Employment insurance premium (employee portion)</field>
+        </record>
+
+        <!-- Total Social Insurance (for display) -->
+        <record id="rule_total_social_insurance" model="hr.salary.rule">
+            <field name="name">Total Social Insurance / 社会保険料合計</field>
+            <field name="code">JP_TOTAL_SOCIAL</field>
+            <field name="category_id" ref="category_social_insurance"/>
+            <field name="struct_id" ref="structure_japan_payroll"/>
+            <field name="sequence">140</field>
+            <field name="appears_on_payslip">False</field>
+            <field name="condition_select">none</field>
+            <field name="amount_select">code</field>
+            <field name="amount_python_compute">
+result = -payslip.total_social_insurance if payslip.total_social_insurance else 0
+            </field>
+        </record>
+
+        <!-- ========================================== -->
+        <!-- Tax Deduction Rules -->
+        <!-- ========================================== -->
+
+        <!-- Income Tax / 所得税 -->
+        <record id="rule_income_tax" model="hr.salary.rule">
+            <field name="name">Income Tax / 所得税</field>
+            <field name="code">JP_INCOME_TAX</field>
+            <field name="category_id" ref="category_tax"/>
+            <field name="struct_id" ref="structure_japan_payroll"/>
+            <field name="sequence">200</field>
+            <field name="condition_select">none</field>
+            <field name="amount_select">code</field>
+            <field name="amount_python_compute">
+# Calculate taxable income (gross - social insurance)
+taxable = categories.GROSS + categories.SOCIAL_INS
+# Get income tax from withholding table
+employee = payslip.employee_id
+tax = employee._get_withholding_tax(taxable)
+result = -tax
+            </field>
+            <field name="note">源泉徴収税額（甲欄/乙欄）/ Withholding tax (Column A/B)</field>
+        </record>
+
+        <!-- Resident Tax / 住民税 -->
+        <record id="rule_resident_tax" model="hr.salary.rule">
+            <field name="name">Resident Tax / 住民税</field>
+            <field name="code">JP_RESIDENT_TAX</field>
+            <field name="category_id" ref="category_tax"/>
+            <field name="struct_id" ref="structure_japan_payroll"/>
+            <field name="sequence">210</field>
+            <field name="condition_select">python</field>
+            <field name="condition_python">
+result = payslip.employee_id.resident_tax_amount > 0
+            </field>
+            <field name="amount_select">code</field>
+            <field name="amount_python_compute">
+result = -payslip.employee_id.resident_tax_amount
+            </field>
+            <field name="note">住民税（特別徴収）/ Resident tax (special collection)</field>
+        </record>
+
+        <!-- ========================================== -->
+        <!-- Net Salary Rule -->
+        <!-- ========================================== -->
+
+        <record id="rule_net_japan" model="hr.salary.rule">
+            <field name="name">Net Salary / 差引支給額</field>
+            <field name="code">JP_NET</field>
+            <field name="category_id" ref="bi_hr_payroll.NET"/>
+            <field name="struct_id" ref="structure_japan_payroll"/>
+            <field name="sequence">999</field>
+            <field name="condition_select">none</field>
+            <field name="amount_select">code</field>
+            <field name="amount_python_compute">
+result = categories.GROSS + categories.DED
+            </field>
+        </record>
+    </data>
+</odoo>

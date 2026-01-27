@@ -6,10 +6,3 @@ from . import hr_employee
 from . import res_config_settings
 from . import hr_salary_rule
 from . import hr_payslip
-from . import res_company
-
-# Japan Payroll Models
-from . import hr_insurance_prefecture
-from . import hr_insurance_rate
-from . import hr_insurance_grade
-from . import hr_withholding_tax

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- 扩展 Discuss Channel 视图，添加 AI Assistant 按钮 -->
+    <!-- 注意：Odoo 18 中 discuss.channel 的视图可能在 mail 模块中 -->
+    <!-- 我们尝试多个可能的视图 ID -->
+    
+    <!-- 方案1: 继承 mail.discuss_channel_view_form (如果存在) -->
+    <record id="view_discuss_channel_form_inherit_ai_companion" model="ir.ui.view">
+        <field name="name">discuss.channel.form.inherit.ai.companion</field>
+        <field name="model">discuss.channel</field>
+        <field name="inherit_id" ref="mail.discuss_channel_view_form" optional="primary"/>
+        <field name="arch" type="xml">
+            <!-- 在 header 中添加按钮 -->
+            <xpath expr="//header" position="inside">
+                <button name="action_add_ai_assistant" 
+                        string="🤖 添加 AI Assistant" 
+                        type="object" 
+                        class="btn-secondary"
+                        invisible="context.get('default_channel_type') == 'channel' or context.get('default_channel_type') == 'group'"/>
+                <button name="action_check_ai_config" 
+                        string="🔍 检查 AI 配置" 
+                        type="object" 
+                        class="btn-info"/>
+            </xpath>
+        </field>
+    </record>
+    
+    <!-- 方案2: 如果上面的视图不存在，尝试继承 mail.channel_view_form -->
+    <record id="view_mail_channel_form_inherit_ai_companion" model="ir.ui.view">
+        <field name="name">mail.channel.form.inherit.ai.companion</field>
+        <field name="model">discuss.channel</field>
+        <field name="inherit_id" ref="mail.channel_view_form" optional="primary"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="action_add_ai_assistant" 
+                        string="🤖 添加 AI Assistant" 
+                        type="object" 
+                        class="btn-secondary"/>
+                <button name="action_check_ai_config" 
+                        string="🔍 检查 AI 配置" 
+                        type="object" 
+                        class="btn-info"/>
+            </xpath>
+        </field>
+    </record>
+    
+    <!-- 方案3: 如果以上都不存在，尝试通过 JavaScript 注入按钮 -->
+    <!-- 这个方案作为备选，如果前两个都不工作 -->
+    
+</odoo>
+
+

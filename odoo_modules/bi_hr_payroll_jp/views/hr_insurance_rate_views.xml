@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Rate Tree View -->
+    <record id="hr_insurance_rate_view_tree" model="ir.ui.view">
+        <field name="name">hr.insurance.rate.tree</field>
+        <field name="model">hr.insurance.rate</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="prefecture_id"/>
+                <field name="fiscal_year"/>
+                <field name="effective_date"/>
+                <field name="expiry_date"/>
+                <field name="health_rate_display" string="Health %"/>
+                <field name="health_rate_with_care_display" string="Health+Care %"/>
+                <field name="pension_rate" string="Pension"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Rate Form View -->
+    <record id="hr_insurance_rate_view_form" model="ir.ui.view">
+        <field name="name">hr.insurance.rate.form</field>
+        <field name="model">hr.insurance.rate</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" readonly="1"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Basic Info">
+                            <field name="prefecture_id"/>
+                            <field name="fiscal_year"/>
+                            <field name="effective_date"/>
+                            <field name="expiry_date"/>
+                            <field name="active"/>
+                        </group>
+                        <group string="Rates">
+                            <field name="health_rate" widget="percentage"/>
+                            <field name="health_rate_with_care" widget="percentage"/>
+                            <field name="care_rate_diff" widget="percentage" readonly="1"/>
+                            <field name="pension_rate" widget="percentage"/>
+                            <field name="employment_rate" widget="percentage"/>
+                        </group>
+                    </group>
+                    <group string="Notes">
+                        <field name="note" nolabel="1"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Rate Search View -->
+    <record id="hr_insurance_rate_view_search" model="ir.ui.view">
+        <field name="name">hr.insurance.rate.search</field>
+        <field name="model">hr.insurance.rate</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="prefecture_id"/>
+                <field name="fiscal_year"/>
+                <filter name="active" string="Active" domain="[('active', '=', True)]"/>
+                <filter name="current" string="Current" domain="[('expiry_date', '=', False)]"/>
+                <group expand="0" string="Group By">
+                    <filter name="group_prefecture" string="Prefecture" context="{'group_by': 'prefecture_id'}"/>
+                    <filter name="group_year" string="Fiscal Year" context="{'group_by': 'fiscal_year'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Rate Action -->
+    <record id="hr_insurance_rate_action" model="ir.actions.act_window">
+        <field name="name">Insurance Rates / 保険料率</field>
+        <field name="res_model">hr.insurance.rate</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_active': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create a new insurance rate
+            </p>
+        </field>
+    </record>
+</odoo>

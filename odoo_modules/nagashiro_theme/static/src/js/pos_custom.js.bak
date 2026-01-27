@@ -1,0 +1,101 @@
+/** @odoo-module **/
+
+// Nagashiro Theme - POS Custom JavaScript
+// This module handles POS-specific logo replacement
+// Since POS uses ES6 modules, we execute code immediately when module loads
+
+console.log('Nagashiro Theme: POS custom.js module loaded');
+
+// Execute immediately (module code runs when imported)
+(function() {
+    function replacePOSLogo() {
+        const logos = document.querySelectorAll('img.pos-logo');
+        const newLogoSrc = '/nagashiro_theme/static/src/img/logo.png';
+        let replaced = false;
+        
+        logos.forEach(logo => {
+            if (logo) {
+                const currentSrc = logo.src || logo.getAttribute('src') || '';
+                if (currentSrc.includes('/web/static/img/logo.png') || 
+                    (currentSrc.includes('logo.png') && !currentSrc.includes('nagashiro_theme'))) {
+                    logo.setAttribute('src', newLogoSrc);
+                    logo.src = newLogoSrc;
+                    replaced = true;
+                }
+            }
+        });
+        
+        if (replaced) {
+            console.log('Nagashiro logo: Replaced POS logo(s)');
+        }
+        return replaced;
+    }
+
+    // Try replacing logo repeatedly
+    let attempts = 0;
+    const maxAttempts = 20;
+    
+    function tryReplaceLogo() {
+        attempts++;
+        const replaced = replacePOSLogo();
+        
+        if (!replaced && attempts < maxAttempts) {
+            setTimeout(tryReplaceLogo, 100);
+        } else if (replaced) {
+            console.log('Nagashiro logo: Successfully replaced after', attempts, 'attempts');
+        }
+    }
+
+    // Initialize when DOM is ready
+    function initialize() {
+        // Only run if document.body exists and is a valid Node
+        if (!document.body || !(document.body instanceof Node)) {
+            return;
+        }
+
+        tryReplaceLogo();
+
+        // Watch for logo changes
+        try {
+            const logoObserver = new MutationObserver(function(mutations) {
+                replacePOSLogo();
+            });
+            
+            logoObserver.observe(document.body, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                attributeFilter: ['src']
+            });
+        } catch (e) {
+            console.debug('MutationObserver setup failed:', e);
+        }
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initialize);
+    } else if (document.body && document.body instanceof Node) {
+        initialize();
+    } else {
+        // Wait for body to be available
+        const checkBody = setInterval(function() {
+            if (document.body && document.body instanceof Node) {
+                clearInterval(checkBody);
+                initialize();
+            }
+        }, 50);
+        
+        // Timeout after 5 seconds
+        setTimeout(function() {
+            clearInterval(checkBody);
+        }, 5000);
+    }
+
+    // Also try after a delay
+    setTimeout(function() {
+        if (document.body && document.body instanceof Node) {
+            initialize();
+        }
+    }, 1000);
+})();
+

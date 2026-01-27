@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="res_config_settings_view_form" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.pos.escpos.printer</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="point_of_sale.res_config_settings_view_form" />
+        <field name="arch" type="xml">
+            <xpath expr="//block[@id='pos_connected_devices_section']" position="inside">
+                <setting id="escpos_print" string="ESC/POS Printer"
+                    help="Connect ESC/POS Printer to your PoS without an IoT Box">
+                    <field name="escpos_print" />
+
+                    <div class="content-group" invisible="not escpos_print">
+                        <field name="escpos_printer_ip" placeholder="Receipt Printer Local IP Address" />
+                        <div class="row" invisible="escpos_printer_ip in [False, '']">
+                            <label string="Cashdrawer" for="escpos_print_cashdrawer"
+                                class="col-lg-3 o_light_label" />
+                            <field name="escpos_print_cashdrawer" />
+                        </div>
+                    </div>
+                    <div role="alert" class="alert alert-warning"
+                        invisible="not pos_iface_print_via_proxy or not escpos_print or escpos_printer_ip in [False, '']">
+                        The receipt printer will be used instead of the receipt printer connected to
+                        the IoT Box.
+                    </div>
+                </setting>
+            </xpath>
+        </field>
+    </record>
+</odoo>

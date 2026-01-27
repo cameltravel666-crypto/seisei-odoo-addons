@@ -1,0 +1,186 @@
+// Nagashiro Theme - Custom JavaScript
+// This script runs as a traditional script (not an ES6 module) for simple DOM manipulation
+console.log('Nagashiro Theme: custom.js loaded', new Date().toISOString());
+
+(function() {
+    // Replace title function
+    function replaceTitle() {
+        if (document.title && document.title.includes('Odoo')) {
+            document.title = document.title.replace(/Odoo/gi, 'Nagashiro ERP');
+        }
+    }
+
+    // Remove "Powered by Odoo" text function
+    function removePoweredByText() {
+        const elements = document.querySelectorAll('*');
+        elements.forEach(el => {
+            if (el.textContent && (el.textContent.includes('Powered by Odoo') || el.textContent.includes('由Odoo提供支持'))) {
+                if (el.textContent.trim() === 'Powered by Odoo' || el.textContent.trim() === '由Odoo提供支持' || 
+                    el.textContent.trim().includes('Powered by') || el.textContent.trim().includes('提供支持')) {
+                    el.style.display = 'none';
+                } else {
+                    el.textContent = el.textContent.replace(/\s*Powered by Odoo\s*/gi, '');
+                    el.textContent = el.textContent.replace(/\s*由Odoo提供支持\s*/gi, '');
+                }
+            }
+        });
+    }
+
+    // Replace POS logo: img.pos-logo with Nagashiro logo
+    function replacePOSLogo() {
+        const logos = document.querySelectorAll('img.pos-logo');
+        const newLogoSrc = '/nagashiro_theme/static/src/img/logo.png';
+        let replaced = false;
+        
+        logos.forEach(logo => {
+            if (logo) {
+                const currentSrc = logo.src || logo.getAttribute('src') || '';
+                if (currentSrc.includes('/web/static/img/logo.png') || 
+                    (currentSrc.includes('logo.png') && !currentSrc.includes('nagashiro_theme'))) {
+                    logo.setAttribute('src', newLogoSrc);
+                    logo.src = newLogoSrc;
+                    replaced = true;
+                }
+            }
+        });
+        
+        if (replaced) {
+            console.log('Nagashiro logo: Replaced POS logo(s)');
+        }
+        return replaced;
+    }
+
+    // Function to try replacing logo repeatedly
+    let attempts = 0;
+    const maxAttempts = 20;
+    
+    function tryReplaceLogo() {
+        attempts++;
+        const replaced = replacePOSLogo();
+        
+        if (!replaced && attempts < maxAttempts) {
+            setTimeout(tryReplaceLogo, 100);
+        } else if (replaced) {
+            console.log('Nagashiro logo: Successfully replaced after', attempts, 'attempts');
+        }
+    }
+
+    // Replace "Odoo" text everywhere function
+    function replaceOdooText() {
+        try {
+            if (document.body) {
+                const walker = document.createTreeWalker(
+                    document.body,
+                    NodeFilter.SHOW_TEXT,
+                    {
+                        acceptNode: function(node) {
+                            const parent = node.parentElement;
+                            if (parent && (
+                                parent.tagName === 'SCRIPT' || 
+                                parent.tagName === 'STYLE' ||
+                                parent.tagName === 'NOSCRIPT' ||
+                                parent.tagName === 'TEMPLATE'
+                            )) {
+                                return NodeFilter.FILTER_REJECT;
+                            }
+                            if (node.textContent && (node.textContent.includes('Odoo') || node.textContent.includes('odoo'))) {
+                                return NodeFilter.FILTER_ACCEPT;
+                            }
+                            return NodeFilter.FILTER_REJECT;
+                        }
+                    },
+                    false
+                );
+
+                const textNodes = [];
+                let node;
+                while (node = walker.nextNode()) {
+                    textNodes.push(node);
+                }
+
+                textNodes.forEach(textNode => {
+                    try {
+                        const originalText = textNode.textContent;
+                        const newText = originalText.replace(/Odoo/gi, 'Nagashiro');
+                        if (originalText !== newText && textNode.textContent === originalText) {
+                            textNode.textContent = newText;
+                        }
+                    } catch (e) {
+                        // Ignore errors
+                    }
+                });
+            }
+        } catch (e) {
+            console.debug('TreeWalker method failed:', e);
+        }
+    }
+
+    // Initialize functions when DOM is ready
+    function initialize() {
+        // Only run if document.body exists
+        if (!document.body) {
+            return;
+        }
+
+        replaceTitle();
+        setInterval(replaceTitle, 1000);
+
+        removePoweredByText();
+        setTimeout(removePoweredByText, 500);
+        setTimeout(removePoweredByText, 2000);
+
+        tryReplaceLogo();
+
+        replaceOdooText();
+        setTimeout(replaceOdooText, 100);
+        setTimeout(replaceOdooText, 2000);
+        setTimeout(replaceOdooText, 5000);
+        setInterval(replaceOdooText, 500);
+
+        // Setup MutationObserver only when body exists
+        if (document.body && document.body instanceof Node) {
+            try {
+                const logoObserver = new MutationObserver(function(mutations) {
+                    replacePOSLogo();
+                });
+                
+                logoObserver.observe(document.body, {
+                    childList: true,
+                    subtree: true,
+                    attributes: true,
+                    attributeFilter: ['src']
+                });
+            } catch (e) {
+                console.debug('MutationObserver setup failed:', e);
+            }
+        }
+    }
+
+    // Run initialization when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initialize);
+    } else if (document.body) {
+        // DOM is already ready and body exists
+        initialize();
+    } else {
+        // Wait for body to be available
+        const checkBody = setInterval(function() {
+            if (document.body) {
+                clearInterval(checkBody);
+                initialize();
+            }
+        }, 50);
+        
+        // Timeout after 5 seconds
+        setTimeout(function() {
+            clearInterval(checkBody);
+        }, 5000);
+    }
+
+    // Also try after a delay
+    setTimeout(function() {
+        if (document.body) {
+            initialize();
+        }
+    }, 1000);
+})();

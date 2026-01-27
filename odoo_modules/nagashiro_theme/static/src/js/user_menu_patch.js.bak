@@ -1,0 +1,97 @@
+/** @odoo-module **/
+
+import { registry } from "@web/core/registry";
+
+// Remove menu items from user menu registry
+const userMenuRegistry = registry.category("user_menuitems");
+
+// Remove the odoo_account menu item
+userMenuRegistry.remove("odoo_account");
+
+// Remove Documentation menu item (文档)
+// Try common IDs used for documentation menu
+userMenuRegistry.remove("documentation");
+userMenuRegistry.remove("doc");
+
+// Remove Support menu item (支持)
+userMenuRegistry.remove("support");
+
+// Fallback: Use DOM manipulation to hide menu items if registry removal doesn't work
+// Function to hide menu items by text content
+function hideMenuItemsByText() {
+    // Try multiple selectors for user menu items
+    const selectors = [
+        '.o_user_menu_menu .dropdown-item',
+        '.o_user_menu_menu a',
+        '.o_user_menu_menu .o-menu-item',
+        '.o_user_menu_menu li',
+        '.dropdown-menu .dropdown-item',
+        '.dropdown-menu a',
+        '[role="menuitem"]'
+    ];
+    
+    // Exact text matches to hide
+    const textsToHide = ['文档', 'Documentation', '支持', 'Support'];
+    
+    selectors.forEach(selector => {
+        try {
+            const items = document.querySelectorAll(selector);
+            items.forEach(item => {
+                // Get text from the element itself, excluding nested elements
+                const text = item.firstChild?.textContent || item.textContent || item.innerText || '';
+                const trimmedText = text.trim();
+                
+                // Check if the text exactly matches or starts with the target text
+                const shouldHide = textsToHide.some(targetText => {
+                    return trimmedText === targetText || 
+                           trimmedText.startsWith(targetText + ' ') ||
+                           trimmedText === targetText;
+                });
+                
+                if (shouldHide) {
+                    item.style.display = 'none';
+                    item.setAttribute('data-nagashiro-hidden', 'true');
+                    // Also hide parent if it's a list item wrapper
+                    if (item.parentElement && item.parentElement.tagName === 'LI') {
+                        item.parentElement.style.display = 'none';
+                        item.parentElement.setAttribute('data-nagashiro-hidden', 'true');
+                    }
+                }
+            });
+        } catch (e) {
+            // Silently ignore selector errors
+        }
+    });
+}
+
+// Run immediately and also after DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', hideMenuItemsByText);
+} else {
+    hideMenuItemsByText();
+}
+
+// Also run after a delay to catch dynamically loaded menus
+setTimeout(hideMenuItemsByText, 500);
+setTimeout(hideMenuItemsByText, 1000);
+setTimeout(hideMenuItemsByText, 2000);
+
+// Use MutationObserver to watch for menu changes
+const observer = new MutationObserver(() => {
+    hideMenuItemsByText();
+});
+
+// Start observing when DOM is ready
+if (document.body) {
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+} else {
+    document.addEventListener('DOMContentLoaded', () => {
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    });
+}

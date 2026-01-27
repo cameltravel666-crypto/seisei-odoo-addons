@@ -1,7 +1,0 @@
-id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_vendor_ops_tenant_user,vendor.ops.tenant.user,model_vendor_ops_tenant,base.group_user,1,1,1,1
-access_vendor_ops_intake_batch_user,vendor.ops.intake.batch.user,model_vendor_ops_intake_batch,base.group_user,1,1,1,1
-access_vendor_ops_start_intake_wizard_user,vendor.ops.start.intake.wizard.user,model_vendor_ops_start_intake_wizard,base.group_user,1,1,1,0
-access_seisei_feature_user,seisei.feature.user,model_seisei_feature,base.group_user,1,1,1,1
-access_seisei_product_feature_map_user,seisei.product.feature.map.user,model_seisei_product_feature_map,base.group_user,1,1,1,1
-access_seisei_push_log_user,seisei.push.log.user,model_seisei_push_log,base.group_user,1,0,0,0

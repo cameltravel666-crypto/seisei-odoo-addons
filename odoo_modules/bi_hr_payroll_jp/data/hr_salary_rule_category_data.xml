@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <data noupdate="1">
+        <!-- Japan-specific Salary Rule Categories -->
+
+        <!-- Social Insurance Deductions / 社会保険控除 -->
+        <record id="category_social_insurance" model="hr.salary.rule.category">
+            <field name="name">Social Insurance / 社会保険</field>
+            <field name="code">SOCIAL_INS</field>
+            <field name="parent_id" ref="bi_hr_payroll.DED"/>
+            <field name="sequence">10</field>
+        </record>
+
+        <!-- Tax Deductions / 税金控除 -->
+        <record id="category_tax" model="hr.salary.rule.category">
+            <field name="name">Tax / 税金</field>
+            <field name="code">TAX</field>
+            <field name="parent_id" ref="bi_hr_payroll.DED"/>
+            <field name="sequence">20</field>
+        </record>
+
+        <!-- Other Deductions / その他控除 -->
+        <record id="category_other_deduction" model="hr.salary.rule.category">
+            <field name="name">Other Deductions / その他控除</field>
+            <field name="code">OTHER_DED</field>
+            <field name="parent_id" ref="bi_hr_payroll.DED"/>
+            <field name="sequence">30</field>
+        </record>
+    </data>
+</odoo>

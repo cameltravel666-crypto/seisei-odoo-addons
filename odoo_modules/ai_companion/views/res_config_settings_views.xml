@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- AI Companion Settings View -->
+        <record id="res_config_settings_view_form_ai_companion" model="ir.ui.view">
+            <field name="name">res.config.settings.view.form.inherit.ai.companion</field>
+            <field name="model">res.config.settings</field>
+            <field name="inherit_id" ref="base_setup.res_config_settings_view_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//form" position="inside">
+                    <div class="row mt16 o_settings_container">
+                        <div class="col-12 col-lg-6 o_setting_box">
+                            <div class="o_setting_left_pane">
+                                <field name="dify_enabled"/>
+                            </div>
+                            <div class="o_setting_right_pane">
+                                <label for="dify_enabled" string="Enable AI Companion"/>
+                                <div class="text-muted">
+                                    Integrate Dify AI assistant into Odoo Discuss for intelligent conversations
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mt16 o_settings_container" invisible="not dify_enabled">
+                        <div class="col-12 col-lg-6 o_setting_box">
+                            <div class="o_setting_left_pane">
+                                <field name="dify_api_key" password="True" widget="text" 
+                                       options="{'rows': 3}" placeholder="粘贴您的 Dify API Key..."/>
+                            </div>
+                            <div class="o_setting_right_pane">
+                                <label for="dify_api_key" string="Dify API Key"/>
+                                <div class="text-muted">
+                                    获取 API Key：访问 <a href="http://13.114.99.38:3000/apps" target="_blank">http://13.114.99.38:3000/apps</a> → 选择应用 → API 访问 → 复制 API Key
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-lg-6 o_setting_box">
+                            <div class="o_setting_left_pane">
+                                <field name="dify_base_url" widget="text" 
+                                       options="{'rows': 2}" placeholder="http://13.114.99.38:5001/v1"/>
+                            </div>
+                            <div class="o_setting_right_pane">
+                                <label for="dify_base_url" string="Dify Base URL"/>
+                                <div class="text-muted">
+                                    默认值：<code>http://13.114.99.38:5001/v1</code><br/>
+                                    <small>注意：端口 5001 是 API 后端，端口 3000 是 Web 前端</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-lg-6 o_setting_box">
+                            <div class="o_setting_left_pane">
+                                <field name="dify_timeout"/>
+                            </div>
+                            <div class="o_setting_right_pane">
+                                <label for="dify_timeout" string="API Timeout (seconds)"/>
+                            </div>
+                        </div>
+                        <div class="col-12 col-lg-6 o_setting_box">
+                            <div class="o_setting_left_pane">
+                                <field name="dify_user_identifier"/>
+                            </div>
+                            <div class="o_setting_right_pane">
+                                <label for="dify_user_identifier" string="User Identifier Prefix"/>
+                                <div class="text-muted">Prefix for user IDs sent to Dify (e.g., "odoo_user_123")</div>
+                            </div>
+                        </div>
+                    </div>
+                </xpath>
+            </field>
+        </record>
+    </data>
+</odoo>

@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Withholding Tax Tree View -->
+    <record id="hr_withholding_tax_view_tree" model="ir.ui.view">
+        <field name="name">hr.withholding.tax.tree</field>
+        <field name="model">hr.withholding.tax</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="tax_column_b"/>
+                <field name="wage_min"/>
+                <field name="wage_max"/>
+                <field name="tax_dep_0"/>
+                <field name="tax_dep_1"/>
+                <field name="tax_dep_2"/>
+                <field name="tax_dep_3"/>
+                <field name="tax_dep_4" optional="hide"/>
+                <field name="tax_dep_5" optional="hide"/>
+                <field name="tax_dep_6" optional="hide"/>
+                <field name="tax_dep_7" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Withholding Tax Form View -->
+    <record id="hr_withholding_tax_view_form" model="ir.ui.view">
+        <field name="name">hr.withholding.tax.form</field>
+        <field name="model">hr.withholding.tax</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <group string="Wage Range / 給与範囲">
+                            <field name="tax_column_b"/>
+                            <field name="wage_min"/>
+                            <field name="wage_max"/>
+                        </group>
+                    </group>
+                    <group string="Tax by Dependants / 扶養親族数別税額">
+                        <group>
+                            <field name="tax_dep_0" string="0人"/>
+                            <field name="tax_dep_1" string="1人"/>
+                            <field name="tax_dep_2" string="2人"/>
+                            <field name="tax_dep_3" string="3人"/>
+                        </group>
+                        <group>
+                            <field name="tax_dep_4" string="4人"/>
+                            <field name="tax_dep_5" string="5人"/>
+                            <field name="tax_dep_6" string="6人"/>
+                            <field name="tax_dep_7" string="7人"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Withholding Tax Search View -->
+    <record id="hr_withholding_tax_view_search" model="ir.ui.view">
+        <field name="name">hr.withholding.tax.search</field>
+        <field name="model">hr.withholding.tax</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="tax_column_b"/>
+                <field name="wage_min"/>
+                <filter name="column_a" string="Column A / 甲欄" domain="[('tax_column_b', '=', 'A')]"/>
+                <filter name="column_b" string="Column B / 乙欄" domain="[('tax_column_b', '=', 'B')]"/>
+                <group expand="0" string="Group By">
+                    <filter name="group_column" string="Tax Column" context="{'group_by': 'tax_column_b'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Withholding Tax Action -->
+    <record id="hr_withholding_tax_action" model="ir.actions.act_window">
+        <field name="name">Withholding Tax / 源泉徴収税額表</field>
+        <field name="res_model">hr.withholding.tax</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_column_a': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create a new withholding tax entry
+            </p>
+            <p>
+                Import the withholding tax table from the National Tax Agency.
+            </p>
+        </field>
+    </record>
+</odoo>

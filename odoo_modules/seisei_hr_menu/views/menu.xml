@@ -136,13 +136,13 @@
 
 
     <!-- ============================================== -->
-    <!-- 4. SETTINGS (设置) - sequence 90 (独立顶栏, Admin only) -->
+    <!-- 4. SETTINGS (设置) - Under Payroll, sequence 90 (Admin only) -->
     <!-- ============================================== -->
     <menuitem id="menu_seisei_settings_root"
         name="Settings"
+        parent="menu_seisei_payroll_root"
         sequence="90"
-        groups="group_seisei_hr_admin"
-        web_icon="hr,static/description/icon.png"/>
+        groups="group_seisei_hr_admin"/>
 
     <!-- General Settings -->
     <menuitem id="menu_seisei_settings_general"
@@ -214,7 +214,7 @@
         sequence="40"
         groups="group_seisei_hr_admin"/>
 
-    <!-- Recruitment -->
+    <!-- Recruitment (if exists) -->
     <menuitem id="menu_seisei_settings_recruitment"
         name="Recruitment"
         parent="menu_seisei_settings_root"

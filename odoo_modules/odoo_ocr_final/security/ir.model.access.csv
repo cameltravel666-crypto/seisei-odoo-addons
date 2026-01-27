@@ -1,0 +1,6 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_ocr_usage_user,ocr.usage.user,model_ocr_usage,base.group_user,1,0,0,0
+access_ocr_usage_purchase_user,ocr.usage.purchase.user,model_ocr_usage,purchase.group_purchase_user,1,1,1,0
+access_ocr_usage_manager,ocr.usage.manager,model_ocr_usage,purchase.group_purchase_manager,1,1,1,1
+access_ocr_batch_progress_user,ocr.batch.progress.user,model_ocr_batch_progress,base.group_user,1,1,1,0
+access_ocr_batch_progress_manager,ocr.batch.progress.manager,model_ocr_batch_progress,account.group_account_manager,1,1,1,1

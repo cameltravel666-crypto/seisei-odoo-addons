@@ -1,41 +1,22 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Seisei HR Menu Restructure',
-    'version': '18.0.1.1.0',
+    'version': '18.0.1.0.0',
     'category': 'Human Resources',
     'summary': 'Restructure HR/Payroll menus for better UX',
     'description': """
 HR/Payroll Menu Restructure
 ===========================
 This module restructures the HR and Payroll menus into 4 top-level categories:
+- Personnel (人事): Employee management
+- Payroll (薪资): Daily payroll operations
+- Reports (报表): HR and Payroll reports
+- Settings (设置): Configuration (admin only)
 
-1. Personnel (人事): Employee and organizational management
-   - Employees
-   - Organization (Departments)
-   - Contracts
-
-2. Payroll (薪資): Daily payroll operations
-   - Payslips
-   - Batches
-   - Japan: Social & Tax (insurance, withholding tax)
-
-3. Reports (報表): HR and Payroll reports
-   - HR Reports
-   - Payroll Reports
-
-4. Settings (設置): Configuration (admin only)
-   - General Settings
-   - Basic Data (Work Locations, Departure Reasons)
-   - Payroll Configuration (Salary Structures, Rules, Categories)
-   - Recruitment (Job Positions)
-
-Permission Groups:
-- group_seisei_store_manager: Can see Personnel + Reports
-- group_seisei_hr_manager: Can see Personnel + Payroll (daily) + Reports
-- group_seisei_hr_admin: Full access including Settings
-
-Rollback:
-- Simply uninstall this module to restore original menu structure
+Features:
+- Role-based menu visibility
+- Clean separation of daily operations and configuration
+- Japan localization support (if bi_hr_payroll installed)
     """,
     'author': 'Seisei',
     'website': 'https://seisei.io',
@@ -43,7 +24,6 @@ Rollback:
     'depends': [
         'hr',
         'hr_contract',
-        'bi_hr_payroll',
     ],
     'data': [
         'security/security.xml',

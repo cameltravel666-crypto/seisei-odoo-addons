@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+    <!-- 
+        Inherit POS SaverScreen template to replace Odoo logo with Nagashiro logo
+        
+        Original template: point_of_sale.SaverScreen
+        Location: /usr/lib/python3/dist-packages/odoo/addons/point_of_sale/static/src/app/screens/saver_screen/saver_screen.xml
+        
+        Original logo: <img t-att-height="env.isSmall ? 40 : 182" src="/web/static/img/odoo_logo.svg" alt="Logo"/>
+        We replace it with Nagashiro logo
+    -->
+    <t t-name="point_of_sale.SaverScreen" t-inherit="point_of_sale.SaverScreen" t-inherit-mode="extension" owl="1">
+        <!-- Replace the Odoo logo img with Nagashiro logo -->
+        <!-- Use multiple xpath selectors to ensure we catch the logo -->
+        <xpath expr="//img[contains(@src, 'odoo_logo.svg') or @alt='Logo']" position="replace">
+            <img t-att-height="env.isSmall ? 40 : 182" src="/my_pos_screensaver_branding/static/src/img/Nagashiro.png" alt="Nagashiro Logo"/>
+        </xpath>
+    </t>
+</templates>
+

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+    <!-- 
+        Inherit POS OrderReceipt template to replace "Powered by Odoo" text
+        
+        Original template: point_of_sale.OrderReceipt
+        Location: /usr/lib/python3/dist-packages/odoo/addons/point_of_sale/static/src/app/screens/receipt_screen/receipt/order_receipt.xml
+        Line 139: <p>Powered by Odoo</p>
+        
+        Note: In Chinese interface, "Powered by Odoo" is translated to "由 Odoo 提供支持"
+        We replace the paragraph element to show "由 Nagashiro 提供支持" instead
+    -->
+    <t t-name="point_of_sale.OrderReceipt" t-inherit="point_of_sale.OrderReceipt" t-inherit-mode="extension" owl="1">
+        <!-- 
+            Replace the paragraph containing "Powered by Odoo" 
+            The xpath targets the <p> element in the pos-receipt-order-data div
+            Using contains() to match both English and Chinese text
+        -->
+        <xpath expr="//div[@class='pos-receipt-order-data']/p" position="replace">
+            <p>由 Nagashiro 提供支持</p>
+        </xpath>
+    </t>
+</templates>
+

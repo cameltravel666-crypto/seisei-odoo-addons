@@ -1,0 +1,447 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# bi_hr_payroll_jp
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 18.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-01-23 00:00+0000\n"
+"PO-Revision-Date: 2026-01-23 00:00+0000\n"
+"Last-Translator: \n"
+"Language-Team: Chinese (Simplified)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: zh_CN\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model,name:bi_hr_payroll_jp.model_hr_employee
+msgid "Employee"
+msgstr "员工"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model,name:bi_hr_payroll_jp.model_hr_employee_dependant
+msgid "Employee Dependant / 扶養親族"
+msgstr "员工被抚养人"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model,name:bi_hr_payroll_jp.model_hr_insurance_prefecture
+msgid "Insurance Prefecture / 保険支部"
+msgstr "保险支部"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model,name:bi_hr_payroll_jp.model_hr_insurance_grade
+msgid "Standard Monthly Remuneration Grade / 標準報酬月額等級"
+msgstr "标准月薪等级"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model,name:bi_hr_payroll_jp.model_hr_insurance_rate
+msgid "Insurance Rate / 保険料率"
+msgstr "保险费率"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model,name:bi_hr_payroll_jp.model_hr_withholding_tax
+msgid "Withholding Tax Table / 源泉徴収税額表"
+msgstr "代扣税额表"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_employee__my_number
+msgid "My Number / マイナンバー"
+msgstr "个人编号"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_employee__nationality
+msgid "Nationality / 国籍"
+msgstr "国籍"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_employee__age
+msgid "Age / 年齢"
+msgstr "年龄"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_employee__is_care_insurance_applicable
+msgid "Care Insurance Applicable / 介護保険対象"
+msgstr "适用护理保险"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_employee__insurance_prefecture_id
+msgid "Insurance Prefecture / 健康保険支部"
+msgstr "健康保险支部"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_employee__effective_insurance_prefecture_id
+msgid "Effective Insurance Prefecture"
+msgstr "实际保险支部"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_employee__health_insurance_grade_id
+msgid "Health Insurance Grade / 健康保険等級"
+msgstr "健康保险等级"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_employee__pension_grade_id
+msgid "Pension Grade / 厚生年金等級"
+msgstr "养老金等级"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_employee__tax_column
+msgid "Tax Column / 税額欄"
+msgstr "税额栏"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,selection:bi_hr_payroll_jp.field_hr_employee__tax_column
+msgid "Column A / 甲欄 (Primary job)"
+msgstr "甲栏（主要工作）"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,selection:bi_hr_payroll_jp.field_hr_employee__tax_column
+msgid "Column B / 乙欄 (Secondary job)"
+msgstr "乙栏（兼职）"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_employee__resident_tax_amount
+msgid "Resident Tax / 住民税"
+msgstr "住民税"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_employee__dependants_count
+msgid "Dependants / 扶養人数"
+msgstr "被抚养人数"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_employee__dependant_ids
+msgid "Dependants / 扶養親族"
+msgstr "被抚养人"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_employee_dependant__name
+msgid "Name / 名前"
+msgstr "姓名"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_employee_dependant__relationship
+msgid "Relationship / 関係"
+msgstr "关系"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,selection:bi_hr_payroll_jp.field_hr_employee_dependant__relationship
+msgid "Spouse / 配偶者"
+msgstr "配偶"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,selection:bi_hr_payroll_jp.field_hr_employee_dependant__relationship
+msgid "Child / 子"
+msgstr "子女"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,selection:bi_hr_payroll_jp.field_hr_employee_dependant__relationship
+msgid "Parent / 親"
+msgstr "父母"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,selection:bi_hr_payroll_jp.field_hr_employee_dependant__relationship
+msgid "Grandparent / 祖父母"
+msgstr "祖父母"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,selection:bi_hr_payroll_jp.field_hr_employee_dependant__relationship
+msgid "Sibling / 兄弟姉妹"
+msgstr "兄弟姐妹"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,selection:bi_hr_payroll_jp.field_hr_employee_dependant__relationship
+msgid "Other / その他"
+msgstr "其他"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_employee_dependant__birth_date
+msgid "Birth Date / 生年月日"
+msgstr "出生日期"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_employee_dependant__gender
+msgid "Gender / 性別"
+msgstr "性别"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,selection:bi_hr_payroll_jp.field_hr_employee_dependant__gender
+msgid "Male / 男性"
+msgstr "男"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,selection:bi_hr_payroll_jp.field_hr_employee_dependant__gender
+msgid "Female / 女性"
+msgstr "女"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_employee_dependant__address
+msgid "Address / 住所"
+msgstr "地址"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_employee_dependant__annual_income
+msgid "Annual Income / 年間所得"
+msgstr "年收入"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_employee_dependant__is_eligible
+msgid "Eligible / 扶養対象"
+msgstr "符合条件"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_insurance_prefecture__name
+msgid "Prefecture Name / 支部名"
+msgstr "支部名称"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_insurance_prefecture__code
+msgid "Code / コード"
+msgstr "代码"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_insurance_prefecture__active
+msgid "Active / 有効"
+msgstr "有效"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_insurance_prefecture__rate_ids
+msgid "Insurance Rates / 保険料率"
+msgstr "保险费率"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_insurance_grade__grade
+msgid "Grade / 等級"
+msgstr "等级"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_insurance_grade__grade_display
+msgid "Grade Display / 等級表示"
+msgstr "等级显示"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_insurance_grade__standard_monthly
+msgid "Standard Monthly / 標準報酬月額"
+msgstr "标准月薪"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_insurance_grade__wage_min
+msgid "Wage Min / 報酬下限"
+msgstr "工资下限"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_insurance_grade__wage_max
+msgid "Wage Max / 報酬上限"
+msgstr "工资上限"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_insurance_grade__has_pension
+msgid "Has Pension / 年金対象"
+msgstr "养老金适用"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_insurance_grade__pension_grade
+msgid "Pension Grade / 厚生年金等級"
+msgstr "养老金等级"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_insurance_rate__name
+msgid "Name / 名称"
+msgstr "名称"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_insurance_rate__prefecture_id
+msgid "Prefecture / 支部"
+msgstr "支部"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_insurance_rate__fiscal_year
+msgid "Fiscal Year / 年度"
+msgstr "财年"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_insurance_rate__effective_date
+msgid "Effective Date / 適用開始日"
+msgstr "生效日期"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_insurance_rate__expiry_date
+msgid "Expiry Date / 適用終了日"
+msgstr "失效日期"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_insurance_rate__health_rate
+msgid "Health Insurance Rate / 健康保険率"
+msgstr "健康保险费率"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_insurance_rate__health_rate_with_care
+msgid "Health + Care Rate / 介護含健保率"
+msgstr "健康+护理保险费率"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_insurance_rate__care_rate_diff
+msgid "Care Insurance Diff / 介護保険差額"
+msgstr "护理保险差额"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_insurance_rate__pension_rate
+msgid "Pension Rate / 厚生年金率"
+msgstr "养老金费率"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_insurance_rate__employment_rate
+msgid "Employment Insurance Rate / 雇用保険率"
+msgstr "失业保险费率"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_insurance_rate__note
+msgid "Note / 備考"
+msgstr "备注"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_withholding_tax__wage_min
+msgid "Wage Min / 給与下限"
+msgstr "工资下限"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_withholding_tax__wage_max
+msgid "Wage Max / 給与上限"
+msgstr "工资上限"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_withholding_tax__tax_dep_0
+msgid "Tax (0 dependents) / 扶養0人"
+msgstr "0人抚养"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_withholding_tax__tax_dep_1
+msgid "Tax (1 dependent) / 扶養1人"
+msgstr "1人抚养"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_withholding_tax__tax_dep_2
+msgid "Tax (2 dependents) / 扶養2人"
+msgstr "2人抚养"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_withholding_tax__tax_dep_3
+msgid "Tax (3 dependents) / 扶養3人"
+msgstr "3人抚养"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_withholding_tax__tax_dep_4
+msgid "Tax (4 dependents) / 扶養4人"
+msgstr "4人抚养"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_withholding_tax__tax_dep_5
+msgid "Tax (5 dependents) / 扶養5人"
+msgstr "5人抚养"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_withholding_tax__tax_dep_6
+msgid "Tax (6 dependents) / 扶養6人"
+msgstr "6人抚养"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_withholding_tax__tax_dep_7
+msgid "Tax (7 dependents) / 扶養7人"
+msgstr "7人抚养"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.model.fields,field_description:bi_hr_payroll_jp.field_hr_withholding_tax__tax_column_b
+msgid "Tax Column B / 乙欄"
+msgstr "乙栏"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.actions.act_window,name:bi_hr_payroll_jp.hr_insurance_prefecture_action
+msgid "Insurance Prefectures / 保険支部"
+msgstr "保险支部"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.actions.act_window,name:bi_hr_payroll_jp.hr_insurance_grade_action
+msgid "Insurance Grades / 標準報酬等級"
+msgstr "标准报酬等级"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.actions.act_window,name:bi_hr_payroll_jp.hr_insurance_rate_action
+msgid "Insurance Rates / 保険料率"
+msgstr "保险费率"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.actions.act_window,name:bi_hr_payroll_jp.hr_withholding_tax_action
+msgid "Withholding Tax / 源泉徴収税額表"
+msgstr "代扣税额表"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.ui.menu,name:bi_hr_payroll_jp.menu_japan_payroll_root
+msgid "Japan Payroll / 日本給与"
+msgstr "日本工资"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.ui.menu,name:bi_hr_payroll_jp.menu_japan_payroll_config
+msgid "Configuration / 設定"
+msgstr "配置"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.ui.menu,name:bi_hr_payroll_jp.menu_insurance_prefecture
+msgid "Insurance Prefectures / 保険支部"
+msgstr "保险支部"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.ui.menu,name:bi_hr_payroll_jp.menu_insurance_rate
+msgid "Insurance Rates / 保険料率"
+msgstr "保险费率"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.ui.menu,name:bi_hr_payroll_jp.menu_insurance_grade
+msgid "Insurance Grades / 標準報酬等級"
+msgstr "标准报酬等级"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.ui.menu,name:bi_hr_payroll_jp.menu_withholding_tax
+msgid "Withholding Tax / 源泉徴収税額"
+msgstr "代扣税额"
+
+#. module: bi_hr_payroll_jp
+#: model_terms:ir.ui.view,arch_db:bi_hr_payroll_jp.hr_employee_view_form_japan
+msgid "Japan Payroll / 日本給与"
+msgstr "日本工资"
+
+#. module: bi_hr_payroll_jp
+#: model_terms:ir.ui.view,arch_db:bi_hr_payroll_jp.hr_employee_view_form_japan
+msgid "Personal Information / 個人情報"
+msgstr "个人信息"
+
+#. module: bi_hr_payroll_jp
+#: model_terms:ir.ui.view,arch_db:bi_hr_payroll_jp.hr_employee_view_form_japan
+msgid "Insurance Settings / 保険設定"
+msgstr "保险设置"
+
+#. module: bi_hr_payroll_jp
+#: model_terms:ir.ui.view,arch_db:bi_hr_payroll_jp.hr_employee_view_form_japan
+msgid "Tax Settings / 税金設定"
+msgstr "税务设置"
+
+#. module: bi_hr_payroll_jp
+#: model_terms:ir.ui.view,arch_db:bi_hr_payroll_jp.hr_employee_view_form_japan
+msgid "Dependants / 扶養親族"
+msgstr "被抚养人"
+
+#. module: bi_hr_payroll_jp
+#: model:res.company,field_description:bi_hr_payroll_jp.field_res_company__default_insurance_prefecture_id
+msgid "Default Insurance Prefecture / デフォルト保険支部"
+msgstr "默认保险支部"
+
+#. module: bi_hr_payroll_jp
+#: model:res.company,field_description:bi_hr_payroll_jp.field_res_company__employment_insurance_rate
+msgid "Employment Insurance Rate / 雇用保険料率"
+msgstr "失业保险费率"
+
+#. module: bi_hr_payroll_jp
+#: model:ir.actions.act_window,name:bi_hr_payroll_jp.hr_insurance_rate_import_wizard_action
+msgid "Import Insurance Rates / 保険料率インポート"
+msgstr "导入保险费率"

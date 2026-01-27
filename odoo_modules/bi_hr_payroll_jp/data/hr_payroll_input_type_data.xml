@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <data noupdate="1">
+        <!-- Japan-specific Payroll Input Types -->
+
+        <!-- Commutation Allowance / 通勤手当 -->
+        <record id="input_commutation" model="hr.payslip.input.type">
+            <field name="name">Commutation Allowance / 通勤手当</field>
+            <field name="code">JP_COMMUTE</field>
+        </record>
+
+        <!-- Overtime Hours / 残業時間 -->
+        <record id="input_overtime_hours" model="hr.payslip.input.type">
+            <field name="name">Overtime Hours / 残業時間</field>
+            <field name="code">JP_OT_HOURS</field>
+        </record>
+
+        <!-- Late Night Hours / 深夜時間 -->
+        <record id="input_late_night_hours" model="hr.payslip.input.type">
+            <field name="name">Late Night Hours / 深夜時間</field>
+            <field name="code">JP_NIGHT_HOURS</field>
+        </record>
+
+        <!-- Holiday Hours / 休日出勤時間 -->
+        <record id="input_holiday_hours" model="hr.payslip.input.type">
+            <field name="name">Holiday Hours / 休日出勤時間</field>
+            <field name="code">JP_HOLIDAY_HOURS</field>
+        </record>
+
+        <!-- Absence Days / 欠勤日数 -->
+        <record id="input_absence_days" model="hr.payslip.input.type">
+            <field name="name">Absence Days / 欠勤日数</field>
+            <field name="code">JP_ABSENCE_DAYS</field>
+        </record>
+
+        <!-- Bonus / 賞与 -->
+        <record id="input_bonus" model="hr.payslip.input.type">
+            <field name="name">Bonus / 賞与</field>
+            <field name="code">JP_BONUS</field>
+        </record>
+    </data>
+</odoo>

@@ -23,7 +23,7 @@ class ResConfigSettings(models.TransientModel):
         string='Enable Google Doc Import',
         config_parameter='seisei.gdoc.enabled',
     )
-    gdoc_service_account_json = fields.Text(
+    gdoc_service_account_json = fields.Char(
         string='Service Account JSON',
         config_parameter='seisei.gdoc.service_account_json',
         help='Paste the JSON content of your Google service account key file'

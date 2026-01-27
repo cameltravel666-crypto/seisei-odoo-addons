@@ -1,0 +1,235 @@
+/**
+ * Seisei Theme - Custom Color Scheme
+ * Changes Odoo's default purple theme to blue to match company website
+ * Primary Blue: #2563eb
+ * Dark Blue: #1e40af
+ * Light Blue: #3b82f6
+ */
+
+/* Override Odoo's primary brand color (purple) with Seisei blue */
+:root {
+    --o-color-primary: #2563eb !important;
+    --o-color-primary-dark: #1e40af !important;
+    --o-color-primary-light: #3b82f6 !important;
+    --o-brand-primary: #2563eb !important;
+    --o-brand-odoo: #2563eb !important;
+}
+
+/* Main navbar background - change from purple to blue */
+.o_main_navbar {
+    background-color: #2563eb !important;
+    border-bottom-color: #1e40af !important;
+}
+
+/* Navbar brand and menu items */
+.o_main_navbar .o_menu_brand,
+.o_main_navbar .o_menu_sections .dropdown-toggle,
+.o_main_navbar .o_menu_sections .dropdown-item {
+    color: #ffffff !important;
+}
+
+.o_main_navbar .o_menu_sections .dropdown-toggle:hover,
+.o_main_navbar .o_menu_sections .dropdown-item:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Discuss/Mail top bar - change purple to blue */
+.o_mail_discuss .o_mail_discuss_topbar,
+.o_mail_discuss .o_mail_discuss_header,
+.o_mail_discuss .o_mail_discuss_navbar,
+.o_mail_discuss .o_mail_discuss_topbar_header,
+.o_mail_discuss .o_mail_discuss_topbar_main,
+.o_mail_discuss .o_mail_discuss_topbar_content {
+    background-color: #2563eb !important;
+    border-bottom-color: #1e40af !important;
+}
+
+/* Discuss sidebar header */
+.o_mail_discuss .o_mail_discuss_sidebar .o_mail_discuss_sidebar_header {
+    background-color: #2563eb !important;
+}
+
+/* Discuss top navigation bar - override any purple background */
+.o_mail_discuss .o_topbar,
+.o_mail_discuss header,
+.o_mail_discuss .o_mail_discuss_header,
+.o_mail_discuss .o_mail_discuss_navbar,
+.o_mail_discuss .o_mail_discuss_topbar {
+    background-color: #2563eb !important;
+    background: #2563eb !important;
+}
+
+/* Discuss navigation items */
+.o_mail_discuss .o_mail_discuss_topbar .o_navbar_item,
+.o_mail_discuss .o_mail_discuss_topbar .o_navbar_item a,
+.o_mail_discuss .o_mail_discuss_topbar button {
+    color: #ffffff !important;
+}
+
+.o_mail_discuss .o_mail_discuss_topbar .o_navbar_item:hover,
+.o_mail_discuss .o_mail_discuss_topbar .o_navbar_item a:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Buttons - primary buttons should be blue */
+.btn-primary,
+.o_button_primary,
+button.o_button_primary,
+.o_form_button_save,
+.o_form_button_edit {
+    background-color: #2563eb !important;
+    border-color: #1e40af !important;
+    color: #ffffff !important;
+}
+
+.btn-primary:hover,
+.o_button_primary:hover,
+button.o_button_primary:hover,
+.o_form_button_save:hover,
+.o_form_button_edit:hover {
+    background-color: #1e40af !important;
+    border-color: #1e40af !important;
+}
+
+/* Links */
+a,
+.o_action_manager a,
+.o_list_view a {
+    color: #2563eb !important;
+}
+
+a:hover,
+.o_action_manager a:hover,
+.o_list_view a:hover {
+    color: #1e40af !important;
+}
+
+/* Status bar and badges */
+.o_statusbar_status .btn-primary,
+.badge-primary,
+.o_badge_primary {
+    background-color: #2563eb !important;
+    border-color: #1e40af !important;
+    color: #ffffff !important;
+}
+
+/* Kanban cards - primary color accents */
+.o_kanban_view .o_kanban_record {
+    border-left-color: #2563eb !important;
+}
+
+.o_kanban_view .o_kanban_record_has_image_fill {
+    border-left-color: #2563eb !important;
+}
+
+/* Progress bars */
+.progress-bar,
+.o_progressbar .o_progressbar_fill {
+    background-color: #2563eb !important;
+}
+
+/* Checkboxes and radio buttons when checked */
+input[type="checkbox"]:checked,
+input[type="radio"]:checked {
+    accent-color: #2563eb !important;
+}
+
+/* Focus states */
+.form-control:focus,
+.o_input:focus,
+.o_searchview_input:focus {
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.25) !important;
+}
+
+/* Dropdown menus - active items */
+.dropdown-item.active,
+.dropdown-item:active {
+    background-color: #2563eb !important;
+    color: #ffffff !important;
+}
+
+/* Tabs - active tab */
+.nav-tabs .nav-link.active,
+.o_tabs .o_tab.active {
+    color: #2563eb !important;
+    border-bottom-color: #2563eb !important;
+}
+
+/* Apps menu background (if using web_responsive) */
+.o_grid_apps_menu[data-theme="community"] {
+    --app-menu-background: linear-gradient(
+        to bottom,
+        #2563eb,
+        #3b82f6
+    ) !important;
+}
+
+/* Calendar view - event colors */
+.o_calendar_view .o_calendar_widget .fc-event {
+    background-color: #2563eb !important;
+    border-color: #1e40af !important;
+}
+
+/* Chatter - message headers */
+.o_Message_header {
+    color: #2563eb !important;
+}
+
+/* Activity view - activity colors */
+.o_activity_view .o_activity_summary_cell_planned {
+    background-color: rgba(37, 99, 235, 0.1) !important;
+    color: #2563eb !important;
+}
+
+/* Pivot view - primary color */
+.o_pivot .o_pivot_cell_value {
+    color: #2563eb !important;
+}
+
+/* Graph view - primary series color */
+.o_graph_view .o_graph_line {
+    stroke: #2563eb !important;
+}
+
+.o_graph_view .o_graph_bar {
+    fill: #2563eb !important;
+}
+
+/* Notification badges */
+.o_notification_counter {
+    background-color: #2563eb !important;
+    color: #ffffff !important;
+}
+
+/* Search panel - active filters */
+.o_search_panel .o_search_panel_section_header.active {
+    color: #2563eb !important;
+}
+
+/* Settings page - primary elements */
+.o_base_settings .o_setting_box .o_setting_right_pane .btn-primary {
+    background-color: #2563eb !important;
+    border-color: #1e40af !important;
+}
+
+/* Mobile menu toggle */
+.o_mobile_menu_toggle {
+    color: #2563eb !important;
+}
+
+/* Override any remaining purple colors */
+[style*="#875A7B"],
+[style*="rgb(135, 90, 123)"] {
+    color: #2563eb !important;
+    background-color: #2563eb !important;
+    border-color: #2563eb !important;
+}
+
+/* Ensure all primary color variables use blue */
+* {
+    --primary: #2563eb !important;
+    --primary-dark: #1e40af !important;
+    --primary-light: #3b82f6 !important;
+}
+

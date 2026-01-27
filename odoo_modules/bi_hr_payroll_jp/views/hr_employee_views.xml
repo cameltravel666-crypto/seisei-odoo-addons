@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Employee Form View Extension -->
+    <record id="hr_employee_view_form_japan" model="ir.ui.view">
+        <field name="name">hr.employee.form.japan</field>
+        <field name="model">hr.employee</field>
+        <field name="inherit_id" ref="hr.view_employee_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='hr_settings']" position="after">
+                <page string="Japan Payroll / 日本給与" name="japan_payroll">
+                    <group string="Personal Information / 個人情報">
+                        <group>
+                            <field name="my_number"/>
+                            <field name="nationality"/>
+                        </group>
+                        <group>
+                            <field name="age" readonly="1"/>
+                            <field name="is_care_insurance_applicable" readonly="1"/>
+                        </group>
+                    </group>
+                    <group string="Insurance Settings / 保険設定">
+                        <group>
+                            <field name="insurance_prefecture_id"/>
+                            <field name="effective_insurance_prefecture_id" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="health_insurance_grade_id"/>
+                            <field name="pension_grade_id"/>
+                        </group>
+                    </group>
+                    <group string="Tax Settings / 税金設定">
+                        <group>
+                            <field name="tax_column"/>
+                            <field name="dependants_count"/>
+                        </group>
+                        <group>
+                            <field name="resident_tax_amount"/>
+                        </group>
+                    </group>
+                    <group string="Dependants / 扶養親族" name="dependants">
+                        <field name="dependant_ids" nolabel="1">
+                            <list editable="bottom">
+                                <field name="name"/>
+                                <field name="relationship"/>
+                                <field name="birth_date"/>
+                                <field name="annual_income"/>
+                                <field name="is_eligible" readonly="1"/>
+                            </list>
+                        </field>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>

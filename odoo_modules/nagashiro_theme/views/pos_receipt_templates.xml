@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Remove "由 Odoo 提供支持" / "Powered by Odoo" from POS receipt -->
+    <!-- Note: POS receipt templates are JavaScript-based in Odoo 18, so we use CSS to hide the text -->
+</odoo>

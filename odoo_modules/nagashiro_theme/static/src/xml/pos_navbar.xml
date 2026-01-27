@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+    <!-- 
+        Inherit POS Navbar template to replace Odoo logo with Nagashiro logo
+        
+        Original template: point_of_sale.Navbar
+        Location: /usr/lib/python3/dist-packages/odoo/addons/point_of_sale/static/src/app/navbar/navbar.xml
+        
+        Original logo: <img class="pos-logo pos-logo mw-100" height="42" src="/web/static/img/logo.png" alt="Logo" />
+        We replace it with Nagashiro logo and add a class for styling
+    -->
+    <t t-name="point_of_sale.Navbar" t-inherit="point_of_sale.Navbar" t-inherit-mode="extension" owl="1">
+        <!-- Replace the Odoo logo with Nagashiro logo -->
+        <xpath expr="//div[contains(@class, 'pos-centerheader')]/img[contains(@class, 'pos-logo')]" position="replace">
+            <img class="pos-logo nagashiro-brand-logo" src="/nagashiro_theme/static/src/img/logo.png" alt="Nagashiro Logo" />
+        </xpath>
+    </t>
+</templates>
+

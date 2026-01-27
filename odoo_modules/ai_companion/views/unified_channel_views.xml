@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- 多渠道配置视图 -->
+    <record id="view_unified_channel_config_tree" model="ir.ui.view">
+        <field name="name">unified.channel.config.tree</field>
+        <field name="model">unified.channel.config</field>
+        <field name="type">list</field>
+        <field name="arch" type="xml">
+            <list string="渠道配置">
+                <field name="name"/>
+                <field name="channel_type"/>
+                <field name="is_enabled"/>
+                <field name="total_messages"/>
+                <field name="last_message_at"/>
+            </list>
+        </field>
+    </record>
+    
+    <record id="view_unified_channel_config_form" model="ir.ui.view">
+        <field name="name">unified.channel.config.form</field>
+        <field name="model">unified.channel.config</field>
+        <field name="arch" type="xml">
+            <form string="渠道配置">
+                <header>
+                    <button name="write" string="保存" type="object" class="btn-primary"/>
+                </header>
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="channel_type"/>
+                        <field name="is_enabled"/>
+                    </group>
+                    <group>
+                        <field name="api_url"/>
+                        <field name="config_json" widget="text"/>
+                    </group>
+                    <group>
+                        <field name="total_messages"/>
+                        <field name="last_message_at"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    
+    <!-- 统一会话视图 -->
+    <record id="view_unified_conversation_tree" model="ir.ui.view">
+        <field name="name">unified.conversation.tree</field>
+        <field name="model">unified.conversation</field>
+        <field name="type">list</field>
+        <field name="arch" type="xml">
+            <list string="会话列表">
+                <field name="name"/>
+                <field name="channel_type"/>
+                <field name="message_count"/>
+                <field name="last_message_at"/>
+                <field name="state"/>
+                <field name="assigned_to"/>
+            </list>
+        </field>
+    </record>
+    
+    <record id="view_unified_conversation_form" model="ir.ui.view">
+        <field name="name">unified.conversation.form</field>
+        <field name="model">unified.conversation</field>
+        <field name="arch" type="xml">
+            <form string="会话详情">
+                <header>
+                    <button name="action_send_message" string="发送消息" type="object" class="btn-primary"/>
+                    <field name="state" widget="statusbar" statusbar_visible="active,closed,archived"/>
+                </header>
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="conversation_id"/>
+                        <field name="channel_type"/>
+                        <field name="unified_user_id"/>
+                    </group>
+                    <group>
+                        <field name="message_count"/>
+                        <field name="last_message_at"/>
+                        <field name="assigned_to"/>
+                    </group>
+                    <notebook>
+                        <page string="消息">
+                            <field name="message_ids" nolabel="1">
+                                <list>
+                                    <field name="direction"/>
+                                    <field name="message_type"/>
+                                    <field name="content"/>
+                                    <field name="created_at"/>
+                                    <button name="action_send_reply" string="回复" type="object" icon="fa-reply"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    
+    <!-- 消息视图 -->
+    <record id="view_unified_message_tree" model="ir.ui.view">
+        <field name="name">unified.message.tree</field>
+        <field name="model">unified.message</field>
+        <field name="type">list</field>
+        <field name="arch" type="xml">
+            <list string="消息">
+                <field name="conversation_id"/>
+                <field name="direction"/>
+                <field name="message_type"/>
+                <field name="content"/>
+                <field name="created_at"/>
+            </list>
+        </field>
+    </record>
+    
+    <!-- 菜单 -->
+    <!-- 尝试多个可能的父菜单位置 -->
+    <!-- 方案1: 作为独立根菜单 -->
+    <menuitem id="menu_unified_channels"
+              name="多渠道客服"
+              sequence="100"/>
+    
+    <!-- 方案2: 如果Live Chat模块存在，也可以作为其子菜单（备用方案，注释掉） -->
+    <!--
+    <menuitem id="menu_unified_channels"
+              name="多渠道客服"
+              parent="website_livechat.menu_website_livechat_root"
+              sequence="100"/>
+    -->
+    
+    <menuitem id="menu_channel_config"
+              name="渠道配置"
+              parent="menu_unified_channels"
+              action="action_unified_channel_config"
+              sequence="10"/>
+    
+    <menuitem id="menu_unified_conversations"
+              name="统一会话"
+              parent="menu_unified_channels"
+              action="action_unified_conversation"
+              sequence="20"/>
+    
+    <!-- 动作 -->
+    <record id="action_unified_channel_config" model="ir.actions.act_window">
+        <field name="name">渠道配置</field>
+        <field name="res_model">unified.channel.config</field>
+        <field name="view_mode">list,form</field>
+    </record>
+    
+    <record id="action_unified_conversation" model="ir.actions.act_window">
+        <field name="name">统一会话</field>
+        <field name="res_model">unified.conversation</field>
+        <field name="view_mode">list,form</field>
+    </record>
+    
+    <!-- 发送消息向导 -->
+    <record id="view_unified_message_wizard_form" model="ir.ui.view">
+        <field name="name">unified.message.wizard.form</field>
+        <field name="model">unified.message.wizard</field>
+        <field name="arch" type="xml">
+            <form string="发送消息">
+                <field name="conversation_id" invisible="1"/>
+                <field name="channel_type" invisible="1"/>
+                <field name="user_id" invisible="1"/>
+                <field name="message" placeholder="输入消息内容..."/>
+                <footer>
+                    <button string="发送" name="action_send" type="object" class="btn-primary"/>
+                    <button string="取消" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>
+

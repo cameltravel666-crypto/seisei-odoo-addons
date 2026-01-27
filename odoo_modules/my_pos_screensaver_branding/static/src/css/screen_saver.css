@@ -1,0 +1,22 @@
+/* 
+    My POS Screensaver Branding - CSS Overrides
+    
+    This CSS file ensures the custom logo is properly displayed in the screensaver.
+    It may be used as a fallback if template inheritance doesn't fully work.
+*/
+
+/* Ensure the screensaver logo container maintains proper sizing */
+.point_of_sale .login-overlay img[src*="Nagashiro.png"] {
+    max-width: 182px;
+    max-height: 182px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+}
+
+/* For small screens, adjust logo size */
+.point_of_sale .login-overlay .env.isSmall img[src*="Nagashiro.png"] {
+    max-width: 40px;
+    max-height: 40px;
+}
+

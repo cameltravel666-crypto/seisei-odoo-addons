@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <!-- Inherit financial report form to add Excel button -->
+    <record id="financial_report_view_form_xlsx" model="ir.ui.view">
+        <field name="name">financial.report.view.form.xlsx</field>
+        <field name="model">financial.report</field>
+        <field name="inherit_id" ref="base_accounting_kit.financial_report_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//footer/button[@name='view_report_pdf']" position="after">
+                <button string="Export Excel" name="view_report_xlsx" type="object"
+                        class="btn-success" icon="fa-file-excel-o"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Cash Flow Report - inherits from base account_report_view_form which has check_report -->
+    <record id="cash_flow_report_xlsx_button" model="ir.ui.view">
+        <field name="name">cash.flow.report.xlsx.button</field>
+        <field name="model">cash.flow.report</field>
+        <field name="inherit_id" ref="base_accounting_kit.account_report_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//footer/button[@name='check_report']" position="after">
+                <button string="Export Excel" name="check_report_xlsx" type="object"
+                        class="btn-success" icon="fa-file-excel-o"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Bank Book Report Excel button -->
+    <record id="bank_book_report_xlsx_button" model="ir.ui.view">
+        <field name="name">account.bank.book.report.xlsx.button</field>
+        <field name="model">account.bank.book.report</field>
+        <field name="inherit_id" ref="base_accounting_kit.account_bank_book_report_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//footer/button[@name='check_report']" position="after">
+                <button string="Export Excel" name="check_report_xlsx" type="object"
+                        class="btn-success" icon="fa-file-excel-o"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Cash Book Report Excel button -->
+    <record id="cash_book_report_xlsx_button" model="ir.ui.view">
+        <field name="name">account.cash.book.report.xlsx.button</field>
+        <field name="model">account.cash.book.report</field>
+        <field name="inherit_id" ref="base_accounting_kit.account_cash_book_report_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//footer/button[@name='check_report']" position="after">
+                <button string="Export Excel" name="check_report_xlsx" type="object"
+                        class="btn-success" icon="fa-file-excel-o"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Day Book Report Excel button -->
+    <record id="day_book_report_xlsx_button" model="ir.ui.view">
+        <field name="name">account.day.book.report.xlsx.button</field>
+        <field name="model">account.day.book.report</field>
+        <field name="inherit_id" ref="base_accounting_kit.account_day_book_report_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//footer/button[@name='check_report']" position="after">
+                <button string="Export Excel" name="check_report_xlsx" type="object"
+                        class="btn-success" icon="fa-file-excel-o"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Aged Trial Balance Excel button -->
+    <record id="aged_trial_balance_xlsx_button" model="ir.ui.view">
+        <field name="name">account.aged.trial.balance.xlsx.button</field>
+        <field name="model">account.aged.trial.balance</field>
+        <field name="inherit_id" ref="base_accounting_kit.account_aged_trial_balance_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//footer/button[@name='check_report']" position="after">
+                <button string="Export Excel" name="check_report_xlsx" type="object"
+                        class="btn-success" icon="fa-file-excel-o"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>
