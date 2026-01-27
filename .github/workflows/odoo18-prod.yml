@@ -193,6 +193,49 @@ jobs:
             # Health check
             curl -sf http://localhost:8069/web/health && echo "Health check passed" || echo "Health check failed (service may still be starting)"
 
+      - name: Upgrade custom modules (all tenants)
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          GHCR_PAT: ${{ secrets.GHCR_PAT }}
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.PROD_SSH_PORT || 22 }}
+          envs: GHCR_PAT
+          script: |
+            set -e
+            # Run module upgrade for ALL tenant databases (ten_*)
+            echo "$GHCR_PAT" | sudo docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin
+
+            # Get all tenant databases matching dbfilter pattern (ten_*)
+            TENANT_DBS=$(sudo docker exec seisei-db psql -U odoo -d postgres -t -c "SELECT datname FROM pg_database WHERE datname LIKE 'ten_%' AND datistemplate = false;" | tr -d ' ' | grep -v '^$' || true)
+
+            if [ -z "$TENANT_DBS" ]; then
+              echo "No tenant databases found matching pattern 'ten_*'"
+              exit 0
+            fi
+
+            echo "Found tenant databases: $TENANT_DBS"
+
+            # Stop web container temporarily for module upgrade
+            sudo docker stop odoo18-prod-web || true
+
+            # Upgrade each tenant database
+            for DB in $TENANT_DBS; do
+              echo "Upgrading modules for database: $DB"
+              sudo docker run --rm \
+                --network seisei-odoo-network \
+                -v /srv/stacks/odoo18-prod/config/odoo.conf:/etc/odoo/odoo.conf:ro \
+                ghcr.io/${{ github.repository_owner }}/seisei-odoo18:sha-${{ steps.vars.outputs.sha_short }} \
+                odoo -c /etc/odoo/odoo.conf -d "$DB" -u qr_ordering --stop-after-init --no-http || echo "Warning: upgrade failed for $DB"
+            done
+
+            # Restart web container
+            sudo docker start odoo18-prod-web
+
+            echo "Module upgrade completed for all tenants"
+
       - name: Deployment summary
         run: |
           echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
