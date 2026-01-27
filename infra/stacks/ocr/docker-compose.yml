@@ -1,6 +1,6 @@
 services:
   ocr-service:
-    image: ghcr.io/seisei/ocr-service:${VERSION:-latest}
+    image: ghcr.io/${GITHUB_REPO_OWNER:-seisei}/ocr-service:${OCR_IMAGE_TAG:-latest}
     container_name: ocr-service
     restart: unless-stopped
     environment:
@@ -9,12 +9,20 @@ services:
       - OCR_SERVICE_KEY=${OCR_SERVICE_KEY}
       - OCR_FREE_QUOTA=${OCR_FREE_QUOTA:-30}
       - OCR_PRICE_PER_IMAGE=${OCR_PRICE_PER_IMAGE:-20}
+    ports:
+      - "8180:8080"
     depends_on:
       ocr-db:
         condition: service_healthy
     networks:
       - ocr-internal
       - edge
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
     labels:
       # OCR service - default NOT exposed to public
       # Uncomment to enable public access for debugging

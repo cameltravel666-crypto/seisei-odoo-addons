@@ -1,0 +1,181 @@
+# =============================================================================
+# OCR Service - Build, Push & Deploy
+# =============================================================================
+# Builds and deploys the central OCR service
+#
+# Required Secrets:
+#   PROD_HOST           - Production server hostname/IP
+#   SSH_PRIVATE_KEY     - SSH private key for deploy user
+#   GEMINI_API_KEY      - Google Gemini API key
+#   OCR_SERVICE_KEY     - OCR service authentication key
+#   OCR_DB_PASSWORD     - OCR database password
+# =============================================================================
+
+name: OCR Service Build & Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'services/ocr_service/**'
+      - 'infra/stacks/ocr/**'
+      - '.github/workflows/ocr-service.yml'
+  workflow_dispatch:
+    inputs:
+      skip_deploy:
+        description: 'Skip deployment (build only)'
+        required: false
+        default: 'false'
+        type: boolean
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ocr-service
+
+jobs:
+  build:
+    name: Build & Push Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    outputs:
+      image_tag: ${{ steps.meta.outputs.tags }}
+      sha_short: ${{ steps.short_sha.outputs.sha_short }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set short SHA
+        id: short_sha
+        run: echo "sha_short=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=sha-
+            type=raw,value=latest
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: services/ocr_service
+          file: services/ocr_service/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Output image info
+        run: |
+          echo "Image pushed: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}"
+          echo "Tags: ${{ steps.meta.outputs.tags }}"
+
+  deploy:
+    name: Deploy to Production
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event.inputs.skip_deploy != 'true'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set short SHA
+        id: vars
+        run: echo "sha_short=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
+
+      - name: Copy files to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.PROD_SSH_PORT || 22 }}
+          source: "infra/stacks/ocr/docker-compose.yml"
+          target: "/tmp/ocr-deploy"
+          strip_components: 3
+
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          GHCR_PAT: ${{ secrets.GHCR_PAT }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OCR_SERVICE_KEY: ${{ secrets.OCR_SERVICE_KEY }}
+          OCR_DB_PASSWORD: ${{ secrets.OCR_DB_PASSWORD }}
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.PROD_SSH_PORT || 22 }}
+          envs: GHCR_PAT,GEMINI_API_KEY,OCR_SERVICE_KEY,OCR_DB_PASSWORD
+          script: |
+            set -e
+            STACK_DIR=/srv/stacks/ocr
+
+            # Create directory if not exists
+            sudo mkdir -p $STACK_DIR
+            cd $STACK_DIR
+
+            # Copy docker-compose.yml from temp location
+            sudo cp /tmp/ocr-deploy/docker-compose.yml $STACK_DIR/
+
+            # Create/update .env file
+            sudo tee .env > /dev/null << EOF
+            GITHUB_REPO_OWNER=${{ github.repository_owner }}
+            OCR_IMAGE_TAG=sha-${{ steps.vars.outputs.sha_short }}
+            GEMINI_API_KEY=$GEMINI_API_KEY
+            OCR_SERVICE_KEY=$OCR_SERVICE_KEY
+            OCR_DB_PASSWORD=$OCR_DB_PASSWORD
+            OCR_FREE_QUOTA=30
+            OCR_PRICE_PER_IMAGE=20
+            EOF
+
+            # Create edge network if not exists
+            sudo docker network create edge 2>/dev/null || true
+
+            # Login to GHCR
+            echo "$GHCR_PAT" | sudo docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin
+
+            # Pull and deploy
+            sudo docker compose pull
+            sudo docker compose up -d
+
+            echo "Deployed OCR service sha-${{ steps.vars.outputs.sha_short }}"
+
+      - name: Verify deployment
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.PROD_SSH_PORT || 22 }}
+          script: |
+            # Wait for container to be ready
+            sleep 15
+            # Health check
+            curl -sf http://localhost:8180/health && echo "OCR Service healthy" || echo "Health check failed"
+
+      - name: Deployment summary
+        run: |
+          echo "## OCR Service Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image Tag**: sha-${{ steps.vars.outputs.sha_short }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Operator**: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Time**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> $GITHUB_STEP_SUMMARY
