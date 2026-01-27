@@ -37,8 +37,8 @@ services:
       - OCR_SERVICE_URL=${OCR_SERVICE_URL:-http://172.17.0.1:8180/api/v1}
       - OCR_SERVICE_KEY=${OCR_SERVICE_KEY}
     volumes:
-      # ONLY data volume - config/addons are in the image
       - odoo18-prod-data:/var/lib/odoo
+      - ./config/odoo.conf:/etc/odoo/odoo.conf:ro
     networks:
       - seisei-odoo-network
       - odoo18-prod-internal

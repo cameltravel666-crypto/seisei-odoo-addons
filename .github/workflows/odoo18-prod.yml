@@ -113,7 +113,7 @@ jobs:
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.PROD_SSH_PORT || 22 }}
-          source: "infra/stacks/odoo18-prod/docker-compose.yml"
+          source: "infra/stacks/odoo18-prod/docker-compose.yml,infra/stacks/odoo18-prod/config/"
           target: "/tmp/odoo18-deploy"
           strip_components: 3
 
@@ -136,8 +136,10 @@ jobs:
             sudo mkdir -p $STACK_DIR
             cd $STACK_DIR
 
-            # Copy docker-compose.yml from temp location
+            # Copy docker-compose.yml and config from temp location
             sudo cp /tmp/odoo18-deploy/docker-compose.yml $STACK_DIR/
+            sudo mkdir -p $STACK_DIR/config
+            sudo cp -r /tmp/odoo18-deploy/config/* $STACK_DIR/config/ 2>/dev/null || true
 
             # Create .env if not exists
             if [ ! -f .env ]; then
