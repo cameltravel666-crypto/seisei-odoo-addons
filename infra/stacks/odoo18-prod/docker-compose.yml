@@ -70,21 +70,40 @@ services:
           cpus: '2'
     labels:
       - "traefik.enable=true"
-      # Main router - *.erp.seisei.tokyo (wildcard for production tenants)
+      # =================================================================
+      # Router 1: *.erp.seisei.tokyo (wildcard for production tenants)
+      # =================================================================
       - "traefik.http.routers.odoo18-prod.rule=HostRegexp(`{subdomain:[a-z0-9-]+}.erp.seisei.tokyo`) && !Host(`testodoo.seisei.tokyo`)"
       - "traefik.http.routers.odoo18-prod.entrypoints=websecure"
       - "traefik.http.routers.odoo18-prod.tls.certresolver=cloudflare"
       - "traefik.http.routers.odoo18-prod.middlewares=secure-headers@file,rate-limit@file"
+      - "traefik.http.routers.odoo18-prod.service=odoo18-prod"
       - "traefik.http.services.odoo18-prod.loadbalancer.server.port=8069"
       - "traefik.http.services.odoo18-prod.loadbalancer.sticky.cookie=true"
       - "traefik.http.services.odoo18-prod.loadbalancer.sticky.cookie.name=odoo_session"
-      # Longpolling / WebSocket
+      # Longpolling / WebSocket for seisei.tokyo
       - "traefik.http.routers.odoo18-prod-lp.rule=HostRegexp(`{subdomain:[a-z0-9-]+}.erp.seisei.tokyo`) && (PathPrefix(`/longpolling`) || PathPrefix(`/websocket`))"
       - "traefik.http.routers.odoo18-prod-lp.entrypoints=websecure"
       - "traefik.http.routers.odoo18-prod-lp.tls.certresolver=cloudflare"
       - "traefik.http.routers.odoo18-prod-lp.middlewares=odoo-websocket@file"
+      - "traefik.http.routers.odoo18-prod-lp.service=odoo18-prod-lp"
       - "traefik.http.services.odoo18-prod-lp.loadbalancer.server.port=8072"
       - "traefik.http.routers.odoo18-prod-lp.priority=100"
+      # =================================================================
+      # Router 2: demo.nagashiro.top
+      # =================================================================
+      - "traefik.http.routers.odoo18-nagashiro.rule=Host(`demo.nagashiro.top`)"
+      - "traefik.http.routers.odoo18-nagashiro.entrypoints=websecure"
+      - "traefik.http.routers.odoo18-nagashiro.tls.certresolver=cloudflare"
+      - "traefik.http.routers.odoo18-nagashiro.middlewares=secure-headers@file,rate-limit@file"
+      - "traefik.http.routers.odoo18-nagashiro.service=odoo18-prod"
+      # Longpolling / WebSocket for nagashiro.top
+      - "traefik.http.routers.odoo18-nagashiro-lp.rule=Host(`demo.nagashiro.top`) && (PathPrefix(`/longpolling`) || PathPrefix(`/websocket`))"
+      - "traefik.http.routers.odoo18-nagashiro-lp.entrypoints=websecure"
+      - "traefik.http.routers.odoo18-nagashiro-lp.tls.certresolver=cloudflare"
+      - "traefik.http.routers.odoo18-nagashiro-lp.middlewares=odoo-websocket@file"
+      - "traefik.http.routers.odoo18-nagashiro-lp.service=odoo18-prod-lp"
+      - "traefik.http.routers.odoo18-nagashiro-lp.priority=100"
 
   redis:
     image: redis:7-alpine
