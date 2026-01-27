@@ -1,3 +1,19 @@
+# =============================================================================
+# Seisei Odoo 18 Production Stack
+# =============================================================================
+# IMMUTABLE IMAGE DEPLOYMENT
+# - web service uses pre-built image from GHCR
+# - Config and addons are baked into the image
+# - Only data volume is mounted for persistence
+#
+# Required environment variables in .env:
+#   GITHUB_REPO_OWNER    - GitHub organization/user (e.g., cameltravel666-crypto)
+#   ODOO18_IMAGE_TAG     - Image tag (e.g., sha-abc1234 or latest)
+#   DB_PASSWORD          - PostgreSQL password
+#   REDIS_PASSWORD       - Redis password
+#   ADMIN_PASSWORD       - Odoo admin password (optional, has default)
+# =============================================================================
+
 services:
   db:
     image: postgres:15
@@ -22,7 +38,8 @@ services:
           memory: 2G
 
   web:
-    image: odoo:18.0
+    # Immutable image from GHCR - config and addons baked in
+    image: ghcr.io/${GITHUB_REPO_OWNER}/seisei-odoo18:${ODOO18_IMAGE_TAG:-latest}
     container_name: seisei-project-web
     restart: unless-stopped
     depends_on:
@@ -35,9 +52,8 @@ services:
       - USER=${DB_USER:-odoo}
       - PASSWORD=${DB_PASSWORD}
     volumes:
+      # ONLY data volume - config/addons are in the image
       - odoo18-prod-data:/var/lib/odoo
-      - ./config:/etc/odoo:ro
-      - ./addons:/mnt/extra-addons:ro
     networks:
       - odoo18-prod-internal
       - edge
@@ -62,7 +78,7 @@ services:
       - "traefik.http.services.odoo18-prod.loadbalancer.server.port=8069"
       - "traefik.http.services.odoo18-prod.loadbalancer.sticky.cookie=true"
       - "traefik.http.services.odoo18-prod.loadbalancer.sticky.cookie.name=odoo_session"
-      # Longpolling
+      # Longpolling / WebSocket
       - "traefik.http.routers.odoo18-prod-lp.rule=HostRegexp(`{subdomain:[a-z0-9-]+}.erp.seisei.tokyo`) && (PathPrefix(`/longpolling`) || PathPrefix(`/websocket`))"
       - "traefik.http.routers.odoo18-prod-lp.entrypoints=websecure"
       - "traefik.http.routers.odoo18-prod-lp.tls.certresolver=cloudflare"

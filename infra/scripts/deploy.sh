@@ -1,6 +1,15 @@
 #!/bin/bash
+# =============================================================================
 # Seisei 统一部署脚本
-# 用法: ./deploy.sh <stack> [version] [stage|prod]
+# =============================================================================
+# 用法: ./deploy.sh <stack> [version] [environment] [operator]
+#
+# Parameters:
+#   stack       - Stack name (e.g., odoo18-prod, erp-seisei)
+#   version     - Image tag (default: latest)
+#   environment - stage or prod (default: stage)
+#   operator    - GitHub username or manual operator (default: manual)
+# =============================================================================
 
 set -eo pipefail
 
@@ -21,6 +30,7 @@ LAST_GOOD_DIR="/srv/deployments/last_good_sha"
 STACK=$1
 VERSION=${2:-latest}
 ENV=${3:-stage}
+OPERATOR=${4:-manual}
 
 log() { echo -e "[$(date '+%Y-%m-%d %H:%M:%S')] $1"; }
 info() { log "${BLUE}INFO${NC}: $1"; }
@@ -67,7 +77,8 @@ check_stack() {
 record() {
     local status=$1
     mkdir -p "$(dirname $HISTORY_LOG)"
-    echo "$(date -Iseconds) | ${STACK} | ${VERSION} | ${ENV} | ${status}" >> $HISTORY_LOG
+    # Format: timestamp | stack | version | env | status | operator
+    echo "$(date -Iseconds) | ${STACK} | ${VERSION} | ${ENV} | ${status} | ${OPERATOR}" >> $HISTORY_LOG
 }
 
 save_last_good() {
@@ -172,10 +183,11 @@ rollback() {
 # 主流程
 main() {
     echo "============================================"
-    info "Seisei Deploy Script v1.0"
+    info "Seisei Deploy Script v1.1"
     info "Stack: ${STACK}"
     info "Version: ${VERSION}"
     info "Environment: ${ENV}"
+    info "Operator: ${OPERATOR}"
     echo "============================================"
 
     check_stack

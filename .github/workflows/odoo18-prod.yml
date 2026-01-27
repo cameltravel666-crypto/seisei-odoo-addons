@@ -1,0 +1,128 @@
+# =============================================================================
+# Seisei Odoo 18 Production - Build, Push & Deploy
+# =============================================================================
+# Triggers on push to main when relevant paths change
+# Builds immutable image with baked config/addons and deploys to production
+#
+# Required Secrets:
+#   PROD_HOST           - Production server hostname/IP
+#   PROD_DEPLOY_SSH_KEY - SSH private key for deploy user
+#   PROD_SSH_PORT       - (Optional) SSH port, defaults to 22
+#
+# The deploy user on the server should have:
+#   - Restricted shell access via authorized_keys command=""
+#   - Only allowed to run /usr/local/bin/deploy_odoo18.sh
+# =============================================================================
+
+name: Odoo18 Prod Build & Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'odoo_modules/**'
+      - 'infra/stacks/odoo18-prod/**'
+      - '.github/workflows/odoo18-prod.yml'
+  workflow_dispatch:
+    inputs:
+      skip_deploy:
+        description: 'Skip deployment (build only)'
+        required: false
+        default: 'false'
+        type: boolean
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: seisei-odoo18
+
+jobs:
+  build:
+    name: Build & Push Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    outputs:
+      image_tag: ${{ steps.meta.outputs.tags }}
+      sha_tag: sha-${{ github.sha }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=sha-
+            type=raw,value=latest
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: infra/stacks/odoo18-prod/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Output image info
+        run: |
+          echo "Image pushed: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}"
+          echo "Tags: ${{ steps.meta.outputs.tags }}"
+          echo "SHA Tag: sha-${{ github.sha }}"
+
+  deploy:
+    name: Deploy to Production
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event.inputs.skip_deploy != 'true'
+
+    steps:
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: deploy
+          key: ${{ secrets.PROD_DEPLOY_SSH_KEY }}
+          port: ${{ secrets.PROD_SSH_PORT || 22 }}
+          script: |
+            # Deploy with image tag and operator info
+            /usr/local/bin/deploy_odoo18.sh "sha-${{ github.sha }}" "${{ github.actor }}"
+
+      - name: Verify deployment
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: deploy
+          key: ${{ secrets.PROD_DEPLOY_SSH_KEY }}
+          port: ${{ secrets.PROD_SSH_PORT || 22 }}
+          script: |
+            # Quick health check
+            sleep 30
+            curl -sf http://localhost:8069/web/health || exit 1
+            echo "Health check passed"
+
+      - name: Deployment summary
+        run: |
+          echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Stack**: odoo18-prod" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image Tag**: sha-${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Operator**: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Time**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> $GITHUB_STEP_SUMMARY
