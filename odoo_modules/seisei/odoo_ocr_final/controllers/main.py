@@ -67,6 +67,10 @@ class OcrCallbackController(http.Controller):
                 # Update invoice with OCR data
                 invoice.update_from_ocr_data(data)
                 _logger.info(f"[OCR Callback] Invoice {record_id} updated successfully")
+
+                # Update batch progress if invoice is part of a batch
+                self._update_batch_progress(invoice, success=True)
+
                 return {'success': True, 'message': f'Invoice {record_id} updated'}
 
             elif status == 'failed':
@@ -78,6 +82,10 @@ class OcrCallbackController(http.Controller):
                     'ocr_raw_data': json.dumps(data, ensure_ascii=False, indent=2),
                 })
                 _logger.warning(f"[OCR Callback] Invoice {record_id} OCR failed: {error_msg}")
+
+                # Update batch progress if invoice is part of a batch
+                self._update_batch_progress(invoice, success=False, error=error_msg)
+
                 return {'success': True, 'message': f'Invoice {record_id} marked as failed'}
 
             else:
@@ -86,6 +94,37 @@ class OcrCallbackController(http.Controller):
         except Exception as e:
             _logger.exception(f"[OCR Callback] Error processing callback: {e}")
             return {'success': False, 'error': str(e)}
+
+    def _update_batch_progress(self, invoice, success=True, error=None):
+        """
+        Update batch progress when an invoice OCR completes via callback.
+
+        Finds the batch that contains this invoice and updates its progress.
+        """
+        try:
+            BatchProgress = request.env['ocr.batch.progress'].sudo()
+
+            # Find batch that contains this invoice
+            batch = BatchProgress.search([
+                ('move_ids', 'in', [invoice.id]),
+                ('state', 'in', ['queued', 'processing']),
+            ], limit=1)
+
+            if batch:
+                # Start processing if still queued
+                if batch.state == 'queued':
+                    batch.start_processing()
+
+                # Update progress
+                batch.update_progress(
+                    current_move=invoice,
+                    success=success,
+                    error=error
+                )
+                _logger.info(f"[OCR Callback] Updated batch {batch.id} progress: {batch.processed_count}/{batch.total_count}")
+
+        except Exception as e:
+            _logger.error(f"[OCR Callback] Error updating batch progress: {e}")
 
     @http.route('/api/ocr/status/<int:record_id>', type='json', auth='user', methods=['GET'])
     def ocr_status(self, record_id):
