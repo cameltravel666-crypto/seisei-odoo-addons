@@ -1,0 +1,76 @@
+name: Deploy Nginx Router Config
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'nginx/default.conf'
+      - '.github/workflows/deploy-nginx-router.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy Nginx Config
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Copy nginx config to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.PROD_SSH_PORT || 22 }}
+          source: "nginx/default.conf"
+          target: "/tmp/nginx-deploy"
+          strip_components: 1
+
+      - name: Deploy and reload nginx
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.PROD_SSH_PORT || 22 }}
+          script: |
+            set -e
+
+            # Backup current config
+            sudo docker cp seisei-odoo-router:/etc/nginx/conf.d/default.conf /tmp/default.conf.bak.$(date +%Y%m%d%H%M%S) || true
+
+            # Copy new config to container
+            sudo docker cp /tmp/nginx-deploy/default.conf seisei-odoo-router:/etc/nginx/conf.d/default.conf
+
+            # Test nginx config
+            sudo docker exec seisei-odoo-router nginx -t
+
+            # Reload nginx
+            sudo docker exec seisei-odoo-router nginx -s reload
+
+            echo "Nginx config deployed and reloaded successfully"
+
+      - name: Verify deployment
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.PROD_SSH_PORT || 22 }}
+          script: |
+            # Test nginx health
+            curl -sf http://localhost/nginx-health && echo "Nginx health check passed" || echo "Health check endpoint not available"
+
+            # Test QR ordering route
+            curl -sI https://demo.nagashiro.top/qr/order/test 2>&1 | head -5
+
+      - name: Deployment summary
+        run: |
+          echo "## Nginx Router Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Config File**: nginx/default.conf" >> $GITHUB_STEP_SUMMARY
+          echo "- **Container**: seisei-odoo-router" >> $GITHUB_STEP_SUMMARY
+          echo "- **Operator**: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Time**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> $GITHUB_STEP_SUMMARY
