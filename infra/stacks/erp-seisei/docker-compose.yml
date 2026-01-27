@@ -49,8 +49,9 @@ services:
       - edge
     labels:
       - "traefik.enable=true"
-      # Main router - erp.seisei.tokyo, biznexus.seisei.tokyo, *.erp.seisei.tokyo
-      - "traefik.http.routers.erp.rule=Host(`erp.seisei.tokyo`) || Host(`biznexus.seisei.tokyo`) || HostRegexp(`{subdomain:[a-z0-9-]+}.erp.seisei.tokyo`)"
+      # Main router - only biznexus.seisei.tokyo and erp.seisei.tokyo (root)
+      # *.erp.seisei.tokyo (subdomains) are routed to Odoo backend via odoo18-prod stack
+      - "traefik.http.routers.erp.rule=Host(`erp.seisei.tokyo`) || Host(`biznexus.seisei.tokyo`)"
       - "traefik.http.routers.erp.entrypoints=websecure"
       - "traefik.http.routers.erp.tls.certresolver=cloudflare"
       - "traefik.http.routers.erp.tls.domains[0].main=erp.seisei.tokyo"
