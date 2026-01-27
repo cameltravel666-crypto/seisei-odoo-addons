@@ -30,7 +30,7 @@ services:
       - DEFAULT_ODOO_DB=${DEFAULT_ODOO_DB:-test001}
       # Public OCR Odoo credentials
       - PUBLIC_ODOO_URL=${PUBLIC_ODOO_URL:-https://testodoo.seisei.tokyo}
-      - PUBLIC_ODOO_DB=${PUBLIC_ODOO_DB:-public}
+      - PUBLIC_ODOO_DB=${PUBLIC_ODOO_DB:-ten_testodoo}
       - PUBLIC_ODOO_USER=${PUBLIC_ODOO_USER:-public@seisei.tokyo}
       - PUBLIC_ODOO_PASSWORD=${PUBLIC_ODOO_PASSWORD}
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
