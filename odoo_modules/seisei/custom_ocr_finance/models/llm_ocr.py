@@ -221,7 +221,8 @@ def _call_ocr_service(file_data: bytes, mimetype: str, tenant_id: str,
             if data.get('success'):
                 # Parse extracted data
                 extracted = data.get('extracted', {})
-                line_items = extracted.get('line_items', [])
+                # Support both 'line_items' and 'lines' field names
+                line_items = extracted.get('line_items') or extracted.get('lines', [])
 
                 # Add usage info to result
                 usage = data.get('usage', {})
@@ -285,7 +286,8 @@ def _process_image_direct(file_data: bytes, mimetype: str, doc_type: str) -> Dic
                 if parts:
                     raw_text = parts[0].get('text', '')
                     extracted = _extract_json_from_text(raw_text)
-                    line_items = extracted.get('line_items', [])
+                    # Support both 'line_items' and 'lines' field names
+                    line_items = extracted.get('line_items') or extracted.get('lines', [])
 
                     return {
                         'success': True,

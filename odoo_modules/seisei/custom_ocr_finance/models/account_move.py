@@ -280,13 +280,14 @@ class AccountMove(models.Model):
             return 0
 
         for item in line_items:
-            product_name = item.get('product_name', '')
+            # Support both old format (product_name) and new format (name)
+            product_name = item.get('product_name') or item.get('name', '')
             if not product_name:
                 continue
 
-            # Parse quantity
+            # Parse quantity - support both 'quantity' and 'qty'
             try:
-                quantity = float(item.get('quantity', 1) or 1)
+                quantity = float(item.get('quantity') or item.get('qty') or 1)
             except (ValueError, TypeError):
                 quantity = 1
 
@@ -297,19 +298,23 @@ class AccountMove(models.Model):
                 unit_price = 0
 
             # If no unit price but amount exists, calculate it
+            # Support both 'amount' and 'gross_amount'
             if unit_price == 0:
                 try:
-                    amount = float(item.get('amount', 0) or 0)
+                    amount = float(item.get('amount') or item.get('gross_amount') or 0)
                     if amount > 0 and quantity > 0:
                         unit_price = amount / quantity
                 except (ValueError, TypeError):
                     pass
 
             # Get tax rate for this item (default to 8% - food items in Japan)
-            # Handle both decimal (0.08) and integer (8) formats
+            # Handle multiple formats: decimal (0.08), integer (8), string ("8%")
             tax_rate = item.get('tax_rate')
             try:
                 if tax_rate is not None:
+                    # Handle string format like "8%" or "10%"
+                    if isinstance(tax_rate, str):
+                        tax_rate = tax_rate.replace('%', '').strip()
                     tax_rate = float(tax_rate)
                     # If decimal format (e.g., 0.08), convert to percentage
                     if tax_rate < 1:
