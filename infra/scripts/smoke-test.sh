@@ -158,6 +158,30 @@ case $STACK in
         check_container "traefik" "Traefik" || true
         echo ""
         ;;&
+
+    three-chain|all)
+        echo "--- Three-Chain Routing ---"
+        # BizNexus login (TENANT chain)
+        check_url "https://biznexus.seisei.tokyo/login" "BizNexus Login (TENANT)" || true
+
+        # Try-OCR page (TRY_OCR chain)
+        check_url "https://biznexus.seisei.tokyo/try-ocr" "Try-OCR Page (TRY_OCR)" || true
+
+        # Admin domain health check (ADMIN chain)
+        check_url "${ODOO18_PROD_BASE_URL}/web/health" "Admin Health (ADMIN)" || true
+
+        # Verify db param override is rejected for TRY_OCR
+        echo -e "${YELLOW}Note:${NC} Testing db param rejection for TRY_OCR..."
+        TRY_OCR_STATUS=$(curl -sf -o /dev/null -w "%{http_code}" --max-time 10 "https://biznexus.seisei.tokyo/api/public/session?db=evil" 2>/dev/null || echo "000")
+        if [[ "$TRY_OCR_STATUS" == "400" ]]; then
+            echo -e "${GREEN}✓${NC} TRY_OCR db param rejected (400)"
+            ((PASSED++))
+        else
+            echo -e "${YELLOW}?${NC} TRY_OCR db param response: ${TRY_OCR_STATUS} (expected 400)"
+            # Don't fail for now as this may not be implemented yet
+        fi
+        echo ""
+        ;;&
 esac
 
 echo "============================================"

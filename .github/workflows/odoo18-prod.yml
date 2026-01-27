@@ -153,6 +153,14 @@ jobs:
             # Login to GHCR
             echo "$GHCR_PAT" | sudo docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin
 
+            # Stop old seisei-odoo container if exists (migrating to new immutable deployment)
+            # This ensures demo.nagashiro.top traffic goes to the new container
+            if sudo docker ps -a --format '{{.Names}}' | grep -q '^seisei-odoo$'; then
+              echo "Stopping old seisei-odoo container..."
+              sudo docker stop seisei-odoo || true
+              sudo docker rm seisei-odoo || true
+            fi
+
             # Pull and deploy
             sudo docker compose pull
             sudo docker compose up -d

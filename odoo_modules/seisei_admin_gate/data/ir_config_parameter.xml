@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- Default admin email configuration -->
+        <record id="admin_email_param" model="ir.config_parameter">
+            <field name="key">seisei_admin_gate.admin_email</field>
+            <field name="value">admin@seisei.tokyo</field>
+        </record>
+    </data>
+</odoo>

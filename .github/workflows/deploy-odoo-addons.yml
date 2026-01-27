@@ -1,15 +1,29 @@
-name: Deploy Odoo Addons
+name: Deploy Odoo Addons (DEPRECATED)
+
+# =============================================================================
+# DEPRECATED: This workflow is disabled.
+# Use odoo18-prod.yml for production deployments (immutable image deployment).
+# Keeping this file for reference/history.
+# =============================================================================
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'odoo_modules/**'
   workflow_dispatch:
+    inputs:
+      confirm_run:
+        description: 'Type "run-deprecated" to confirm running this deprecated workflow'
+        required: true
+        type: string
+
+# Disabled auto-trigger - previously triggered on:
+#   push:
+#     branches: [main]
+#     paths:
+#       - 'odoo_modules/**'
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    if: github.event.inputs.confirm_run == 'run-deprecated'
 
     steps:
       - uses: actions/checkout@v4

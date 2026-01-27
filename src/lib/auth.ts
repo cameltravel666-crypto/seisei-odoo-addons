@@ -60,7 +60,8 @@ export async function verifyToken(token: string): Promise<JWTPayload | null> {
 // Get current session from cookies
 export async function getSession(): Promise<JWTPayload | null> {
   const cookieStore = await cookies();
-  const token = cookieStore.get('auth-token')?.value;
+  // Try new cookie name first, then fall back to legacy
+  const token = cookieStore.get('bn_session')?.value || cookieStore.get('auth-token')?.value;
   if (!token) return null;
   return verifyToken(token);
 }
@@ -81,21 +82,42 @@ export async function getCurrentUser() {
   return user;
 }
 
+// Cookie configuration for session isolation
+// IMPORTANT: BizNexus cookies must be limited to biznexus.seisei.tokyo
+// They must NOT use .seisei.tokyo (which would leak to Odoo domains)
+const COOKIE_NAME = 'bn_session'; // Different from Odoo's 'session_id' and 'odoo_session'
+const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN || undefined; // biznexus.seisei.tokyo in production
+
 // Set auth cookie
 export async function setAuthCookie(token: string) {
   const cookieStore = await cookies();
-  cookieStore.set('auth-token', token, {
+  cookieStore.set(COOKIE_NAME, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     maxAge: 60 * 60 * 24, // 24 hours
     path: '/',
+    // IMPORTANT: Do NOT set domain to .seisei.tokyo
+    // This ensures cookie isolation from Odoo domains
+    ...(COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {}),
+  });
+
+  // Also set the legacy auth-token for backward compatibility
+  cookieStore.set('auth-token', token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 60 * 60 * 24,
+    path: '/',
+    ...(COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {}),
   });
 }
 
 // Clear auth cookie
 export async function clearAuthCookie() {
   const cookieStore = await cookies();
+  // Clear both new and legacy cookie names
+  cookieStore.delete('bn_session');
   cookieStore.delete('auth-token');
 }
 

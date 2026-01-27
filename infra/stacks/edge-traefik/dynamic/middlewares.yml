@@ -1,52 +1,116 @@
+# =============================================================================
+# Traefik Dynamic Configuration - Middlewares
+# =============================================================================
+# File-based middlewares for use across services
+# Referenced as middleware@file in service labels
+# =============================================================================
+
 http:
   middlewares:
-    # 安全头
+    # -----------------------------------------------------------------
+    # Security Headers (Common)
+    # -----------------------------------------------------------------
     secure-headers:
       headers:
-        browserXssFilter: true
-        contentTypeNosniff: true
-        frameDeny: false
-        customFrameOptionsValue: "SAMEORIGIN"
+        stsSeconds: 31536000
         stsIncludeSubdomains: true
         stsPreload: true
-        stsSeconds: 31536000
+        forceSTSHeader: true
+        contentTypeNosniff: true
+        browserXssFilter: true
+        referrerPolicy: "strict-origin-when-cross-origin"
+        customFrameOptionsValue: "SAMEORIGIN"
 
-    # 速率限制
+    # -----------------------------------------------------------------
+    # Compression
+    # -----------------------------------------------------------------
+    compress:
+      compress: {}
+
+    # -----------------------------------------------------------------
+    # Rate Limiting (General)
+    # -----------------------------------------------------------------
     rate-limit:
       rateLimit:
         average: 100
         burst: 50
         period: 1s
 
-    # 压缩
-    compress:
-      compress:
-        excludedContentTypes:
-          - text/event-stream
+    # -----------------------------------------------------------------
+    # Admin Backend Access Control (First Gate)
+    # Option 1: IP Allowlist - More secure, requires static IPs
+    # -----------------------------------------------------------------
+    erp-admin-allowlist:
+      ipAllowList:
+        sourceRange:
+          # Add your admin IPs here
+          # Format: "IP/CIDR"
+          - "127.0.0.1/32"           # Localhost
+          - "10.0.0.0/8"             # Private network
+          - "172.16.0.0/12"          # Docker networks
+          - "192.168.0.0/16"         # Private network
+          # Add specific admin IPs as needed:
+          # - "203.0.113.50/32"      # Office IP
+        # Reject requests from non-allowed IPs
+        ipStrategy:
+          depth: 0
 
-    # CORS
-    cors-all:
-      headers:
-        accessControlAllowMethods:
-          - GET
-          - OPTIONS
-          - PUT
-          - POST
-          - DELETE
-          - PATCH
-        accessControlAllowHeaders:
-          - "*"
-        accessControlAllowOriginList:
-          - "https://erp.seisei.tokyo"
-          - "https://biznexus.seisei.tokyo"
-          - "https://seisei.tokyo"
-        accessControlMaxAge: 100
-        addVaryHeader: true
+    # -----------------------------------------------------------------
+    # Admin Backend Access Control (First Gate)
+    # Option 2: Basic Auth - Fallback if IP allowlist not feasible
+    # Password: htpasswd -nb admin your-secret-password
+    # -----------------------------------------------------------------
+    erp-admin-basicauth:
+      basicAuth:
+        users:
+          # Format: "user:htpasswd-encoded-password"
+          # Generate: htpasswd -nb admin password123
+          - "admin:$apr1$xyz123$abc..."  # Replace with actual hash
+        realm: "Seisei Admin Backend"
+        removeHeader: true
 
-    # Odoo Longpolling 专用
+    # -----------------------------------------------------------------
+    # Odoo WebSocket Support
+    # -----------------------------------------------------------------
     odoo-websocket:
       headers:
         customRequestHeaders:
-          X-Forwarded-Proto: "https"
-        customResponseHeaders:
-          X-Frame-Options: "SAMEORIGIN"
+          Connection: "upgrade"
+          Upgrade: "websocket"
+
+    # -----------------------------------------------------------------
+    # Strip Prefix (for sub-paths)
+    # -----------------------------------------------------------------
+    strip-api:
+      stripPrefix:
+        prefixes:
+          - "/api"
+
+    # -----------------------------------------------------------------
+    # Redirect HTTP to HTTPS
+    # -----------------------------------------------------------------
+    https-redirect:
+      redirectScheme:
+        scheme: https
+        permanent: true
+
+    # -----------------------------------------------------------------
+    # CORS for API endpoints
+    # -----------------------------------------------------------------
+    cors-api:
+      headers:
+        accessControlAllowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+        accessControlAllowHeaders:
+          - Content-Type
+          - Authorization
+          - X-Requested-With
+        accessControlAllowOriginList:
+          - "https://biznexus.seisei.tokyo"
+          - "https://erp.seisei.tokyo"
+        accessControlMaxAge: 86400
+        addVaryHeader: true
