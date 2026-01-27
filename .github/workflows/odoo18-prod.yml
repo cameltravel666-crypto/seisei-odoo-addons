@@ -222,13 +222,14 @@ jobs:
             sudo docker stop odoo18-prod-web || true
 
             # Upgrade each tenant database
+            # Use -i to install (idempotent) and -u to upgrade, ensuring module is properly loaded
             for DB in $TENANT_DBS; do
               echo "Upgrading modules for database: $DB"
               sudo docker run --rm \
                 --network seisei-odoo-network \
                 -v /srv/stacks/odoo18-prod/config/odoo.conf:/etc/odoo/odoo.conf:ro \
                 ghcr.io/${{ github.repository_owner }}/seisei-odoo18:sha-${{ steps.vars.outputs.sha_short }} \
-                odoo -c /etc/odoo/odoo.conf -d "$DB" -u qr_ordering --stop-after-init --no-http || echo "Warning: upgrade failed for $DB"
+                odoo -c /etc/odoo/odoo.conf -d "$DB" -i qr_ordering -u qr_ordering --stop-after-init --no-http 2>&1 | tail -50 || echo "Warning: upgrade failed for $DB"
             done
 
             # Restart web container
