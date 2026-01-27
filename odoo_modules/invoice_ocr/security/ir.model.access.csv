@@ -1,0 +1,7 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_ocr_document_user,ocr.document.user,model_ocr_document,base.group_user,1,1,1,0
+access_ocr_document_manager,ocr.document.manager,model_ocr_document,account.group_account_manager,1,1,1,1
+access_ocr_document_line_user,ocr.document.line.user,model_ocr_document_line,base.group_user,1,1,1,0
+access_ocr_document_line_manager,ocr.document.line.manager,model_ocr_document_line,account.group_account_manager,1,1,1,1
+access_ocr_batch_import_user,ocr.batch.import.user,model_ocr_batch_import,base.group_user,1,1,1,0
+access_ocr_batch_import_line_user,ocr.batch.import.line.user,model_ocr_batch_import_line,base.group_user,1,1,1,0

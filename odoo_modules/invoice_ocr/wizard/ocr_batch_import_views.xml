@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_ocr_batch_import_form" model="ir.ui.view">
+        <field name="name">ocr.batch.import.form</field>
+        <field name="model">ocr.batch.import</field>
+        <field name="arch" type="xml">
+            <form string="批量导入票据">
+                <group>
+                    <field name="upload_mode" widget="radio"/>
+                    <field name="auto_recognize"/>
+                </group>
+                
+                <group invisible="upload_mode != 'zip'">
+                    <field name="zip_file" filename="zip_filename"/>
+                    <field name="zip_filename" invisible="1"/>
+                    <p class="text-muted">
+                        💡 将多张票据图片打包成 ZIP 文件上传，系统会自动解压并导入
+                    </p>
+                </group>
+                
+                <notebook invisible="upload_mode != 'single'">
+                    <page string="逐个上传">
+                        <field name="file_ids">
+                            <list editable="bottom">
+                                <field name="file_data" filename="filename"/>
+                                <field name="filename"/>
+                            </list>
+                        </field>
+                    </page>
+                </notebook>
+                
+                <footer>
+                    <button name="action_import" type="object" 
+                            string="📥 开始导入" class="btn-primary"/>
+                    <button string="取消" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_ocr_batch_import" model="ir.actions.act_window">
+        <field name="name">批量导入票据</field>
+        <field name="res_model">ocr.batch.import</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>

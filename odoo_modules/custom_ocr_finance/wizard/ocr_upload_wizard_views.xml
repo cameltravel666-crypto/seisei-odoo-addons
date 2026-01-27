@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- OCR Upload Wizard Form View -->
+    <record id="view_ocr_upload_wizard_form" model="ir.ui.view">
+        <field name="name">ocr.upload.wizard.form</field>
+        <field name="model">ocr.upload.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Upload Invoice for OCR">
+                <group>
+                    <field name="move_id" readonly="1" invisible="1"/>
+                    <field name="file_data" filename="file_name" widget="binary" 
+                           string="Select Invoice/Receipt File"
+                           help="Upload PDF or image file (JPG, PNG, GIF, WebP)"/>
+                    <field name="file_name" invisible="1"/>
+                </group>
+                <footer>
+                    <button name="action_upload_and_ocr" string="Upload &amp; Process OCR" 
+                            type="object" class="btn-primary" icon="fa-eye"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action to open wizard -->
+    <record id="action_ocr_upload_wizard" model="ir.actions.act_window">
+        <field name="name">Upload Invoice for OCR</field>
+        <field name="res_model">ocr.upload.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="binding_model_id" ref="account.model_account_move"/>
+    </record>
+</odoo>

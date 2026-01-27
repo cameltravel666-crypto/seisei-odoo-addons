@@ -1,0 +1,5 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_account_move_ocr_user,account.move.ocr.user,account.model_account_move,account.group_account_invoice,1,1,1,0
+access_ocr_usage_user,ocr.usage.user,model_ocr_usage,base.group_user,1,1,1,0
+access_ocr_data_wizard,ocr.data.wizard.user,model_ocr_data_wizard,base.group_user,1,1,1,1
+access_ocr_upload_wizard,ocr.upload.wizard.user,model_ocr_upload_wizard,base.group_user,1,1,1,1

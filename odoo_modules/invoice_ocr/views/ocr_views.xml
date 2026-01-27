@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- 表单视图 -->
+    <record id="view_ocr_document_form" model="ir.ui.view">
+        <field name="name">ocr.document.form</field>
+        <field name="model">ocr.document</field>
+        <field name="arch" type="xml">
+            <form string="票据识别">
+                <header>
+                    <button name="action_recognize" type="object" 
+                            string="🔍 开始识别" class="btn-primary"
+                            invisible="state != 'draft'"/>
+                    <button name="action_recognize" type="object" 
+                            string="🔄 重新识别" class="btn-secondary"
+                            invisible="state == 'draft'"/>
+                    <button name="action_auto_classify_all" type="object"
+                            string="🏷️ 自动分类科目" class="btn-info"
+                            invisible="state != 'done'"/>
+                    <button name="action_create_bill" type="object"
+                            string="📄 创建账单" class="btn-success"
+                            invisible="state != 'done'"/>
+                    <button name="action_reset" type="object"
+                            string="↩️ 重置" class="btn-warning"
+                            invisible="state == 'draft'"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,done"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="票据名称"/></h1>
+                    </div>
+                    <group>
+                        <group string="票据信息">
+                            <field name="doc_type"/>
+                            <field name="image" widget="image" class="oe_avatar"/>
+                            <field name="image_filename" invisible="1"/>
+                        </group>
+                        <group string="基本信息">
+                            <field name="invoice_number"/>
+                            <field name="invoice_date"/>
+                            <field name="seller_name"/>
+                            <field name="buyer_name"/>
+                        </group>
+                    </group>
+                    <group string="金额信息">
+                        <group>
+                            <field name="subtotal"/>
+                            <field name="amount"/>
+                        </group>
+                        <group>
+                            <field name="tax_amount"/>
+                            <field name="tax_amount_10" string="10%税额"/>
+                            <field name="tax_amount_8" string="8%税额"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="商品明细 &amp; 会计科目">
+                            <field name="line_ids">
+                                <list editable="bottom">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="name"/>
+                                    <field name="quantity"/>
+                                    <field name="unit"/>
+                                    <field name="amount" sum="合计"/>
+                                    <field name="debit_account" string="借方科目"/>
+                                    <field name="credit_account" string="贷方科目"/>
+                                    <field name="note"/>
+                                </list>
+                            </field>
+                            <group>
+                                <p class="text-muted">
+                                    💡 提示：可以在列表中直接编辑科目，或勾选多行后使用批量操作
+                                </p>
+                            </group>
+                        </page>
+                        <page string="识别原文">
+                            <field name="ocr_result" readonly="1"/>
+                        </page>
+                        <page string="错误信息" invisible="state != 'error'">
+                            <field name="error_message" readonly="1"/>
+                        </page>
+                        <page string="关联信息">
+                            <group>
+                                <field name="account_move_id"/>
+                                <field name="process_time"/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- 明细行列表视图（独立） -->
+    <record id="view_ocr_document_line_list" model="ir.ui.view">
+        <field name="name">ocr.document.line.list</field>
+        <field name="model">ocr.document.line</field>
+        <field name="arch" type="xml">
+            <list string="票据明细" editable="bottom" multi_edit="1">
+                <header>
+                    <button name="action_auto_classify" type="object" string="🏷️ 自动分类"/>
+                </header>
+                <field name="document_id"/>
+                <field name="name"/>
+                <field name="quantity"/>
+                <field name="amount" sum="总金额"/>
+                <field name="debit_account"/>
+                <field name="credit_account"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- 票据列表视图 -->
+    <record id="view_ocr_document_list" model="ir.ui.view">
+        <field name="name">ocr.document.list</field>
+        <field name="model">ocr.document</field>
+        <field name="arch" type="xml">
+            <list string="票据识别" 
+                  decoration-success="state=='done'" 
+                  decoration-danger="state=='error'"
+                  decoration-info="state=='draft'">
+                <header>
+                    <button name="action_recognize" type="object" string="🔍 批量识别"/>
+                    <button name="action_auto_classify_all" type="object" string="🏷️ 批量分类科目"/>
+                </header>
+                <field name="name"/>
+                <field name="doc_type"/>
+                <field name="invoice_number"/>
+                <field name="seller_name"/>
+                <field name="amount" sum="总金额"/>
+                <field name="tax_amount" sum="总税额"/>
+                <field name="invoice_date"/>
+                <field name="state"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- 搜索视图 -->
+    <record id="view_ocr_document_search" model="ir.ui.view">
+        <field name="name">ocr.document.search</field>
+        <field name="model">ocr.document</field>
+        <field name="arch" type="xml">
+            <search string="搜索票据">
+                <field name="name"/>
+                <field name="invoice_number"/>
+                <field name="seller_name"/>
+                <filter string="待识别" name="draft" domain="[('state','=','draft')]"/>
+                <filter string="已识别" name="done" domain="[('state','=','done')]"/>
+                <filter string="识别失败" name="error" domain="[('state','=','error')]"/>
+                <separator/>
+                <filter string="零售小票" name="retail" domain="[('doc_type','=','retail_receipt')]"/>
+                <filter string="适格请求书" name="qualified" domain="[('doc_type','=','qualified_invoice')]"/>
+                <group expand="0" string="分组">
+                    <filter string="状态" name="group_state" context="{'group_by':'state'}"/>
+                    <filter string="票据类型" name="group_type" context="{'group_by':'doc_type'}"/>
+                    <filter string="开票日期" name="group_date" context="{'group_by':'invoice_date'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_ocr_document" model="ir.actions.act_window">
+        <field name="name">票据识别</field>
+        <field name="res_model">ocr.document</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">开始使用智能票据识别</p>
+        </field>
+    </record>
+
+    <!-- 明细行管理动作 -->
+    <record id="action_ocr_document_line" model="ir.actions.act_window">
+        <field name="name">明细科目管理</field>
+        <field name="res_model">ocr.document.line</field>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="view_ocr_document_line_list"/>
+        <field name="help" type="html">
+            <p>批量管理所有票据的明细科目</p>
+        </field>
+    </record>
+</odoo>

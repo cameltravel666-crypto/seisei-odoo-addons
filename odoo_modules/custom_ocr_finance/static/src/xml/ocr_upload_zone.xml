@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="custom_ocr_finance.OcrUploadZone" owl="1">
+        <div class="ocr-upload-container">
+            <div t-ref="dropZone"
+                 class="ocr-upload-zone"
+                 t-att-class="statusClass"
+                 t-on-dragover="handleDragOver"
+                 t-on-dragleave="handleDragLeave"
+                 t-on-drop="handleDrop"
+                 t-on-click="handleClick">
+                
+                <!-- Preview image -->
+                <t t-if="state.previewUrl">
+                    <img t-att-src="state.previewUrl" class="ocr-preview-image" alt="Preview"/>
+                </t>
+                
+                <!-- Upload icon -->
+                <t t-else="">
+                    <div class="ocr-upload-icon">
+                        <i class="fa fa-cloud-upload fa-3x"/>
+                    </div>
+                </t>
+                
+                <!-- Status text -->
+                <div class="ocr-upload-text">
+                    <t t-esc="state.statusText"/>
+                </div>
+                
+                <!-- Progress bar -->
+                <t t-if="state.status !== 'idle' and state.status !== 'error'">
+                    <div class="ocr-progress-container">
+                        <div class="ocr-progress-bar" t-attf-style="width: {{state.progress}}%"/>
+                    </div>
+                </t>
+                
+                <!-- Hint text -->
+                <t t-if="state.status === 'idle'">
+                    <div class="ocr-upload-hint">
+                        支持 JPG, PNG, PDF 格式<br/>
+                        图片将自动压缩到100KB以内
+                    </div>
+                </t>
+            </div>
+        </div>
+    </t>
+</templates>

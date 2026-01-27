@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <menuitem id="menu_ocr_root" 
+              name="票据识别" 
+              sequence="50"/>
+    
+    <menuitem id="menu_ocr_documents" 
+              name="票据列表" 
+              parent="menu_ocr_root"
+              action="action_ocr_document"
+              sequence="10"/>
+    
+    <menuitem id="menu_ocr_batch_import" 
+              name="📥 批量导入" 
+              parent="menu_ocr_root"
+              action="action_ocr_batch_import"
+              sequence="20"/>
+    
+    <menuitem id="menu_ocr_lines" 
+              name="📊 明细科目管理" 
+              parent="menu_ocr_root"
+              action="action_ocr_document_line"
+              sequence="30"/>
+</odoo>

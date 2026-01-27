@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="ocr_data_wizard_form" model="ir.ui.view">
+        <field name="name">ocr.data.wizard.form</field>
+        <field name="model">ocr.data.wizard</field>
+        <field name="arch" type="xml">
+            <form string="OCR Data">
+                <group>
+                    <group>
+                        <field name="ocr_status"/>
+                        <field name="ocr_confidence" widget="percentage"/>
+                    </group>
+                </group>
+                <notebook>
+                    <page string="OCR Raw Text" name="raw_text">
+                        <field name="ocr_extracted_texts" nolabel="1" readonly="1"
+                               widget="text" placeholder="No OCR text available"
+                               style="font-family: monospace; font-size: 12px; min-height: 400px;"/>
+                    </page>
+                    <page string="Extracted Items (JSON)" name="json_items">
+                        <field name="ocr_line_items" nolabel="1" readonly="1"
+                               widget="text" placeholder="No extracted items"
+                               style="font-family: monospace; font-size: 12px; min-height: 400px;"/>
+                    </page>
+                </notebook>
+                <footer>
+                    <button string="Close" class="btn-primary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_ocr_data_wizard" model="ir.actions.act_window">
+        <field name="name">OCR Data</field>
+        <field name="res_model">ocr.data.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="binding_model_id" ref="purchase.model_purchase_order"/>
+        <field name="binding_view_types">form</field>
+    </record>
+</odoo>
