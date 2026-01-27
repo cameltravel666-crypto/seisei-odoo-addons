@@ -15,10 +15,28 @@ FROM odoo:18.0
 # Switch to root for installation
 USER root
 
-# Install curl for healthcheck (may already exist, but ensure it)
+# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies required by custom addons
+# PyMuPDF: odoo_ocr_final, custom_ocr_finance (PDF processing)
+# boto3: seisei_s3_attachment (S3 storage)
+# qrcode: qr_ordering (QR code generation)
+# openpyxl, xlsxwriter: accounting_report_xlsx, ocr_file, base_accounting_kit
+# ofxparse, qifparse: base_accounting_kit (bank statement import)
+# google-api-python-client, google-auth: seisei_gdoc_import
+RUN pip3 install --no-cache-dir \
+    PyMuPDF \
+    boto3 \
+    qrcode \
+    openpyxl \
+    xlsxwriter \
+    ofxparse \
+    qifparse \
+    google-api-python-client \
+    google-auth
 
 # Create addons directory structure
 RUN mkdir -p /mnt/extra-addons && chown -R odoo:odoo /mnt/extra-addons
