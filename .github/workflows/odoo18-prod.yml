@@ -110,11 +110,14 @@ jobs:
 
       - name: Deploy to server
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          GHCR_PAT: ${{ secrets.GHCR_PAT }}
         with:
           host: ${{ secrets.PROD_HOST }}
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.PROD_SSH_PORT || 22 }}
+          envs: GHCR_PAT
           script: |
             set -e
             STACK_DIR=/srv/stacks/odoo18-prod
@@ -138,6 +141,9 @@ jobs:
 
             # Create edge network if not exists
             sudo docker network create edge 2>/dev/null || true
+
+            # Login to GHCR
+            echo "$GHCR_PAT" | sudo docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin
 
             # Pull and deploy
             sudo docker compose pull
