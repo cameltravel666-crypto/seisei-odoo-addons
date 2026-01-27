@@ -20,6 +20,70 @@ QR_ORDERING_BUILD = f"{QR_ORDERING_VERSION}-{int(time.time())}"
 class QrOrderingController(http.Controller):
     """扫码点餐控制器"""
 
+    # ==================== Bootstrap Route (No Auth Required) ====================
+
+    @http.route('/qr/b/<string:table_token>', type='http', auth='none', csrf=False)
+    def qr_bootstrap(self, table_token, **kwargs):
+        """
+        Bootstrap route for QR ordering - accessible without database session.
+
+        This route establishes the database session and redirects to the main QR page.
+        It uses an HTTP redirect with session cookie set.
+
+        URL: /qr/b/{table_token}?db={database_name}
+
+        Flow:
+        1. Client scans QR code → nginx rewrites to /qr/b/{token}?db={db}
+        2. This route sets session.db and redirects to /qr/order/{token}
+        3. Session cookie is saved, next request has valid database session
+        """
+        from werkzeug.utils import redirect
+        from werkzeug.wrappers import Response
+        import odoo
+
+        # Get database from URL parameter or X-Odoo-dbfilter header
+        db = kwargs.get('db')
+        if not db:
+            # Try to get from header (nginx sets this)
+            db_filter = request.httprequest.headers.get('X-Odoo-dbfilter', '')
+            if db_filter and not db_filter.startswith('^'):
+                db = db_filter
+
+        if not db:
+            return Response(
+                '<html><body><h1>Database Required</h1><p>Please specify database parameter.</p></body></html>',
+                status=400,
+                content_type='text/html'
+            )
+
+        # Validate database exists
+        try:
+            db_list = odoo.service.db.list_dbs(force=True)
+            if db not in db_list:
+                return Response(
+                    f'<html><body><h1>Database Not Found</h1><p>Database "{db}" not found.</p></body></html>',
+                    status=404,
+                    content_type='text/html'
+                )
+        except Exception as e:
+            _logger.warning(f"[Bootstrap] Could not list databases: {e}")
+
+        # Build redirect URL
+        redirect_url = f'/qr/order/{table_token}'
+        params = [f'{k}={v}' for k, v in kwargs.items() if k != 'db']
+        if params:
+            redirect_url += '?' + '&'.join(params)
+
+        _logger.info(f"[Bootstrap] Creating session for db={db}, token={table_token[:8]}...")
+
+        # Set the database in the session
+        # This is the key part - we set session.db and the session will be saved
+        request.session.db = db
+
+        # Return redirect response
+        # The session will be saved automatically with the db set
+        return redirect(redirect_url, code=302)
+
     # ==================== 页面路由 ====================
 
     @http.route('/qr/order/<string:table_token>', type='http', auth='public', website=False)
