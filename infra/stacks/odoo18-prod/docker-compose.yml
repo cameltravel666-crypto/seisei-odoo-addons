@@ -12,6 +12,8 @@
 #   DB_PASSWORD          - PostgreSQL password
 #   REDIS_PASSWORD       - Redis password
 #   ADMIN_PASSWORD       - Odoo admin password (optional, has default)
+#   OCR_SERVICE_URL      - Central OCR service URL (e.g., http://172.17.0.1:8180/api/v1)
+#   OCR_SERVICE_KEY      - OCR service API key (required for OCR functionality)
 # =============================================================================
 
 services:
@@ -51,6 +53,9 @@ services:
       - HOST=db
       - USER=${DB_USER:-odoo}
       - PASSWORD=${DB_PASSWORD}
+      # OCR Service (Central Odoo 19)
+      - OCR_SERVICE_URL=${OCR_SERVICE_URL:-http://172.17.0.1:8180/api/v1}
+      - OCR_SERVICE_KEY=${OCR_SERVICE_KEY}
     volumes:
       # ONLY data volume - config/addons are in the image
       - odoo18-prod-data:/var/lib/odoo
