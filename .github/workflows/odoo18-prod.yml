@@ -45,11 +45,15 @@ jobs:
 
     outputs:
       image_tag: ${{ steps.meta.outputs.tags }}
-      sha_tag: sha-${{ github.sha }}
+      sha_short: ${{ steps.short_sha.outputs.sha_short }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Set short SHA
+        id: short_sha
+        run: echo "sha_short=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -85,7 +89,7 @@ jobs:
         run: |
           echo "Image pushed: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}"
           echo "Tags: ${{ steps.meta.outputs.tags }}"
-          echo "SHA Tag: sha-${{ github.sha }}"
+          echo "SHA Tag: sha-${{ steps.vars.outputs.sha_short }}"
 
   deploy:
     name: Deploy to Production
@@ -96,6 +100,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Set short SHA
+        id: vars
+        run: echo "sha_short=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
 
       - name: Copy files to server
         uses: appleboy/scp-action@v0.1.7
@@ -132,11 +140,11 @@ jobs:
             # Create .env if not exists
             if [ ! -f .env ]; then
               echo "GITHUB_REPO_OWNER=${{ github.repository_owner }}" | sudo tee .env
-              echo "ODOO18_IMAGE_TAG=sha-${{ github.sha }}" | sudo tee -a .env
+              echo "ODOO18_IMAGE_TAG=sha-${{ steps.vars.outputs.sha_short }}" | sudo tee -a .env
               echo "DB_PASSWORD=changeme" | sudo tee -a .env
               echo "REDIS_PASSWORD=changeme" | sudo tee -a .env
             else
-              sudo sed -i 's/ODOO18_IMAGE_TAG=.*/ODOO18_IMAGE_TAG=sha-${{ github.sha }}/' .env
+              sudo sed -i 's/ODOO18_IMAGE_TAG=.*/ODOO18_IMAGE_TAG=sha-${{ steps.vars.outputs.sha_short }}/' .env
             fi
 
             # Create edge network if not exists
@@ -149,7 +157,7 @@ jobs:
             sudo docker compose pull
             sudo docker compose up -d
 
-            echo "Deployed sha-${{ github.sha }} by ${{ github.actor }}"
+            echo "Deployed sha-${{ steps.vars.outputs.sha_short }} by ${{ github.actor }}"
 
       - name: Verify deployment
         uses: appleboy/ssh-action@v1.0.3
@@ -169,7 +177,6 @@ jobs:
           echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Stack**: odoo18-prod" >> $GITHUB_STEP_SUMMARY
-          echo "- **Image Tag**: sha-${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image Tag**: sha-${{ steps.vars.outputs.sha_short }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Operator**: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Time**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> $GITHUB_STEP_SUMMARY
-# Trigger deploy Tue Jan 27 14:00:00 JST 2026
