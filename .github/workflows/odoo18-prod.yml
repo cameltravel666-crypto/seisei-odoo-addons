@@ -94,6 +94,20 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event.inputs.skip_deploy != 'true'
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Copy files to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.PROD_SSH_PORT || 22 }}
+          source: "infra/stacks/odoo18-prod/docker-compose.yml"
+          target: "/tmp/odoo18-deploy"
+          strip_components: 3
+
       - name: Deploy to server
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -103,14 +117,31 @@ jobs:
           port: ${{ secrets.PROD_SSH_PORT || 22 }}
           script: |
             set -e
-            cd /srv/stacks/odoo18-prod
+            STACK_DIR=/srv/stacks/odoo18-prod
 
-            # Update image tag
-            sed -i 's/ODOO18_IMAGE_TAG=.*/ODOO18_IMAGE_TAG=sha-${{ github.sha }}/' .env
+            # Create directory if not exists
+            sudo mkdir -p $STACK_DIR
+            cd $STACK_DIR
+
+            # Copy docker-compose.yml from temp location
+            sudo cp /tmp/odoo18-deploy/docker-compose.yml $STACK_DIR/
+
+            # Create .env if not exists
+            if [ ! -f .env ]; then
+              echo "GITHUB_REPO_OWNER=${{ github.repository_owner }}" | sudo tee .env
+              echo "ODOO18_IMAGE_TAG=sha-${{ github.sha }}" | sudo tee -a .env
+              echo "DB_PASSWORD=changeme" | sudo tee -a .env
+              echo "REDIS_PASSWORD=changeme" | sudo tee -a .env
+            else
+              sudo sed -i 's/ODOO18_IMAGE_TAG=.*/ODOO18_IMAGE_TAG=sha-${{ github.sha }}/' .env
+            fi
+
+            # Create edge network if not exists
+            sudo docker network create edge 2>/dev/null || true
 
             # Pull and deploy
-            sudo docker compose pull web
-            sudo docker compose up -d web
+            sudo docker compose pull
+            sudo docker compose up -d
 
             echo "Deployed sha-${{ github.sha }} by ${{ github.actor }}"
 
