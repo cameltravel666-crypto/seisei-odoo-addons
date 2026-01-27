@@ -21,7 +21,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies required by custom addons
-# PyMuPDF: odoo_ocr_final, custom_ocr_finance (PDF processing)
+# PyMuPDF (fitz): odoo_ocr_final, custom_ocr_finance (PDF processing)
 # boto3: seisei_s3_attachment (S3 storage)
 # qrcode: qr_ordering (QR code generation)
 # openpyxl, xlsxwriter: accounting_report_xlsx, ocr_file, base_accounting_kit
@@ -29,7 +29,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # google-api-python-client, google-auth: seisei_gdoc_import
 # Note: --break-system-packages required for Debian 12 (PEP 668)
 RUN pip3 install --no-cache-dir --break-system-packages \
-    PyMuPDF \
+    PyMuPDF==1.24.0 \
     boto3 \
     qrcode \
     openpyxl \
@@ -37,7 +37,8 @@ RUN pip3 install --no-cache-dir --break-system-packages \
     ofxparse \
     qifparse \
     google-api-python-client \
-    google-auth
+    google-auth \
+    && python3 -c "import fitz; print('PyMuPDF version:', fitz.version)"
 
 # Create addons directory structure
 RUN mkdir -p /mnt/extra-addons && chown -R odoo:odoo /mnt/extra-addons
