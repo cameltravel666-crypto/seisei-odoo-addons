@@ -217,10 +217,16 @@ def _call_ocr_service(file_data: bytes, mimetype: str, tenant_id: str,
             extracted = result.get('extracted', {})
             normalized = _normalize_extracted(extracted)
 
+            # Get line_items from normalized data (handles both old and new format)
+            line_items = normalized.get('line_items', [])
+            # Fall back to original if not in normalized
+            if not line_items:
+                line_items = extracted.get('line_items', [])
+
             return {
                 'success': True,
                 'extracted': normalized,
-                'line_items': extracted.get('line_items', []),
+                'line_items': line_items,
                 'raw_response': result.get('raw_response', ''),
                 'pages': 1,
             }
@@ -235,7 +241,15 @@ def _call_ocr_service(file_data: bytes, mimetype: str, tenant_id: str,
 
 
 def _normalize_extracted(extracted: dict) -> dict:
-    """Normalize extracted data from OCR"""
+    """Normalize extracted data from OCR.
+
+    Handles both old format (flat structure) and new format (nested issuer/document/lines).
+    """
+    # Check if this is the new unified prompt format
+    if 'issuer' in extracted or 'document' in extracted or 'lines' in extracted:
+        return _normalize_new_format(extracted)
+
+    # Old format - use legacy key mapping
     key_mapping = {
         'vendor_name': ['vendor_name_仕入先名', 'vendor_name', '仕入先名', 'vendor', 'store_name_店舗名', 'store_name', '店舗名'],
         'vendor_address': ['vendor_address_住所', 'vendor_address', '住所', 'address'],
@@ -263,6 +277,102 @@ def _normalize_extracted(extracted: dict) -> dict:
     for key, value in extracted.items():
         if key not in normalized and not any(key in sources for sources in key_mapping.values()):
             normalized[key] = value
+
+    return normalized
+
+
+def _normalize_new_format(extracted: dict) -> dict:
+    """Normalize new unified OCR format to Odoo-expected format.
+
+    New format structure:
+    {
+        "issuer": {"issuer_name": "...", "invoice_reg_no": "...", ...},
+        "document": {"doc_type": "...", "doc_date": "...", "category": "..."},
+        "lines": [{"name": "...", "gross_amount": ..., "tax_rate": "10%", ...}],
+        "totals_on_doc": {"total_gross": ..., "total_tax": ...}
+    }
+
+    Converts to Odoo format:
+    {
+        "vendor_name": "...",
+        "tax_id": "...",
+        "date": "...",
+        "total": ...,
+        "line_items": [{"product_name": "...", "amount": ..., "tax_rate": 10, ...}]
+    }
+    """
+    normalized = {}
+
+    # Extract issuer info
+    issuer = extracted.get('issuer', {})
+    if issuer:
+        normalized['vendor_name'] = issuer.get('issuer_name')
+        normalized['vendor_address'] = issuer.get('issuer_address')
+        # Convert invoice_reg_no (T1234...) to tax_id format
+        reg_no = issuer.get('invoice_reg_no', '')
+        if reg_no and reg_no != '0000000000000':
+            normalized['tax_id'] = reg_no if reg_no.startswith('T') else f'T{reg_no}'
+        normalized['issuer_tel'] = issuer.get('issuer_tel')
+
+    # Extract document info
+    document = extracted.get('document', {})
+    if document:
+        normalized['date'] = document.get('doc_date')
+        normalized['doc_type'] = document.get('doc_type')
+        normalized['category'] = document.get('category')
+
+    # Extract totals
+    totals = extracted.get('totals_on_doc', {})
+    if totals:
+        normalized['total'] = totals.get('total_gross')
+        normalized['tax'] = totals.get('total_tax')
+        # Calculate subtotal if not available
+        if totals.get('total_gross') and totals.get('total_tax'):
+            try:
+                normalized['subtotal'] = totals['total_gross'] - totals['total_tax']
+            except (TypeError, ValueError):
+                pass
+
+    # Convert lines to line_items format
+    lines = extracted.get('lines', [])
+    line_items = []
+    for line in lines:
+        item = {}
+        item['product_name'] = line.get('name', '')
+        item['quantity'] = line.get('qty', 1) or 1
+        item['unit_price'] = line.get('unit_price')
+
+        # Use gross_amount as primary amount (tax-inclusive)
+        amount = line.get('gross_amount') or line.get('net_amount')
+        item['amount'] = amount
+
+        # Convert tax_rate string to number: "10%" -> 10, "8%" -> 8, "exempt" -> 0
+        tax_rate_str = line.get('tax_rate', '10%')
+        if tax_rate_str == 'exempt':
+            item['tax_rate'] = 0
+        elif isinstance(tax_rate_str, str):
+            # Extract number from "10%" or "8%"
+            tax_num = re.sub(r'[^\d]', '', tax_rate_str)
+            item['tax_rate'] = int(tax_num) if tax_num else 10
+        else:
+            item['tax_rate'] = tax_rate_str or 10
+
+        # Include suggested account for reference
+        item['suggested_account'] = line.get('suggested_account')
+
+        line_items.append(item)
+
+    normalized['line_items'] = line_items
+
+    # Determine is_tax_inclusive based on document type
+    # Japanese receipts are typically tax-inclusive (内税)
+    normalized['is_tax_inclusive'] = True
+
+    # Keep original data for reference
+    normalized['_original'] = extracted
+
+    _logger.info(f'[OCR] Normalized new format: vendor={normalized.get("vendor_name")}, '
+                 f'lines={len(line_items)}, total={normalized.get("total")}')
 
     return normalized
 
