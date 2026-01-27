@@ -27,7 +27,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # openpyxl, xlsxwriter: accounting_report_xlsx, ocr_file, base_accounting_kit
 # ofxparse, qifparse: base_accounting_kit (bank statement import)
 # google-api-python-client, google-auth: seisei_gdoc_import
-RUN pip3 install --no-cache-dir \
+# Note: --break-system-packages required for Debian 12 (PEP 668)
+RUN pip3 install --no-cache-dir --break-system-packages \
     PyMuPDF \
     boto3 \
     qrcode \
