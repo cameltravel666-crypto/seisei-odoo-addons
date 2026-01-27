@@ -1,17 +1,24 @@
 # =============================================================================
-# Seisei Odoo 18 Production Stack
+# Seisei Odoo 18 Production Stack - Bind Mount Mode
 # =============================================================================
-# IMMUTABLE IMAGE DEPLOYMENT
-# - web service uses pre-built image from GHCR
-# - Config and addons are baked into the image
-# - Only data volume is mounted for persistence
+# USE THIS FOR:
+# - Development and testing
+# - Servers where you want to update addons without rebuilding images
+# - Quick iteration on addon changes
 #
 # Required environment variables in .env:
-#   GITHUB_REPO_OWNER    - GitHub organization/user (e.g., cameltravel666-crypto)
-#   ODOO18_IMAGE_TAG     - Image tag (e.g., sha-abc1234 or latest)
+#   ADDONS_PATH          - Path to seisei-odoo-addons/odoo_modules on host
 #   DB_PASSWORD          - PostgreSQL password
 #   REDIS_PASSWORD       - Redis password
-#   ADMIN_PASSWORD       - Odoo admin password (optional, has default)
+#   ADMIN_PASSWORD       - Odoo admin password (optional)
+#
+# Example .env:
+#   ADDONS_PATH=/opt/seisei-odoo-addons/odoo_modules
+#   DB_PASSWORD=secure-password
+#   REDIS_PASSWORD=secure-password
+#
+# To deploy:
+#   docker compose -f docker-compose.bind.yml up -d
 # =============================================================================
 
 services:
@@ -38,8 +45,7 @@ services:
           memory: 2G
 
   web:
-    # Immutable image from GHCR - config and addons baked in
-    image: ghcr.io/${GITHUB_REPO_OWNER}/seisei-odoo18:${ODOO18_IMAGE_TAG:-latest}
+    image: odoo:18.0
     container_name: odoo18-prod-web
     restart: unless-stopped
     depends_on:
@@ -52,8 +58,13 @@ services:
       - USER=${DB_USER:-odoo}
       - PASSWORD=${DB_PASSWORD}
     volumes:
-      # ONLY data volume - config/addons are in the image
+      # Data volume - for Odoo filestore (REQUIRED)
       - odoo18-prod-data:/var/lib/odoo
+      # Config - bind mount (read-only)
+      - ./config:/etc/odoo:ro
+      # Addons - BIND MOUNT from seisei-odoo-addons repository (read-only)
+      # IMPORTANT: This is the SINGLE SOURCE OF TRUTH for production addons
+      - ${ADDONS_PATH}:/mnt/extra-addons:ro
     networks:
       - odoo18-prod-internal
       - edge
@@ -91,7 +102,6 @@ services:
       - "traefik.http.routers.odoo18-prod-lp.priority=100"
       # =================================================================
       # Router 2: demo.nagashiro.top
-      # Database: ten_testodoo (via nagashiro-dbfilter middleware)
       # =================================================================
       - "traefik.http.routers.odoo18-nagashiro.rule=Host(`demo.nagashiro.top`)"
       - "traefik.http.routers.odoo18-nagashiro.entrypoints=websecure"
