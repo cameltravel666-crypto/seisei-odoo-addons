@@ -413,13 +413,44 @@ class AccountMove(models.Model):
             except Exception as e:
                 _logger.error(f"[OCR] Failed to update line: {e}")
 
-        # Recompute dynamic lines (taxes, totals) after all changes
+        # Odoo 18: Force recomputation of invoice amounts after all lines are created
+        # The old _recompute_dynamic_lines method no longer exists in Odoo 18
         try:
-            self.with_context(check_move_validity=False)._recompute_dynamic_lines(
-                recompute_all_taxes=True
-            )
+            # Invalidate cache to force recomputation of computed fields
+            self.invalidate_recordset(['amount_total', 'amount_untaxed', 'amount_tax', 'amount_residual'])
+
+            # Trigger recomputation by accessing computed fields
+            # This forces Odoo to recalculate based on invoice_line_ids
+            _logger.info(f"[OCR] Triggering amount recomputation for invoice {self.id}")
+
+            # In Odoo 18, we need to properly sync the lines
+            # Use _sync_dynamic_lines if available, otherwise force compute
+            if hasattr(self, '_sync_dynamic_lines'):
+                self.with_context(check_move_validity=False)._sync_dynamic_lines(
+                    container={'records': self, 'self': self}
+                )
+            else:
+                # Alternative: Manually trigger the amount computation
+                # Access the computed fields to trigger their compute methods
+                for line in self.invoice_line_ids:
+                    # Ensure line amounts are computed
+                    line.invalidate_recordset(['price_subtotal', 'price_total'])
+                    _ = line.price_subtotal
+                    _ = line.price_total
+
+                # Now recompute the move totals
+                self._compute_amount()
+
+            _logger.info(f"[OCR] After recompute: total={self.amount_total}, untaxed={self.amount_untaxed}, tax={self.amount_tax}")
+
         except Exception as e:
-            _logger.warning(f"[OCR] Dynamic lines recompute warning: {e}")
+            _logger.warning(f"[OCR] Amount recomputation warning: {e}")
+            # Fallback: try simple invalidate and access
+            try:
+                self.invalidate_recordset()
+                _ = self.amount_total
+            except Exception:
+                pass
 
         return created_count
 
