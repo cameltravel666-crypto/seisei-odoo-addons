@@ -158,7 +158,9 @@ class QrOrderingController(http.Controller):
             'qr_ordering.base_url',
             default='https://demo.nagashiro.top'
         )
-        qr_content_url = f"{qr_base_url}/qr/order/{table.qr_token}"
+        # 获取当前数据库名称，确保多租户环境下正确路由
+        db_name = request.env.cr.dbname
+        qr_content_url = f"{qr_base_url}/qr/order/{table.qr_token}?db={db_name}"
         
         # URL 编码后的二维码内容
         qr_url_encoded = quote(qr_content_url, safe='')
