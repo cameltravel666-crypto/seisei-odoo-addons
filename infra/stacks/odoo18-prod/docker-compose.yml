@@ -91,17 +91,18 @@ services:
       - "traefik.http.routers.odoo18-prod-lp.priority=100"
       # =================================================================
       # Router 2: demo.nagashiro.top
+      # Database: ten_testodoo (via nagashiro-dbfilter middleware)
       # =================================================================
       - "traefik.http.routers.odoo18-nagashiro.rule=Host(`demo.nagashiro.top`)"
       - "traefik.http.routers.odoo18-nagashiro.entrypoints=websecure"
       - "traefik.http.routers.odoo18-nagashiro.tls.certresolver=cloudflare"
-      - "traefik.http.routers.odoo18-nagashiro.middlewares=secure-headers@file,rate-limit@file"
+      - "traefik.http.routers.odoo18-nagashiro.middlewares=secure-headers@file,rate-limit@file,nagashiro-dbfilter@file"
       - "traefik.http.routers.odoo18-nagashiro.service=odoo18-prod"
       # Longpolling / WebSocket for nagashiro.top
       - "traefik.http.routers.odoo18-nagashiro-lp.rule=Host(`demo.nagashiro.top`) && (PathPrefix(`/longpolling`) || PathPrefix(`/websocket`))"
       - "traefik.http.routers.odoo18-nagashiro-lp.entrypoints=websecure"
       - "traefik.http.routers.odoo18-nagashiro-lp.tls.certresolver=cloudflare"
-      - "traefik.http.routers.odoo18-nagashiro-lp.middlewares=odoo-websocket@file"
+      - "traefik.http.routers.odoo18-nagashiro-lp.middlewares=odoo-websocket@file,nagashiro-dbfilter@file"
       - "traefik.http.routers.odoo18-nagashiro-lp.service=odoo18-prod-lp"
       - "traefik.http.routers.odoo18-nagashiro-lp.priority=100"
 

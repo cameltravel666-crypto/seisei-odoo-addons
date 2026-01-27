@@ -95,6 +95,15 @@ http:
         permanent: true
 
     # -----------------------------------------------------------------
+    # Database Filter Headers for Odoo
+    # Sets X-Odoo-dbfilter header based on domain
+    # -----------------------------------------------------------------
+    nagashiro-dbfilter:
+      headers:
+        customRequestHeaders:
+          X-Odoo-dbfilter: "ten_testodoo"
+
+    # -----------------------------------------------------------------
     # CORS for API endpoints
     # -----------------------------------------------------------------
     cors-api:
@@ -112,5 +121,6 @@ http:
         accessControlAllowOriginList:
           - "https://biznexus.seisei.tokyo"
           - "https://erp.seisei.tokyo"
+          - "https://demo.nagashiro.top"
         accessControlMaxAge: 86400
         addVaryHeader: true
