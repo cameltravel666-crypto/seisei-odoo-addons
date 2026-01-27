@@ -4,62 +4,43 @@
 # IMMUTABLE IMAGE DEPLOYMENT
 # - web service uses pre-built image from GHCR
 # - Config and addons are baked into the image
-# - Only data volume is mounted for persistence
+# - Uses EXTERNAL database (seisei-db) for data persistence
 #
 # Required environment variables in .env:
 #   GITHUB_REPO_OWNER    - GitHub organization/user (e.g., cameltravel666-crypto)
 #   ODOO18_IMAGE_TAG     - Image tag (e.g., sha-abc1234 or latest)
-#   DB_PASSWORD          - PostgreSQL password
+#   DB_PASSWORD          - PostgreSQL password (for seisei-db)
 #   REDIS_PASSWORD       - Redis password
-#   ADMIN_PASSWORD       - Odoo admin password (optional, has default)
 #   OCR_SERVICE_URL      - Central OCR service URL (e.g., http://172.17.0.1:8180/api/v1)
 #   OCR_SERVICE_KEY      - OCR service API key (required for OCR functionality)
+#
+# External dependencies:
+#   - seisei-db container must be running on seisei-odoo-network
+#   - edge network must exist for Traefik routing
 # =============================================================================
 
 services:
-  db:
-    image: postgres:15
-    container_name: odoo18-prod-db
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${DB_USER:-odoo}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      PGDATA: /var/lib/postgresql/data/pgdata
-    volumes:
-      - odoo18-prod-db:/var/lib/postgresql/data
-    networks:
-      - odoo18-prod-internal
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-odoo}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    deploy:
-      resources:
-        limits:
-          memory: 2G
-
   web:
     # Immutable image from GHCR - config and addons baked in
     image: ghcr.io/${GITHUB_REPO_OWNER}/seisei-odoo18:${ODOO18_IMAGE_TAG:-latest}
     container_name: odoo18-prod-web
     restart: unless-stopped
     depends_on:
-      db:
-        condition: service_healthy
       redis:
         condition: service_started
     environment:
-      - HOST=db
+      # Database connection - use external seisei-db
+      - HOST=seisei-db
       - USER=${DB_USER:-odoo}
       - PASSWORD=${DB_PASSWORD}
-      # OCR Service (Central Odoo 19)
+      # OCR Service (Central)
       - OCR_SERVICE_URL=${OCR_SERVICE_URL:-http://172.17.0.1:8180/api/v1}
       - OCR_SERVICE_KEY=${OCR_SERVICE_KEY}
     volumes:
       # ONLY data volume - config/addons are in the image
       - odoo18-prod-data:/var/lib/odoo
     networks:
+      - seisei-odoo-network
       - odoo18-prod-internal
       - edge
     healthcheck:
@@ -133,13 +114,13 @@ services:
       retries: 5
 
 volumes:
-  odoo18-prod-db:
   odoo18-prod-data:
   odoo18-prod-redis:
 
 networks:
   odoo18-prod-internal:
     driver: bridge
+  seisei-odoo-network:
+    external: true
   edge:
     external: true
-
