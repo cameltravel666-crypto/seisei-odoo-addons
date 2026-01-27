@@ -126,49 +126,197 @@ async def verify_service_key(x_service_key: Optional[str] = Header(None)):
     return True
 
 
-def build_ocr_prompt(template_fields: List[str]) -> str:
-    """Build OCR prompt based on template fields"""
-    if not template_fields:
-        template_fields = [
-            '仕入先名/Vendor Name',
-            '日付/Date',
-            '請求書番号/Invoice Number',
-            '登録番号/Tax ID',
-            '合計金額/Total Amount',
-            '通貨/Currency'
-        ]
+def build_ocr_prompt(template_fields: List[str] = None) -> str:
+    """
+    Build OCR prompt for Japanese accounting documents.
+    Supports 適格請求書 (Invoice System) and JGAAP standards.
+    """
+    return '''你是日本会计（日本基準/JGAAP）与适格請求書（インボイス制度）解析引擎。请从输入的小票/发票/请款单文本中，抽取"开票方信息 + 明细行 + 税率汇总 + 会计科目建议"，并进行严格交叉验证，尽量提高识别率。
 
-    fields_json = {}
-    for field in template_fields:
-        key = field.strip().replace(' ', '_').replace('/', '_')
-        fields_json[key] = f"<{field}の値>"
+【必须抽取的核心字段】
+1) issuer（开票方）
+- issuer_name：开票方名称（商号/店名/公司名）
+- invoice_reg_no：税务识别号码（适格請求書発行事業者登録番号），形如 "T"+13位数字（例如 T1234567890123）
+  - 若文本中找不到任何注册号/登録番号/適格請求書発行事業者番号/インボイス番号，则 invoice_reg_no 直接输出 "0000000000000"（十三个0，不带T）
+- issuer_tel、issuer_address：能识别则填，否则为 null
 
-    fields_str = json.dumps(fields_json, ensure_ascii=False, indent=2)
+2) document（单据）
+- doc_type：receipt | invoice | unknown
+- doc_date：YYYY-MM-DD 或 null
+- currency：JPY
+- category（必须输出且仅能取以下之一）：purchase | sale | expense
+  - category 识别优先级：
+    A. 文本明确：請求書/納品書/領収書/レシート/見積書 等 + 语义（売上/請求/支払/仕入/経費）
+    B. 若出现"御請求/請求金額/お支払い"且对方为客户语境，倾向 sale
+    C. 若出现"仕入/買掛/発注/納入/支払先/振込先"倾向 purchase
+    D. 若出现大量费用类关键词（交通費/宿泊/会議/広告/通信/消耗品 等）倾向 expense
+    E. 无法判断时：默认 expense，并在 notes 说明
 
-    return f'''あなたは請求書・納品書のOCR専門家です。
-この画像から以下の項目を抽出してJSON形式で返してください：
+3) lines（逐行明细，必须输出）
+每一行必须输出：
+- line_no：从1开始
+- name：行名称（原文）
+- tax_rate：枚举 ["10%","8%","exempt","unknown"]
+  - 行税率判定优先级：
+    A. 行内/附近出现 10%/8%/税10/税8/標準/軽減/外税10/内税8 等
+    B. 汇总区的 "10%対象 / 8%対象 / 軽減対象 / 税率別" 对照（若能）
+    C. 找不到税率：强制默认 "8%"
+    D. 出现 非課税/不課税/免税/対象外：设为 "exempt"
+- net_amount：净额（不含税金额，数值JPY；若只能得到含税则允许推导或置 null）
+- tax_amount：税额（数值JPY；无法确定则 null）
+- gross_amount：总额（含税金额，数值JPY；无法确定则 null）
+- amount_source：说明三者来源与推导方式，枚举：
+  ["all_on_doc","net+tax=gross","gross->net_by_rate","net->tax_by_rate","unknown"]
+- qty、unit_price：能识别则填，否则 null
+- suggested_account：建议会计科目（勘定科目名，日文）
+- suggested_account_code：可选（若能给出常见代码体系则填，否则 null）
+- suggested_account_confidence：0~1
+- raw：原文片段用于追溯
 
-{fields_str}
+【会计科目建议规则（结合日本会计准则的常见实务）】
+你必须基于 category + 行名称关键词，给出 suggested_account：
+A) category = purchase（采购：存货/进货/材料等）
+- 默认：仕入高
+- 若关键词包含：原材料/材料/部品/資材 → 原材料費 or 仕入高（择优）
+- 若为固定资产/设备：PC/パソコン/サーバ/機械/備品/什器/工具/ソフトウェア → 工具器具備品 or ソフトウェア（金额大且耐用倾向固定资产）
+- 若为外包：外注/業務委託/制作/開発 → 外注費
+- 若为运费：送料/配送/運賃 → 荷造運賃
+- 税处理提示（notes中给出）：对 purchase 通常对应 仮払消費税（但你仍需输出行税额）
 
-また、明細行がある場合は以下の形式で抽出：
-{{
-  "line_items": [
-    {{
-      "product_name": "商品名",
-      "quantity": 数量,
-      "unit": "単位",
-      "unit_price": 単価,
-      "amount": 金額
-    }}
+B) category = sale（销售：对外开票/收入）
+- 默认：売上高
+- 若关键词包含：手数料/利用料/サブスク/課金 → 売上高（内可加"役務収益"类说明但科目仍输出売上高）
+- 若为运费：送料/配送料 → 売上高（或 売上高(送料) 说明）
+- 税处理提示（notes中给出）：对 sale 通常对应 仮受消費税（但你仍需输出行税额）
+
+C) category = expense（费用：日常经费）
+按关键词映射（优先级从高到低，命中即用）：
+- 旅費交通費：電車/バス/タクシー/交通/切符/IC/出張
+- 会議費：会議/打合せ/ミーティング
+- 交際費：接待/贈答/お土産/懇親
+- 通信費：通信/携帯/電話/インターネット/回線
+- 水道光熱費：電気/ガス/水道
+- 消耗品費：消耗品/文房具/日用品/備品（小额）
+- 広告宣伝費：広告/宣伝/Google/Meta/販促
+- 支払手数料：手数料/決済/振込手数料
+- 地代家賃：家賃/賃料/レンタル
+- 修繕費：修理/修繕/メンテ
+- 福利厚生費：福利/健康/社内イベント
+- 研修費：研修/セミナー/講座
+- 未命中：雑費（并降低置信度）
+
+【净额/税额/总额推导规则（必须执行）】
+1) 若同一行同时出现"税抜/税別/本体"与"税込/合計"：
+- 优先把税抜作为 net_amount，税込作为 gross_amount，税额为 gross-net（若可计算）
+2) 若只出现含税金额 gross_amount，且税率明确为 10% 或 8%：
+- 推导 net = round(gross / (1+rate))（JPY四舍五入；并在 amount_source 标注 gross->net_by_rate）
+- tax = gross - net
+3) 若只出现净额 net_amount，且税率明确：
+- tax = round(net * rate)（JPY四舍五入；amount_source=net->tax_by_rate）
+- gross = net + tax
+4) 若 tax_rate="exempt"：tax_amount=0，gross=net（若可）
+5) 若税率缺失：强制视为 8% 进行推导（并在 notes 标注"默认8%"）
+
+【汇总区抽取（若存在）】
+你必须尽最大努力抽取以下关键词附近的金额：
+- total_gross（合計/総合計/請求金額/お会計/税込合計）
+- total_tax（消費税/税額/内消費税）
+- by_rate_summary（若有）：10%対象、8%対象、軽減対象、税率別、標準税率、軽減税率
+并标注每个汇总值的来源：on_doc 或 derived（从行汇总推导）
+
+【交叉验证（必须输出validation）】
+你必须做三层校验，并给出 pass/fail/partial：
+A) 行内校验（line-level）
+- 对每行：若三者齐全，检查 net + tax == gross
+- 若不等，给出 diff，并尝试解释：四舍五入/折扣/内税外税/OCR错位
+B) 分税率校验（by-rate）
+- 按 tax_rate 分组汇总 net/tax/gross（折扣行要计入，折扣为负数）
+- 若票面存在 8%/10%対象 与 税额：对比差异
+C) 总计校验（grand total）
+- 所有行汇总 vs 票面 total_gross/total_tax（若存在）
+- 若票面无总计，则输出 derived_total
+
+【容差（考虑日元四舍五入与分摊）】
+- 单行容差：±1 JPY
+- 分税率税额容差：±1 JPY
+- 总税额容差：±2 JPY
+- 总金额容差：±2 JPY
+超出容差必须列入 mismatches，并给出最可能修正建议（例如：某行税率应为10%而不是8%，或该金额为税抜而被当成税込）。
+
+【输出格式要求】
+只能输出 JSON（不要 markdown，不要解释文本），结构如下：
+{
+  "currency": "JPY",
+  "document": {
+    "doc_type": "receipt|invoice|unknown",
+    "doc_date": "YYYY-MM-DD|null",
+    "category": "purchase|sale|expense"
+  },
+  "issuer": {
+    "issuer_name": "string|null",
+    "invoice_reg_no": "T1234567890123|string(13 zeros)",
+    "issuer_tel": "string|null",
+    "issuer_address": "string|null"
+  },
+  "totals_on_doc": {
+    "total_gross": 0|null,
+    "total_tax": 0|null,
+    "by_rate": {
+      "10%": { "net": 0|null, "tax": 0|null, "gross": 0|null, "source": "on_doc|derived" },
+      "8%":  { "net": 0|null, "tax": 0|null, "gross": 0|null, "source": "on_doc|derived" },
+      "exempt": { "net": 0|null, "tax": 0|null, "gross": 0|null, "source": "on_doc|derived" }
+    }
+  },
+  "lines": [
+    {
+      "line_no": 1,
+      "name": "string",
+      "tax_rate": "10%|8%|exempt|unknown",
+      "net_amount": 0|null,
+      "tax_amount": 0|null,
+      "gross_amount": 0|null,
+      "amount_source": "all_on_doc|net+tax=gross|gross->net_by_rate|net->tax_by_rate|unknown",
+      "qty": 0|null,
+      "unit_price": 0|null,
+      "suggested_account": "string",
+      "suggested_account_code": "string|null",
+      "suggested_account_confidence": 0.0,
+      "raw": "string"
+    }
+  ],
+  "validation": {
+    "tolerances": { "line": 1, "by_rate_tax": 1, "total_tax": 2, "total_gross": 2 },
+    "checks": [
+      { "name": "line_level", "status": "pass|fail|partial", "details": "string" },
+      { "name": "by_rate", "status": "pass|fail|partial", "details": "string" },
+      { "name": "grand_total", "status": "pass|fail|partial", "details": "string" }
+    ],
+    "mismatches": [
+      {
+        "scope": "line|8%|10%|exempt|total",
+        "field": "net|tax|gross",
+        "expected": 0,
+        "actual": 0,
+        "diff": 0,
+        "reason": "string",
+        "candidate_fix": {
+          "line_no": 0|null,
+          "suggest_tax_rate": "10%|8%|exempt|null",
+          "suggest_amount_interpretation": "tax_inclusive|tax_exclusive|null",
+          "confidence": 0.0
+        }
+      }
+    ]
+  },
+  "notes": [
+    "string"
   ]
-}}
+}
 
-重要：
-- 項目名は上記のキー名をそのまま使用
-- 数値は数字のみ（通貨記号やカンマなし）
-- 日付はYYYY-MM-DD形式
-- 読み取れない項目はnullにする
-- JSONのみを返す（説明文不要）'''
+【强制约束】
+- 如果 invoice_reg_no 缺失：必须输出 "0000000000000"（十三个0）
+- 如果行税率缺失：必须默认 "8%"
+- 不能省略 lines；即使识别困难也要尽量输出候选行并用 null 标注不确定值'''
 
 
 def extract_json_from_text(text: str) -> dict:
