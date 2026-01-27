@@ -190,6 +190,32 @@ def _process_with_template(file_data: bytes, mimetype: str, tenant_id: str, doc_
     return _process_image_direct(file_data, mimetype, doc_type)
 
 
+def _parse_tax_rate(tax_rate_str) -> int:
+    """Parse tax rate from various formats to integer.
+
+    Handles: "8%", "10%", 8, 10, 0.08, 0.10, "exempt"
+    Returns: integer tax rate (8, 10, 0)
+    """
+    if tax_rate_str is None:
+        return 8  # Default to 8% for food items
+
+    if tax_rate_str == 'exempt':
+        return 0
+
+    if isinstance(tax_rate_str, str):
+        # Remove % and whitespace
+        tax_rate_str = tax_rate_str.replace('%', '').strip()
+
+    try:
+        rate = float(tax_rate_str)
+        # If decimal format (0.08), convert to percentage
+        if rate < 1:
+            return int(rate * 100)
+        return int(rate)
+    except (ValueError, TypeError):
+        return 8  # Default
+
+
 def _call_ocr_service(file_data: bytes, mimetype: str, tenant_id: str,
                       template_fields: List[str]) -> Dict[str, Any]:
     """Call central OCR service"""
@@ -221,8 +247,27 @@ def _call_ocr_service(file_data: bytes, mimetype: str, tenant_id: str,
             if data.get('success'):
                 # Parse extracted data
                 extracted = data.get('extracted', {})
+                _logger.info(f'[OCR] Extracted keys: {list(extracted.keys())}')
+
                 # Support both 'line_items' and 'lines' field names
-                line_items = extracted.get('line_items') or extracted.get('lines', [])
+                line_items = extracted.get('line_items', [])
+
+                # Fallback: convert 'lines' to 'line_items' format
+                if not line_items:
+                    lines = extracted.get('lines', [])
+                    if lines:
+                        _logger.info(f'[OCR] Found {len(lines)} lines, converting to line_items')
+                        line_items = []
+                        for line in lines:
+                            item = {
+                                'product_name': line.get('name', ''),
+                                'quantity': line.get('qty') or 1,
+                                'unit_price': line.get('unit_price'),
+                                'amount': line.get('gross_amount') or line.get('net_amount'),
+                                'tax_rate': _parse_tax_rate(line.get('tax_rate', '8%')),
+                                'suggested_account': line.get('suggested_account'),
+                            }
+                            line_items.append(item)
 
                 # Add usage info to result
                 usage = data.get('usage', {})

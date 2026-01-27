@@ -184,6 +184,32 @@ def _process_with_template(file_data: bytes, mimetype: str, tenant_id: str, doc_
         return {'success': False, 'error': 'OCR処理に失敗しました。しばらくしてから再度お試しください。'}
 
 
+def _parse_tax_rate(tax_rate_str) -> int:
+    """Parse tax rate from various formats to integer.
+
+    Handles: "8%", "10%", 8, 10, 0.08, 0.10, "exempt"
+    Returns: integer tax rate (8, 10, 0)
+    """
+    if tax_rate_str is None:
+        return 8  # Default to 8% for food items
+
+    if tax_rate_str == 'exempt':
+        return 0
+
+    if isinstance(tax_rate_str, str):
+        # Remove % and whitespace
+        tax_rate_str = tax_rate_str.replace('%', '').strip()
+
+    try:
+        rate = float(tax_rate_str)
+        # If decimal format (0.08), convert to percentage
+        if rate < 1:
+            return int(rate * 100)
+        return int(rate)
+    except (ValueError, TypeError):
+        return 8  # Default
+
+
 def _call_ocr_service(file_data: bytes, mimetype: str, tenant_id: str,
                       template_fields: List[str]) -> Dict[str, Any]:
     """Call central OCR service"""
@@ -215,13 +241,40 @@ def _call_ocr_service(file_data: bytes, mimetype: str, tenant_id: str,
 
         if result.get('success'):
             extracted = result.get('extracted', {})
-            normalized = _normalize_extracted(extracted)
+            _logger.info(f'[OCR] Extracted keys: {list(extracted.keys())}')
+
+            # Try to normalize the extracted data
+            try:
+                normalized = _normalize_extracted(extracted)
+                _logger.info(f'[OCR] Normalized keys: {list(normalized.keys())}')
+            except Exception as e:
+                _logger.exception(f'[OCR] Normalization failed: {e}')
+                normalized = extracted
 
             # Get line_items from normalized data (handles both old and new format)
             line_items = normalized.get('line_items', [])
-            # Fall back to original if not in normalized
+
+            # Multiple fallbacks for line_items
             if not line_items:
                 line_items = extracted.get('line_items', [])
+            if not line_items:
+                # Support new format with 'lines' field
+                lines = extracted.get('lines', [])
+                if lines:
+                    _logger.info(f'[OCR] Found {len(lines)} lines in extracted, converting to line_items')
+                    line_items = []
+                    for line in lines:
+                        item = {
+                            'product_name': line.get('name', ''),
+                            'quantity': line.get('qty') or 1,
+                            'unit_price': line.get('unit_price'),
+                            'amount': line.get('gross_amount') or line.get('net_amount'),
+                            'tax_rate': _parse_tax_rate(line.get('tax_rate', '8%')),
+                            'suggested_account': line.get('suggested_account'),
+                        }
+                        line_items.append(item)
+
+            _logger.info(f'[OCR] Final line_items count: {len(line_items)}')
 
             return {
                 'success': True,
