@@ -172,3 +172,4 @@ jobs:
           echo "- **Image Tag**: sha-${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Operator**: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Time**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> $GITHUB_STEP_SUMMARY
+# Trigger deploy Tue Jan 27 14:00:00 JST 2026
