@@ -8,6 +8,7 @@
 #   PROD_HOST           - Production server hostname/IP
 #   SSH_PRIVATE_KEY     - SSH private key for deploy user
 #   PROD_SSH_PORT       - (Optional) SSH port, defaults to 22
+#   OCR_SERVICE_KEY     - OCR service API key for authentication
 #
 # The deploy user on the server should have:
 #   - Restricted shell access via authorized_keys command=""
@@ -120,12 +121,13 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         env:
           GHCR_PAT: ${{ secrets.GHCR_PAT }}
+          OCR_SERVICE_KEY: ${{ secrets.OCR_SERVICE_KEY }}
         with:
           host: ${{ secrets.PROD_HOST }}
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.PROD_SSH_PORT || 22 }}
-          envs: GHCR_PAT
+          envs: GHCR_PAT,OCR_SERVICE_KEY
           script: |
             set -e
             STACK_DIR=/srv/stacks/odoo18-prod
@@ -143,8 +145,17 @@ jobs:
               echo "ODOO18_IMAGE_TAG=sha-${{ steps.vars.outputs.sha_short }}" | sudo tee -a .env
               echo "DB_PASSWORD=changeme" | sudo tee -a .env
               echo "REDIS_PASSWORD=changeme" | sudo tee -a .env
+              echo "OCR_SERVICE_KEY=$OCR_SERVICE_KEY" | sudo tee -a .env
             else
               sudo sed -i 's/ODOO18_IMAGE_TAG=.*/ODOO18_IMAGE_TAG=sha-${{ steps.vars.outputs.sha_short }}/' .env
+              # Update OCR_SERVICE_KEY if provided
+              if [ -n "$OCR_SERVICE_KEY" ]; then
+                if grep -q "^OCR_SERVICE_KEY=" .env; then
+                  sudo sed -i "s/OCR_SERVICE_KEY=.*/OCR_SERVICE_KEY=$OCR_SERVICE_KEY/" .env
+                else
+                  echo "OCR_SERVICE_KEY=$OCR_SERVICE_KEY" | sudo tee -a .env
+                fi
+              fi
             fi
 
             # Create edge network if not exists
