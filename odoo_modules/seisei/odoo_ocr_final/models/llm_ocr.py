@@ -417,9 +417,39 @@ def _normalize_new_format(extracted: dict) -> dict:
 
     normalized['line_items'] = line_items
 
-    # Determine is_tax_inclusive based on document type
-    # Japanese receipts are typically tax-inclusive (内税)
-    normalized['is_tax_inclusive'] = True
+    # Determine is_tax_inclusive by comparing line totals with document totals
+    # If sum of line amounts ≈ total_gross, lines are tax-inclusive
+    # If sum of line amounts ≈ total_gross - total_tax (subtotal), lines are tax-exclusive
+    is_tax_inclusive = True  # Default assumption
+
+    totals = extracted.get('totals_on_doc', {})
+    total_gross = totals.get('total_gross')
+    total_tax = totals.get('total_tax')
+
+    if line_items and total_gross:
+        line_sum = sum(item.get('amount') or 0 for item in line_items)
+        if line_sum > 0:
+            # Check if line sum matches total_gross (tax-inclusive) or subtotal (tax-exclusive)
+            tolerance = 5  # Allow small rounding differences
+            subtotal = total_gross - (total_tax or 0)
+
+            if abs(line_sum - total_gross) <= tolerance:
+                is_tax_inclusive = True
+                _logger.info(f'[OCR] Detected tax-inclusive: line_sum={line_sum} ≈ total_gross={total_gross}')
+            elif abs(line_sum - subtotal) <= tolerance:
+                is_tax_inclusive = False
+                _logger.info(f'[OCR] Detected tax-exclusive: line_sum={line_sum} ≈ subtotal={subtotal}')
+            else:
+                # Fallback: check by_rate.net if available
+                by_rate = totals.get('by_rate', {})
+                net_8 = by_rate.get('8%', {}).get('net') or 0
+                net_10 = by_rate.get('10%', {}).get('net') or 0
+                net_total = net_8 + net_10
+                if net_total > 0 and abs(line_sum - net_total) <= tolerance:
+                    is_tax_inclusive = False
+                    _logger.info(f'[OCR] Detected tax-exclusive via by_rate: line_sum={line_sum} ≈ net_total={net_total}')
+
+    normalized['is_tax_inclusive'] = is_tax_inclusive
 
     # Keep original data for reference
     normalized['_original'] = extracted
