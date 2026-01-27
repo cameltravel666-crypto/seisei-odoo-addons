@@ -383,13 +383,14 @@ class AccountMove(models.Model):
 
             created_count += 1
 
-        # Batch create all new lines with validation disabled
+        # Batch create all new lines
+        # Note: Do NOT use skip_invoice_sync=True as it prevents balance/debit/credit computation
         if lines_to_create:
             try:
-                # Disable move validation during line creation to avoid concurrent update
+                # Use check_move_validity=False to avoid validation during batch creation
+                # But allow invoice_sync to happen so balance/debit/credit are computed
                 self.env["account.move.line"].with_context(
                     check_move_validity=False,
-                    skip_invoice_sync=True,
                 ).create(lines_to_create)
                 _logger.info(f"[OCR] Batch created {len(lines_to_create)} invoice lines")
             except Exception as e:
@@ -399,7 +400,6 @@ class AccountMove(models.Model):
                     try:
                         self.env["account.move.line"].with_context(
                             check_move_validity=False,
-                            skip_invoice_sync=True,
                         ).create(line_vals)
                     except Exception as e2:
                         _logger.error(f"[OCR] Failed to create line: {e2}")
@@ -413,44 +413,42 @@ class AccountMove(models.Model):
             except Exception as e:
                 _logger.error(f"[OCR] Failed to update line: {e}")
 
-        # Odoo 18: Force recomputation of invoice amounts after all lines are created
-        # The old _recompute_dynamic_lines method no longer exists in Odoo 18
+        # Odoo 18: Force synchronization and recomputation of all accounting fields
+        # This ensures balance/debit/credit and totals are computed correctly
         try:
-            # Invalidate cache to force recomputation of computed fields
-            self.invalidate_recordset(['amount_total', 'amount_untaxed', 'amount_tax', 'amount_residual'])
+            _logger.info(f"[OCR] Triggering full sync for invoice {self.id}")
 
-            # Trigger recomputation by accessing computed fields
-            # This forces Odoo to recalculate based on invoice_line_ids
-            _logger.info(f"[OCR] Triggering amount recomputation for invoice {self.id}")
+            # Method 1: Try _synchronize_business_models (Odoo 18 standard method)
+            if hasattr(self, '_synchronize_business_models'):
+                self.with_context(check_move_validity=False)._synchronize_business_models(['line_ids'])
+                _logger.info("[OCR] Used _synchronize_business_models")
 
-            # In Odoo 18, we need to properly sync the lines
-            # Use _sync_dynamic_lines if available, otherwise force compute
-            if hasattr(self, '_sync_dynamic_lines'):
-                self.with_context(check_move_validity=False)._sync_dynamic_lines(
-                    container={'records': self, 'self': self}
-                )
-            else:
-                # Alternative: Manually trigger the amount computation
-                # Access the computed fields to trigger their compute methods
-                for line in self.invoice_line_ids:
-                    # Ensure line amounts are computed
-                    line.invalidate_recordset(['price_subtotal', 'price_total'])
-                    _ = line.price_subtotal
-                    _ = line.price_total
+            # Method 2: Invalidate and recompute all line fields
+            for line in self.line_ids:
+                line.invalidate_recordset()
+                # Force balance computation by writing price_unit back
+                if line.display_type == 'product' and line.price_unit:
+                    try:
+                        line.with_context(check_move_validity=False).write({
+                            'price_unit': line.price_unit
+                        })
+                    except Exception:
+                        pass
 
-                # Now recompute the move totals
-                self._compute_amount()
+            # Method 3: Trigger onchange to sync tax and payment lines
+            if hasattr(self, '_onchange_quick_edit_line_ids'):
+                self.with_context(check_move_validity=False)._onchange_quick_edit_line_ids()
 
-            _logger.info(f"[OCR] After recompute: total={self.amount_total}, untaxed={self.amount_untaxed}, tax={self.amount_tax}")
+            # Final: Invalidate move and access computed fields
+            self.invalidate_recordset()
+            _logger.info(f"[OCR] After sync: total={self.amount_total}, untaxed={self.amount_untaxed}, tax={self.amount_tax}")
+
+            # Log line balances for debugging
+            for line in self.line_ids.filtered(lambda l: l.display_type == 'product'):
+                _logger.info(f"[OCR] Line {line.name}: balance={line.balance}, debit={line.debit}, credit={line.credit}")
 
         except Exception as e:
-            _logger.warning(f"[OCR] Amount recomputation warning: {e}")
-            # Fallback: try simple invalidate and access
-            try:
-                self.invalidate_recordset()
-                _ = self.amount_total
-            except Exception:
-                pass
+            _logger.warning(f"[OCR] Sync warning: {e}")
 
         return created_count
 
