@@ -193,6 +193,53 @@ jobs:
             # Health check
             curl -sf http://localhost:8069/web/health && echo "Health check passed" || echo "Health check failed (service may still be starting)"
 
+      - name: Setup public demo database (ten_public)
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          GHCR_PAT: ${{ secrets.GHCR_PAT }}
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.PROD_SSH_PORT || 22 }}
+          envs: GHCR_PAT
+          script: |
+            set -e
+            echo "$GHCR_PAT" | sudo docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin
+
+            # Check if ten_public database exists
+            DB_EXISTS=$(sudo docker exec seisei-db psql -U odoo -d postgres -t -c "SELECT 1 FROM pg_database WHERE datname = 'ten_public';" | tr -d ' ' || true)
+
+            if [ "$DB_EXISTS" != "1" ]; then
+              echo "Creating ten_public database..."
+              sudo docker exec seisei-db psql -U odoo -d postgres -c "CREATE DATABASE ten_public OWNER odoo;"
+              echo "Database ten_public created"
+
+              # Initialize Odoo database with base module
+              echo "Initializing ten_public with base modules..."
+              sudo docker stop odoo18-prod-web || true
+              sudo docker run --rm \
+                --network seisei-odoo-network \
+                -v /srv/stacks/odoo18-prod/config/odoo.conf:/etc/odoo/odoo.conf:ro \
+                ghcr.io/${{ github.repository_owner }}/seisei-odoo18:sha-${{ steps.vars.outputs.sha_short }} \
+                odoo -c /etc/odoo/odoo.conf -d ten_public -i base --stop-after-init --no-http 2>&1 | tail -100
+              sudo docker start odoo18-prod-web
+            else
+              echo "Database ten_public already exists"
+            fi
+
+            # Install/upgrade OCR module on ten_public
+            echo "Installing OCR module on ten_public..."
+            sudo docker stop odoo18-prod-web || true
+            sudo docker run --rm \
+              --network seisei-odoo-network \
+              -v /srv/stacks/odoo18-prod/config/odoo.conf:/etc/odoo/odoo.conf:ro \
+              ghcr.io/${{ github.repository_owner }}/seisei-odoo18:sha-${{ steps.vars.outputs.sha_short }} \
+              odoo -c /etc/odoo/odoo.conf -d ten_public -i odoo_ocr_final -u odoo_ocr_final --stop-after-init --no-http 2>&1 | tail -100 || echo "Warning: OCR module install/upgrade failed"
+            sudo docker start odoo18-prod-web
+
+            echo "Public demo database setup completed"
+
       - name: Upgrade custom modules (all tenants)
         uses: appleboy/ssh-action@v1.0.3
         env:
@@ -229,7 +276,7 @@ jobs:
                 --network seisei-odoo-network \
                 -v /srv/stacks/odoo18-prod/config/odoo.conf:/etc/odoo/odoo.conf:ro \
                 ghcr.io/${{ github.repository_owner }}/seisei-odoo18:sha-${{ steps.vars.outputs.sha_short }} \
-                odoo -c /etc/odoo/odoo.conf -d "$DB" -i qr_ordering -u qr_ordering --stop-after-init --no-http 2>&1 | tail -50 || echo "Warning: upgrade failed for $DB"
+                odoo -c /etc/odoo/odoo.conf -d "$DB" -i qr_ordering,odoo_ocr_final -u qr_ordering,odoo_ocr_final --stop-after-init --no-http 2>&1 | tail -50 || echo "Warning: upgrade failed for $DB"
             done
 
             # Restart web container
