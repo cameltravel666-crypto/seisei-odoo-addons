@@ -255,6 +255,7 @@ export async function POST(request: NextRequest) {
       state: string;
       ocr_status: string;
       ocr_line_items: string | false;
+      ocr_raw_data: string | false;
       ocr_confidence: number;
       ocr_pages: number;
       ocr_error_message: string | false;
@@ -265,7 +266,7 @@ export async function POST(request: NextRequest) {
     }>('account.move', [['id', '=', moveId]], {
       fields: [
         'partner_id', 'ref', 'invoice_date', 'state',
-        'ocr_status', 'ocr_line_items', 'ocr_confidence', 'ocr_pages',
+        'ocr_status', 'ocr_line_items', 'ocr_raw_data', 'ocr_confidence', 'ocr_pages',
         'ocr_error_message', 'amount_total', 'amount_untaxed', 'amount_tax',
         'invoice_line_ids',
       ],
@@ -347,14 +348,44 @@ export async function POST(request: NextRequest) {
     const usageResult = await odoo19.recordOcrUsage(tenant.tenantCode, 1);
     console.log(`[Billing OCR] Recorded usage to Odoo 19:`, usageResult);
 
-    // Calculate totals
+    // Extract totals from OCR raw data (more accurate than recalculating)
     let amountUntaxed = invoice.amount_untaxed || 0;
     let amountTotal = invoice.amount_total || 0;
+    let amountTax = invoice.amount_tax || 0;
 
+    // Try to get accurate totals from OCR extracted data
+    if (invoice.ocr_raw_data) {
+      try {
+        const ocrData = JSON.parse(invoice.ocr_raw_data);
+        const extracted = ocrData.extracted || {};
+
+        // Fast format: use 'total' (mapped from 'gross') directly
+        if (extracted.total) {
+          amountTotal = Number(extracted.total) || 0;
+          amountUntaxed = Number(extracted.subtotal) || Number(extracted.net) || 0;
+          amountTax = Number(extracted.tax) || (amountTotal - amountUntaxed);
+          console.log(`[Billing OCR] Using OCR extracted totals: total=${amountTotal}, untaxed=${amountUntaxed}, tax=${amountTax}`);
+        }
+        // Legacy format: use 'gross' or calculate
+        else if (extracted.gross) {
+          amountTotal = Number(extracted.gross) || 0;
+          amountUntaxed = Number(extracted.net) || 0;
+          amountTax = Number(extracted.tax) || (amountTotal - amountUntaxed);
+          console.log(`[Billing OCR] Using OCR gross totals: total=${amountTotal}, untaxed=${amountUntaxed}, tax=${amountTax}`);
+        }
+      } catch (e) {
+        console.error('[Billing OCR] Failed to parse ocr_raw_data:', e);
+      }
+    }
+
+    // Fallback: if still no total, sum line items (but they're already tax-inclusive!)
     if (amountTotal === 0 && lineItems.length > 0) {
-      amountUntaxed = lineItems.reduce((sum, item) => sum + (item.amount || 0), 0);
-      const amountTax = Math.round(amountUntaxed * 0.08);
-      amountTotal = amountUntaxed + amountTax;
+      // line_items.amount is gross (tax-inclusive), so just sum them
+      amountTotal = lineItems.reduce((sum, item) => sum + (item.amount || 0), 0);
+      // Estimate tax as ~8% of total for display purposes
+      amountTax = Math.round(amountTotal * 0.08 / 1.08);
+      amountUntaxed = amountTotal - amountTax;
+      console.log(`[Billing OCR] Fallback calculation: total=${amountTotal}, untaxed=${amountUntaxed}, tax=${amountTax}`);
     }
 
     // Normalize confidence
@@ -386,7 +417,7 @@ export async function POST(request: NextRequest) {
       invoice_number: invoice.ref || null,
       amount_total: amountTotal || null,
       amount_untaxed: amountUntaxed || null,
-      amount_tax: invoice.amount_tax || (amountTotal - amountUntaxed) || null,
+      amount_tax: amountTax || null,
       line_items: lineItems,
       ocr_confidence: normalizedConfidence,
       ocr_status: invoice.ocr_status,
