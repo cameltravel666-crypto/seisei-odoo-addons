@@ -13,7 +13,7 @@ from odoo.http import request
 _logger = logging.getLogger(__name__)
 
 # QR Ordering Build Version (version + timestamp for cache-busting)
-QR_ORDERING_VERSION = '18.0.1.0.2'
+QR_ORDERING_VERSION = '18.0.1.0.3'
 QR_ORDERING_BUILD = f"{QR_ORDERING_VERSION}-{int(time.time())}"
 
 
@@ -688,9 +688,10 @@ class QrOrderingController(http.Controller):
                 line_data = self._serialize_pos_order_line(pos_line)
                 lines_data.append(line_data)
 
-            # 金额从 POS 订单获取（最准确）
-            amount_total_incl = pos_order.amount_total or 0
-            amount_tax = pos_order.amount_tax or 0
+            # 金额从 POS 订单行直接计算（避免 POS 前端重置 amount_total 的问题）
+            # 注意：不能依赖 pos_order.amount_total，因为 POS 前端可能会覆盖这个值
+            amount_total_incl = sum(pos_line.price_subtotal_incl for pos_line in pos_order.lines) or 0
+            amount_tax = sum((pos_line.price_subtotal_incl - pos_line.price_subtotal) for pos_line in pos_order.lines) or 0
             amount_untaxed = amount_total_incl - amount_tax
             total_qty = sum(pos_line.qty for pos_line in pos_order.lines)
 
