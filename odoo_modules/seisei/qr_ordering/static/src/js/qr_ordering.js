@@ -1023,41 +1023,53 @@
 
         try {
             const note = document.getElementById('qr-cart-note')?.value || '';
+            console.log('[submitOrder] Calling API...');
             const result = await apiCall('order/submit', { note });
+            console.log('[submitOrder] API returned:', result);
 
-            if (result.success) {
+            if (result && result.success) {
                 // P0-1: 下单成功后清空购物车
                 state.cart = [];
                 if (result.data) {
                     state.orders.unshift(result.data);
                 }
 
-                // P0-1: 更新底部栏（金额清零）
-                updateCartUI();
+                try {
+                    // P0-1: 更新底部栏（金额清零）
+                    updateCartUI();
 
-                // P0-2: 使用 OverlayManager 关闭弹层
-                OverlayManager.close();
+                    // P0-2: 使用 OverlayManager 关闭弹层
+                    OverlayManager.close();
 
-                // 更新底部栏状态
-                updateFooterState();
+                    // 更新底部栏状态
+                    updateFooterState();
 
-                // P1-2: 更新菜品卡片（清除已加购数量 badge）
-                renderProducts();
+                    // P1-2: 更新菜品卡片（清除已加购数量 badge）
+                    renderProducts();
 
-                // P0-2: 显示成功 Toast
-                const footerState = getFooterState();
-                showOrderStatusToast({
-                    orderRef: footerState.orderRef || result.data?.name,
-                    tableName: state.tableName,
-                    canAdd: true,
-                    autoHide: true
-                });
+                    // P0-2: 显示成功 Toast
+                    const footerState = getFooterState();
+                    showOrderStatusToast({
+                        orderRef: footerState.orderRef || result.data?.name,
+                        tableName: state.tableName,
+                        canAdd: true,
+                        autoHide: true
+                    });
+                } catch (uiError) {
+                    // UI 更新错误不影响订单提交成功
+                    console.error('[submitOrder] UI update error (order was submitted):', uiError);
+                    showToast(t('order_submitted'));
+                }
             } else {
-                showToast(result.message || t('order_failed'));
+                // API 返回失败
+                const errMsg = (result && result.message) ? result.message : t('order_failed');
+                console.error('[submitOrder] API returned failure:', result);
+                showToast(errMsg);
             }
         } catch (error) {
-            console.error('[submitOrder] Error:', error);
-            showToast(t('order_failed'));
+            // 网络或解析错误
+            console.error('[submitOrder] Network/API error:', error);
+            showToast(error.message || t('order_failed'));
         } finally {
             // 恢复按钮状态
             state.isSubmitting = false;
