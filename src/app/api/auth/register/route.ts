@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import crypto from 'crypto';
 import { prisma } from '@/lib/db';
 import { createToken, setAuthCookie } from '@/lib/auth';
 import { initializeTenantFeatures } from '@/lib/features';
@@ -279,31 +280,21 @@ export async function POST(request: NextRequest) {
 
 /**
  * Generate unique tenant code (TEN-XXXXXXXX format)
- * Uses database-level uniqueness to handle concurrency
+ * Uses 8 random alphanumeric characters with database uniqueness check
+ * Capacity: 36^8 = 2.8 trillion unique codes
  */
 async function generateTenantCode(): Promise<string> {
   const maxAttempts = 10;
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    // Get the current max number
-    const lastTenant = await prisma.tenant.findFirst({
-      where: {
-        tenantCode: { startsWith: 'TEN-' },
-        NOT: { tenantCode: 'TEN-DEMO01' }, // Exclude demo tenant
-      },
-      orderBy: { tenantCode: 'desc' },
-      select: { tenantCode: true },
-    });
-
-    let nextNumber = 1;
-    if (lastTenant) {
-      const match = lastTenant.tenantCode.match(/TEN-(\d+)/);
-      if (match) {
-        nextNumber = parseInt(match[1], 10) + 1;
-      }
+    // Generate 8 random alphanumeric characters
+    const bytes = crypto.randomBytes(8);
+    let code = '';
+    for (let i = 0; i < 8; i++) {
+      code += chars[bytes[i] % 36];
     }
-
-    const tenantCode = `TEN-${nextNumber.toString().padStart(8, '0')}`;
+    const tenantCode = `TEN-${code}`;
 
     // Check if this code already exists (concurrent safety)
     const exists = await prisma.tenant.findUnique({
@@ -315,13 +306,14 @@ async function generateTenantCode(): Promise<string> {
       return tenantCode;
     }
 
-    // Code exists, retry with next number
-    console.log(`[Register] Tenant code ${tenantCode} already exists, retrying...`);
+    // Code exists (extremely rare), retry
+    console.log(`[Register] Tenant code ${tenantCode} collision, retrying...`);
   }
 
-  // Fallback: use timestamp-based code
+  // Fallback: use timestamp + random (should never reach here)
   const timestamp = Date.now().toString(36).toUpperCase();
-  return `TEN-${timestamp.padStart(8, '0').slice(-8)}`;
+  const random = crypto.randomBytes(2).toString('hex').toUpperCase();
+  return `TEN-${(timestamp + random).slice(-8)}`;
 }
 
 /**

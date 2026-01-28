@@ -121,8 +121,14 @@ export async function clearAuthCookie() {
   cookieStore.delete('auth-token');
 }
 
-// Generate tenant code
+// Generate tenant code (8 random alphanumeric characters)
+// Capacity: 36^8 = 2.8 trillion unique codes
 export function generateTenantCode(): string {
-  const randomPart = crypto.randomBytes(3).toString('hex').toUpperCase();
-  return `TEN-${randomPart}`;
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  const bytes = crypto.randomBytes(8);
+  let code = '';
+  for (let i = 0; i < 8; i++) {
+    code += chars[bytes[i] % 36];
+  }
+  return `TEN-${code}`;
 }
