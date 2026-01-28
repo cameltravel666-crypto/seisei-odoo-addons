@@ -9,6 +9,7 @@ import json
 import base64
 import logging
 import time
+import asyncio
 import re
 from datetime import datetime, date
 from typing import Optional, List, Dict, Any
@@ -80,7 +81,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Central OCR Service",
     description="Centralized OCR service managed by Odoo 19",
-    version="1.0.0",
+    version="1.1.0",
     lifespan=lifespan
 )
 
@@ -345,7 +346,7 @@ async def call_gemini_api(image_data: str, mime_type: str, template_fields: List
         logger.error("GEMINI_API_KEY not configured")
         return {'success': False, 'error_code': 'service_error'}
 
-    url = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key={GEMINI_API_KEY}'
+    url = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}'
     prompt = build_ocr_prompt(template_fields)
 
     payload = {
@@ -372,9 +373,9 @@ async def call_gemini_api(image_data: str, mime_type: str, template_fields: List
                 )
 
             if response.status_code == 429:
-                wait_time = (attempt + 1) * 10
+                wait_time = (attempt + 1) * 5
                 logger.warning(f"Rate limited, waiting {wait_time}s")
-                time.sleep(wait_time)
+                await asyncio.sleep(wait_time)
                 continue
 
             if response.status_code != 200:
@@ -402,7 +403,7 @@ async def call_gemini_api(image_data: str, mime_type: str, template_fields: List
 
         except httpx.TimeoutException:
             if attempt < max_retries - 1:
-                time.sleep(5)
+                await asyncio.sleep(5)
                 continue
             return {'success': False, 'error_code': 'timeout'}
         except Exception as e:
@@ -470,7 +471,7 @@ async def update_usage(tenant_id: str, success: bool, processing_time_ms: int, f
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
-    return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+    return {"status": "healthy", "version": "1.1.0", "timestamp": datetime.now().isoformat()}
 
 
 @app.post("/api/v1/ocr/process", response_model=OCRResponse)
@@ -492,6 +493,7 @@ async def process_ocr(
     )
 
     processing_time_ms = int((time.time() - start_time) * 1000)
+    logger.info(f"OCR completed in {processing_time_ms}ms, success={result.get('success')}")
 
     # Update usage tracking
     usage = await update_usage(
