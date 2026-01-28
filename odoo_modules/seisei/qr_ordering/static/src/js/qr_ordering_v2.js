@@ -715,25 +715,29 @@
             return;
         }
 
-        const result = await apiCall('cart/submit');
-        
+        const result = await apiCall('order/submit');
+
         if (result && result.success) {
             // P0-1: 下单成功后清空购物车
             state.cart = [];
             state.orders.unshift(result.data);
-            
+
             // P0-1: 更新底部栏（金额清零）
             updateCartUI();
-            
+
             // P0-2: 使用 OverlayManager 关闭弹层
             OverlayManager.close();
-            
+
             // P1-2: 更新菜品卡片（清除已加购数量 badge）
             renderProductGrid();
             updateCarouselSteppers();
-            
+
             // P0-3: 显示成功 Toast（不叠加modal）
             showToast('订单已提交！');
+        } else {
+            // 显示错误信息
+            const errorMsg = (result && result.message) ? result.message : '下单失败，请重试';
+            showToast(errorMsg);
         }
     }
 
