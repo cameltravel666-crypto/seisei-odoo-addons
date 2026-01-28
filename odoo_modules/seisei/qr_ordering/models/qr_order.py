@@ -1421,8 +1421,22 @@ class QrOrder(models.Model):
             if not pos_config:
                 return
 
-            # 准备订单数据（与 POS _export_for_ui 格式一致）
-            order_data = pos_order._export_for_ui(pos_order)
+            # 准备订单数据 - 直接构建，避免 _export_for_ui 继承链问题
+            order_data = {
+                'id': pos_order.id,
+                'name': pos_order.name,
+                'pos_reference': pos_order.pos_reference,
+                'state': pos_order.state,
+                'table_id': pos_order.table_id.id if pos_order.table_id else False,
+                'session_id': pos_order.session_id.id,
+                'config_id': pos_order.config_id.id,
+                'partner_id': pos_order.partner_id.id if pos_order.partner_id else False,
+                'amount_total': pos_order.amount_total,
+                'amount_tax': pos_order.amount_tax,
+                'amount_paid': pos_order.amount_paid,
+                'amount_return': pos_order.amount_return,
+                'qr_source': pos_order.qr_source if hasattr(pos_order, 'qr_source') else True,
+            }
 
             # 准备订单行数据
             lines_data = []
