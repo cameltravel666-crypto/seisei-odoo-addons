@@ -33,6 +33,11 @@ services:
       - HOST=seisei-db
       - USER=${DB_USER:-odoo}
       - PASSWORD=${DB_PASSWORD}
+      # S3 Storage for attachments (images, files)
+      - SEISEI_S3_BUCKET=${SEISEI_S3_BUCKET}
+      - SEISEI_S3_REGION=${SEISEI_S3_REGION:-ap-northeast-1}
+      - SEISEI_S3_ACCESS_KEY=${SEISEI_S3_ACCESS_KEY}
+      - SEISEI_S3_SECRET_KEY=${SEISEI_S3_SECRET_KEY}
       # OCR Service (Central)
       - OCR_SERVICE_URL=${OCR_SERVICE_URL:-http://172.17.0.1:8180/api/v1}
       - OCR_SERVICE_KEY=${OCR_SERVICE_KEY}
