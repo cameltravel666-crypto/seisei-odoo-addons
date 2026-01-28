@@ -1,0 +1,45 @@
+# =============================================================================
+# QR-BFF Traefik Routes
+# =============================================================================
+# Add this content to /srv/stacks/edge-traefik/dynamic/services.yml
+# under the http: section
+# =============================================================================
+
+http:
+  routers:
+    # QR-BFF API - qr.seisei.tokyo
+    qr-bff-secure:
+      rule: "Host(`qr.seisei.tokyo`)"
+      entryPoints:
+        - websecure
+      service: qr-bff-service
+      middlewares:
+        - rate-limit
+      tls:
+        certResolver: letsencrypt
+
+    # QR-BFF API - HTTP redirect to HTTPS
+    qr-bff:
+      rule: "Host(`qr.seisei.tokyo`)"
+      entryPoints:
+        - web
+      middlewares:
+        - redirect-to-https
+      service: qr-bff-service
+
+  services:
+    qr-bff-service:
+      loadBalancer:
+        servers:
+          - url: "http://qr-bff:3100"
+        healthCheck:
+          path: /v1/qr/health
+          interval: "30s"
+          timeout: "10s"
+
+  middlewares:
+    # HTTPS redirect middleware (if not already defined)
+    redirect-to-https:
+      redirectScheme:
+        scheme: https
+        permanent: true
