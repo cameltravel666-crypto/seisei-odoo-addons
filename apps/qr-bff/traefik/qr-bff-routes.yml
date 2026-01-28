@@ -1,8 +1,8 @@
 # =============================================================================
 # QR-BFF Traefik Routes
 # =============================================================================
-# Add this content to /srv/stacks/edge-traefik/dynamic/services.yml
-# under the http: section
+# Deployed via GitHub Actions to /srv/stacks/edge-traefik/dynamic/services.yml
+# Domain: qr.seisei.tokyo -> qr-bff:3100
 # =============================================================================
 
 http:
