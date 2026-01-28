@@ -17,6 +17,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Copy Traefik config to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.PROD_SSH_PORT || 22 }}
+          source: "apps/qr-bff/traefik/qr-bff-routes.yml"
+          target: "/tmp/traefik-deploy"
+          strip_components: 3
+
       - name: Deploy QR-BFF Traefik routes
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -26,45 +37,10 @@ jobs:
           port: ${{ secrets.PROD_SSH_PORT || 22 }}
           script: |
             set -e
-
-            # Create separate config file for qr-bff (Traefik supports multiple dynamic files)
-            sudo tee /srv/stacks/edge-traefik/dynamic/qr-bff.yml > /dev/null << 'TRAEFIK_EOF'
-http:
-  routers:
-    qr-bff-secure:
-      rule: "Host(`qr.seisei.tokyo`)"
-      entryPoints:
-        - websecure
-      service: qr-bff-service
-      tls:
-        certResolver: letsencrypt
-
-    qr-bff-http:
-      rule: "Host(`qr.seisei.tokyo`)"
-      entryPoints:
-        - web
-      middlewares:
-        - redirect-to-https
-      service: qr-bff-service
-
-  services:
-    qr-bff-service:
-      loadBalancer:
-        servers:
-          - url: "http://qr-bff:3100"
-        healthCheck:
-          path: /v1/qr/health
-          interval: "30s"
-          timeout: "10s"
-TRAEFIK_EOF
-
-            # Traefik auto-reloads on file change
+            sudo cp /tmp/traefik-deploy/qr-bff-routes.yml /srv/stacks/edge-traefik/dynamic/qr-bff.yml
             echo "Traefik routes updated. Waiting for auto-reload..."
             sleep 3
-
-            # Verify Traefik picked up the changes
             sudo docker logs edge-traefik --tail 10 2>&1 | grep -i "configuration" || true
-
             echo "QR-BFF Traefik routes deployed successfully"
 
       - name: Verify deployment
@@ -75,14 +51,9 @@ TRAEFIK_EOF
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.PROD_SSH_PORT || 22 }}
           script: |
-            # Wait for DNS/TLS propagation
             sleep 5
-
-            # Test internal endpoint first
-            curl -sf http://qr-bff:3100/v1/qr/health 2>/dev/null && echo "Internal health check passed" || echo "Internal check failed (container may not be in same network)"
-
-            # Test external endpoint
-            curl -sf https://qr.seisei.tokyo/v1/qr/health 2>/dev/null && echo "External health check passed" || echo "External endpoint pending (TLS cert may be provisioning)"
+            curl -sf http://localhost:3100/v1/qr/health 2>/dev/null && echo "Internal health check passed" || echo "Internal check failed"
+            curl -sf https://qr.seisei.tokyo/v1/qr/health 2>/dev/null && echo "External health check passed" || echo "External endpoint pending"
 
       - name: Deployment summary
         run: |
@@ -91,4 +62,3 @@ TRAEFIK_EOF
           echo "- **Domain**: qr.seisei.tokyo" >> $GITHUB_STEP_SUMMARY
           echo "- **Service**: qr-bff:3100" >> $GITHUB_STEP_SUMMARY
           echo "- **Operator**: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Time**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> $GITHUB_STEP_SUMMARY

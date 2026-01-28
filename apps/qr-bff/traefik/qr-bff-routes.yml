@@ -1,25 +1,14 @@
-# =============================================================================
-# QR-BFF Traefik Routes
-# =============================================================================
-# Deployed via GitHub Actions to /srv/stacks/edge-traefik/dynamic/services.yml
-# Domain: qr.seisei.tokyo -> qr-bff:3100
-# =============================================================================
-
 http:
   routers:
-    # QR-BFF API - qr.seisei.tokyo
     qr-bff-secure:
       rule: "Host(`qr.seisei.tokyo`)"
       entryPoints:
         - websecure
       service: qr-bff-service
-      middlewares:
-        - rate-limit
       tls:
         certResolver: letsencrypt
 
-    # QR-BFF API - HTTP redirect to HTTPS
-    qr-bff:
+    qr-bff-http:
       rule: "Host(`qr.seisei.tokyo`)"
       entryPoints:
         - web
@@ -38,7 +27,6 @@ http:
           timeout: "10s"
 
   middlewares:
-    # HTTPS redirect middleware (if not already defined)
     redirect-to-https:
       redirectScheme:
         scheme: https
