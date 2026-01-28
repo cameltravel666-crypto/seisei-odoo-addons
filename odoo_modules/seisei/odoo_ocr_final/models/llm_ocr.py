@@ -15,6 +15,15 @@ _logger = logging.getLogger(__name__)
 
 # Central OCR Service configuration
 # All OCR processing is handled by the central service - no direct API calls
+# Note: Read at function call time to avoid caching issues with module imports
+def _get_ocr_config():
+    """Get OCR service configuration at runtime to avoid caching issues."""
+    return {
+        'url': os.getenv('OCR_SERVICE_URL', 'http://172.17.0.1:8180/api/v1'),
+        'key': os.getenv('OCR_SERVICE_KEY', ''),
+    }
+
+# Legacy module-level variables for backwards compatibility
 OCR_SERVICE_URL = os.getenv('OCR_SERVICE_URL', 'http://172.17.0.1:8180/api/v1')
 OCR_SERVICE_KEY = os.getenv('OCR_SERVICE_KEY', '')
 
@@ -159,7 +168,9 @@ def _process_with_template(file_data: bytes, mimetype: str, tenant_id: str, doc_
     All OCR processing is handled by the central OCR service.
     No direct API calls are made from this module.
     """
-    if not OCR_SERVICE_URL:
+    # Check config at runtime
+    config = _get_ocr_config()
+    if not config['url']:
         _logger.error('[OCR] OCR_SERVICE_URL not configured')
         return {'success': False, 'error': 'OCRサービスが利用できません。システム管理者にお問い合わせください。'}
 
@@ -214,11 +225,18 @@ def _call_ocr_service(file_data: bytes, mimetype: str, tenant_id: str,
                       template_fields: List[str]) -> Dict[str, Any]:
     """Call central OCR service"""
     try:
+        # Get config at runtime to avoid caching issues
+        config = _get_ocr_config()
+        ocr_url = config['url']
+        ocr_key = config['key']
+
+        _logger.info(f'[OCR] Calling service at {ocr_url}, key present: {bool(ocr_key)}')
+
         b64_data = base64.standard_b64encode(file_data).decode('utf-8')
 
         headers = {'Content-Type': 'application/json'}
-        if OCR_SERVICE_KEY:
-            headers['X-Service-Key'] = OCR_SERVICE_KEY
+        if ocr_key:
+            headers['X-Service-Key'] = ocr_key
 
         payload = {
             'image_data': b64_data,
@@ -228,7 +246,7 @@ def _call_ocr_service(file_data: bytes, mimetype: str, tenant_id: str,
         }
 
         response = requests.post(
-            f'{OCR_SERVICE_URL}/ocr/process',
+            f'{ocr_url}/ocr/process',
             json=payload,
             headers=headers,
             timeout=120
