@@ -27,22 +27,10 @@ jobs:
           script: |
             set -e
 
-            # Backup current config
-            sudo cp /srv/stacks/edge-traefik/dynamic/services.yml /srv/stacks/edge-traefik/dynamic/services.yml.bak.$(date +%Y%m%d%H%M%S) || true
-
-            # Check if qr-bff routes already exist
-            if grep -q "qr-bff-service" /srv/stacks/edge-traefik/dynamic/services.yml; then
-              echo "QR-BFF routes already configured, skipping..."
-            else
-              echo "Adding QR-BFF routes to Traefik..."
-
-              # Add qr-bff router and service to existing services.yml
-              # Using a temp file to merge properly
-              cat >> /srv/stacks/edge-traefik/dynamic/services.yml << 'TRAEFIK_EOF'
-
-    # ==========================================================================
-    # QR-BFF API - qr.seisei.tokyo
-    # ==========================================================================
+            # Create separate config file for qr-bff (Traefik supports multiple dynamic files)
+            sudo tee /srv/stacks/edge-traefik/dynamic/qr-bff.yml > /dev/null << 'TRAEFIK_EOF'
+http:
+  routers:
     qr-bff-secure:
       rule: "Host(`qr.seisei.tokyo`)"
       entryPoints:
@@ -69,14 +57,13 @@ jobs:
           interval: "30s"
           timeout: "10s"
 TRAEFIK_EOF
-            fi
 
             # Traefik auto-reloads on file change
             echo "Traefik routes updated. Waiting for auto-reload..."
             sleep 3
 
             # Verify Traefik picked up the changes
-            docker logs edge-traefik --tail 10 2>&1 | grep -i "configuration" || true
+            sudo docker logs edge-traefik --tail 10 2>&1 | grep -i "configuration" || true
 
             echo "QR-BFF Traefik routes deployed successfully"
 
