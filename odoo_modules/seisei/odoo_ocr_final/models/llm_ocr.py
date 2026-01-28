@@ -162,11 +162,14 @@ def process_expense_document(file_data: bytes, mimetype: str, tenant_id: str = '
     return _process_with_template(file_data, mimetype, tenant_id, 'expense')
 
 
-def _process_with_template(file_data: bytes, mimetype: str, tenant_id: str, doc_type: str) -> Dict[str, Any]:
+def _process_with_template(file_data: bytes, mimetype: str, tenant_id: str, doc_type: str, prompt_version: str = 'fast') -> Dict[str, Any]:
     """Process document with specific document type
 
     All OCR processing is handled by the central OCR service.
     No direct API calls are made from this module.
+
+    Args:
+        prompt_version: 'fast' (5-8s, totals only) or 'full' (25-35s, line-by-line)
     """
     # Check config at runtime
     config = _get_ocr_config()
@@ -175,7 +178,7 @@ def _process_with_template(file_data: bytes, mimetype: str, tenant_id: str, doc_
         return {'success': False, 'error': 'OCRサービスが利用できません。システム管理者にお問い合わせください。'}
 
     template_fields = EXPENSE_TEMPLATE_FIELDS if doc_type == 'expense' else INVOICE_TEMPLATE_FIELDS
-    result = _call_ocr_service(file_data, mimetype, tenant_id, template_fields)
+    result = _call_ocr_service(file_data, mimetype, tenant_id, template_fields, prompt_version)
 
     if result.get('success'):
         return result
@@ -222,15 +225,19 @@ def _parse_tax_rate(tax_rate_str) -> int:
 
 
 def _call_ocr_service(file_data: bytes, mimetype: str, tenant_id: str,
-                      template_fields: List[str]) -> Dict[str, Any]:
-    """Call central OCR service"""
+                      template_fields: List[str], prompt_version: str = 'fast') -> Dict[str, Any]:
+    """Call central OCR service
+
+    Args:
+        prompt_version: 'fast' (5-8s, totals only) or 'full' (25-35s, line-by-line)
+    """
     try:
         # Get config at runtime to avoid caching issues
         config = _get_ocr_config()
         ocr_url = config['url']
         ocr_key = config['key']
 
-        _logger.info(f'[OCR] Calling service at {ocr_url}, key present: {bool(ocr_key)}')
+        _logger.info(f'[OCR] Calling service at {ocr_url}, prompt={prompt_version}, key present: {bool(ocr_key)}')
 
         b64_data = base64.standard_b64encode(file_data).decode('utf-8')
 
@@ -243,6 +250,7 @@ def _call_ocr_service(file_data: bytes, mimetype: str, tenant_id: str,
             'mime_type': mimetype,
             'template_fields': template_fields,
             'tenant_id': tenant_id,
+            'prompt_version': prompt_version,  # 'fast' or 'full'
         }
 
         response = requests.post(
@@ -314,8 +322,15 @@ def _call_ocr_service(file_data: bytes, mimetype: str, tenant_id: str,
 def _normalize_extracted(extracted: dict) -> dict:
     """Normalize extracted data from OCR.
 
-    Handles both old format (flat structure) and new format (nested issuer/document/lines).
+    Handles multiple formats:
+    - Fast format: flat with vendor, tax_id, gross, net, r8_*, r10_*
+    - Full format: nested issuer/document/lines
+    - Legacy format: flat structure with Japanese keys
     """
+    # Check if this is the fast prompt format
+    if 'vendor' in extracted and 'gross' in extracted and 'r8_net' in extracted:
+        return _normalize_fast_format(extracted)
+
     # Check if this is the new unified prompt format
     if 'issuer' in extracted or 'document' in extracted or 'lines' in extracted:
         return _normalize_new_format(extracted)
@@ -474,6 +489,90 @@ def _normalize_new_format(extracted: dict) -> dict:
 
     _logger.info(f'[OCR] Normalized new format: vendor={normalized.get("vendor_name")}, '
                  f'lines={len(line_items)}, total={normalized.get("total")}')
+
+    return normalized
+
+
+def _normalize_fast_format(extracted: dict) -> dict:
+    """Normalize fast OCR format to Odoo-expected format.
+
+    Fast format structure (from fast prompt):
+    {
+        "vendor": "店名/会社名",
+        "tax_id": "T+13桁 or null",
+        "date": "YYYY-MM-DD or null",
+        "gross": 税込合計,
+        "net": 税抜合計,
+        "tax": 消費税合計,
+        "r8_net": 8%対象税抜,
+        "r8_tax": 8%税額,
+        "r10_net": 10%対象税抜,
+        "r10_tax": 10%税額
+    }
+
+    Converts to Odoo format for accounting journal entries.
+    """
+    normalized = {}
+
+    # Basic fields
+    normalized['vendor_name'] = extracted.get('vendor')
+    normalized['tax_id'] = extracted.get('tax_id')
+    normalized['date'] = extracted.get('date')
+
+    # Totals
+    normalized['total'] = extracted.get('gross')
+    normalized['subtotal'] = extracted.get('net')
+    normalized['tax'] = extracted.get('tax')
+
+    # Tax breakdown by rate
+    r8_net = extracted.get('r8_net') or 0
+    r8_tax = extracted.get('r8_tax') or 0
+    r10_net = extracted.get('r10_net') or 0
+    r10_tax = extracted.get('r10_tax') or 0
+
+    normalized['tax_8_net'] = r8_net
+    normalized['tax_8_amount'] = r8_tax
+    normalized['tax_10_net'] = r10_net
+    normalized['tax_10_amount'] = r10_tax
+
+    # For accounting journal entries:
+    # Debit: 仕入高 (net) + 仮払消費税8% (r8_tax) + 仮払消費税10% (r10_tax)
+    # Credit: 現金/買掛金 (gross)
+    normalized['debit_expense'] = normalized['subtotal']  # 仕入高/経費
+    normalized['debit_tax_8'] = r8_tax  # 仮払消費税 8%
+    normalized['debit_tax_10'] = r10_tax  # 仮払消費税 10%
+    normalized['credit_total'] = normalized['total']  # 現金/買掛金
+
+    # Create synthetic line items for compatibility (one line per tax rate)
+    line_items = []
+    if r8_net > 0:
+        line_items.append({
+            'product_name': '8%対象商品',
+            'quantity': 1,
+            'amount': r8_net + r8_tax,  # gross amount
+            'net_amount': r8_net,
+            'tax_amount': r8_tax,
+            'tax_rate': 8,
+        })
+    if r10_net > 0:
+        line_items.append({
+            'product_name': '10%対象商品',
+            'quantity': 1,
+            'amount': r10_net + r10_tax,  # gross amount
+            'net_amount': r10_net,
+            'tax_amount': r10_tax,
+            'tax_rate': 10,
+        })
+
+    normalized['line_items'] = line_items
+    normalized['is_tax_inclusive'] = True  # Fast format assumes tax-inclusive totals
+
+    # Keep original data
+    normalized['_original'] = extracted
+    normalized['_prompt_version'] = 'fast'
+
+    _logger.info(f'[OCR] Normalized fast format: vendor={normalized.get("vendor_name")}, '
+                 f'total={normalized.get("total")}, tax_8={r8_tax}, tax_10={r10_tax}')
 
     return normalized
 

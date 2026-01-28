@@ -90,7 +90,7 @@ def build_ocr_prompt(template_fields: list) -> str:
     return prompt
 
 
-def process_image_via_central_service(image_data: bytes, mimetype: str = 'image/jpeg', template_fields: list = None, tenant_id: str = None, max_retries: int = 3):
+def process_image_via_central_service(image_data: bytes, mimetype: str = 'image/jpeg', template_fields: list = None, tenant_id: str = None, max_retries: int = 3, prompt_version: str = 'fast'):
     """Process image via Central OCR Service (managed by Odoo 19)
 
     This function does NOT directly call any AI API.
@@ -98,6 +98,9 @@ def process_image_via_central_service(image_data: bytes, mimetype: str = 'image/
     - Manages API keys securely
     - Tracks usage per tenant
     - Handles rate limiting and retries
+
+    Args:
+        prompt_version: 'fast' (5-8s, totals only) or 'full' (25-35s, line-by-line)
     """
     b64_data = base64.standard_b64encode(image_data).decode('utf-8')
 
@@ -110,6 +113,7 @@ def process_image_via_central_service(image_data: bytes, mimetype: str = 'image/
         'mime_type': mimetype,
         'template_fields': template_fields or [],
         'tenant_id': tenant_id or 'default',
+        'prompt_version': prompt_version,  # 'fast' or 'full'
     }
 
     headers = {
