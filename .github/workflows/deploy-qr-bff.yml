@@ -60,18 +60,19 @@ jobs:
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.PROD_SSH_PORT || 22 }}
+          envs: REGISTRY,IMAGE_NAME
           script: |
             set -e
 
             # Pull latest image
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-
-            # Create qr-bff directory if not exists
-            sudo mkdir -p /opt/qr-bff
+            docker pull $REGISTRY/$IMAGE_NAME:latest
 
             # Stop existing container if running
             docker stop qr-bff 2>/dev/null || true
             docker rm qr-bff 2>/dev/null || true
+
+            # Load env vars from odoo18-prod
+            source /srv/stacks/odoo18-prod/.env 2>/dev/null || true
 
             # Start qr-bff container
             docker run -d \
@@ -81,17 +82,21 @@ jobs:
               -e PORT=3100 \
               -e REDIS_HOST=odoo-redis \
               -e REDIS_PORT=6379 \
-              -e REDIS_PASSWORD="${REDIS_PASSWORD}" \
+              -e REDIS_PASSWORD="${REDIS_PASSWORD:-changeme}" \
               -e REDIS_DB=1 \
               -e ODOO_URL=http://seisei-odoo-router:80 \
-              -e ODOO_SERVICE_LOGIN="${QR_SERVICE_LOGIN:-qr_service}" \
-              -e ODOO_SERVICE_PASSWORD="${QR_SERVICE_PASSWORD}" \
-              -e ODOO_TIMEOUT=10000 \
-              -e ODOO_RETRIES=1 \
+              -e ODOO_SERVICE_LOGIN="${QR_SERVICE_LOGIN:-test}" \
+              -e ODOO_SERVICE_PASSWORD="${QR_SERVICE_PASSWORD:-test123}" \
+              -e ODOO_TIMEOUT=30000 \
+              -e ODOO_RETRIES=2 \
               -e DEFAULT_DB=ten_testodoo \
               --memory=256m \
               --cpus=0.5 \
-              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+              $REGISTRY/$IMAGE_NAME:latest
+
+            # Connect to additional networks
+            docker network connect odoo18-prod_odoo-internal qr-bff || true
+            docker network connect edge qr-bff || true
 
             # Wait for container to be healthy
             sleep 5
@@ -107,13 +112,17 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.PROD_SSH_PORT || 22 }}
           script: |
+            # Load env vars
+            source /srv/stacks/odoo18-prod/.env 2>/dev/null || true
+            REDIS_PASS="${REDIS_PASSWORD:-changeme}"
+
             # Create demo token if not exists
-            docker exec odoo-redis redis-cli -a "${REDIS_PASSWORD}" -n 1 \
+            docker exec odoo-redis redis-cli -a "$REDIS_PASS" -n 1 \
               SETNX "qr:token:R8YxZM3IsfFwYz6qp1C5_g" \
               '{"tenantDb":"ten_testodoo","status":"active","tableName":"Demo Table"}' || true
 
             # Set expiration (1 year)
-            docker exec odoo-redis redis-cli -a "${REDIS_PASSWORD}" -n 1 \
+            docker exec odoo-redis redis-cli -a "$REDIS_PASS" -n 1 \
               EXPIRE "qr:token:R8YxZM3IsfFwYz6qp1C5_g" 31536000 || true
 
       - name: Verify deployment
