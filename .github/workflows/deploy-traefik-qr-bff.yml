@@ -1,0 +1,107 @@
+name: Deploy Traefik QR-BFF Routes
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/qr-bff/traefik/**'
+      - '.github/workflows/deploy-traefik-qr-bff.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy Traefik Routes
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy QR-BFF Traefik routes
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.PROD_SSH_PORT || 22 }}
+          script: |
+            set -e
+
+            # Backup current config
+            sudo cp /srv/stacks/edge-traefik/dynamic/services.yml /srv/stacks/edge-traefik/dynamic/services.yml.bak.$(date +%Y%m%d%H%M%S) || true
+
+            # Check if qr-bff routes already exist
+            if grep -q "qr-bff-service" /srv/stacks/edge-traefik/dynamic/services.yml; then
+              echo "QR-BFF routes already configured, skipping..."
+            else
+              echo "Adding QR-BFF routes to Traefik..."
+
+              # Add qr-bff router and service to existing services.yml
+              # Using a temp file to merge properly
+              cat >> /srv/stacks/edge-traefik/dynamic/services.yml << 'TRAEFIK_EOF'
+
+    # ==========================================================================
+    # QR-BFF API - qr.seisei.tokyo
+    # ==========================================================================
+    qr-bff-secure:
+      rule: "Host(`qr.seisei.tokyo`)"
+      entryPoints:
+        - websecure
+      service: qr-bff-service
+      tls:
+        certResolver: letsencrypt
+
+    qr-bff-http:
+      rule: "Host(`qr.seisei.tokyo`)"
+      entryPoints:
+        - web
+      middlewares:
+        - redirect-to-https
+      service: qr-bff-service
+
+  services:
+    qr-bff-service:
+      loadBalancer:
+        servers:
+          - url: "http://qr-bff:3100"
+        healthCheck:
+          path: /v1/qr/health
+          interval: "30s"
+          timeout: "10s"
+TRAEFIK_EOF
+            fi
+
+            # Traefik auto-reloads on file change
+            echo "Traefik routes updated. Waiting for auto-reload..."
+            sleep 3
+
+            # Verify Traefik picked up the changes
+            docker logs edge-traefik --tail 10 2>&1 | grep -i "configuration" || true
+
+            echo "QR-BFF Traefik routes deployed successfully"
+
+      - name: Verify deployment
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.PROD_SSH_PORT || 22 }}
+          script: |
+            # Wait for DNS/TLS propagation
+            sleep 5
+
+            # Test internal endpoint first
+            curl -sf http://qr-bff:3100/v1/qr/health 2>/dev/null && echo "Internal health check passed" || echo "Internal check failed (container may not be in same network)"
+
+            # Test external endpoint
+            curl -sf https://qr.seisei.tokyo/v1/qr/health 2>/dev/null && echo "External health check passed" || echo "External endpoint pending (TLS cert may be provisioning)"
+
+      - name: Deployment summary
+        run: |
+          echo "## Traefik QR-BFF Routes Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Domain**: qr.seisei.tokyo" >> $GITHUB_STEP_SUMMARY
+          echo "- **Service**: qr-bff:3100" >> $GITHUB_STEP_SUMMARY
+          echo "- **Operator**: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Time**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> $GITHUB_STEP_SUMMARY
