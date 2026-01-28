@@ -1,24 +1,69 @@
 /** @odoo-module **/
 
+import { browser } from "@web/core/browser/browser";
+
 /**
  * OCR Batch Progress Tracker
  * Shows real-time progress of batch OCR processing
  * Displays: total count, processed count, success/failed, ETA
+ *
+ * Uses both:
+ * - Bus notifications for instant updates
+ * - HTTP polling as fallback
  */
 
 class OcrBatchProgress {
     constructor() {
         this.activeBatches = new Map();
-        this.pollInterval = 3000; // 3 seconds
+        this.pollInterval = 2000; // 2 seconds (fallback)
         this.pollTimer = null;
+        this.busChannel = null;
     }
 
     start() {
         // Check for active batches on page load
         this.checkActiveBatches();
 
-        // Start polling if there are active batches
+        // Subscribe to bus for real-time updates
+        this.subscribeToBus();
+
+        // Start polling as fallback
         this.startPolling();
+    }
+
+    subscribeToBus() {
+        // Try to subscribe to Odoo bus for real-time updates
+        try {
+            if (typeof odoo !== 'undefined' && odoo.bus) {
+                // Get current user ID from session
+                const userId = odoo.session_info?.uid || odoo.user_id;
+                if (userId) {
+                    this.busChannel = `ocr_batch_progress_${userId}`;
+
+                    // Subscribe to the bus channel
+                    odoo.bus.on('notification', this, this.handleBusNotification.bind(this));
+                    console.log('[OCR Batch] Subscribed to bus channel:', this.busChannel);
+                }
+            }
+        } catch (e) {
+            console.warn('[OCR Batch] Could not subscribe to bus, using polling only:', e);
+        }
+    }
+
+    handleBusNotification(notifications) {
+        if (!Array.isArray(notifications)) {
+            notifications = [notifications];
+        }
+
+        for (const notification of notifications) {
+            if (notification.type === 'ocr_batch_progress') {
+                const data = notification.payload || notification;
+                if (data.batch_id && data.progress) {
+                    console.log('[OCR Batch] Received bus update for batch', data.batch_id);
+                    this.showBatchProgress(data.progress);
+                }
+            }
+        }
     }
 
     async checkActiveBatches() {

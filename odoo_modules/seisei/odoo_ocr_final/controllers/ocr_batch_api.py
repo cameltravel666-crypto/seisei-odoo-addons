@@ -81,3 +81,41 @@ class OcrBatchProgressController(http.Controller):
                 content_type="application/json",
                 status=500
             )
+
+    @http.route("/api/ocr/batch/cancel/<int:batch_id>", type="http", auth="user", methods=["POST"], csrf=False)
+    def cancel_batch(self, batch_id, **kwargs):
+        """Cancel a batch OCR job"""
+        try:
+            batch = request.env["ocr.batch.progress"].sudo().browse(batch_id)
+            if not batch.exists():
+                return Response(
+                    json.dumps({"success": False, "error": "Batch not found"}),
+                    content_type="application/json",
+                    status=404
+                )
+
+            # Check if user owns this batch
+            if batch.user_id.id != request.env.uid:
+                return Response(
+                    json.dumps({"success": False, "error": "Not authorized to cancel this batch"}),
+                    content_type="application/json",
+                    status=403
+                )
+
+            # Cancel the batch
+            batch.cancel()
+
+            _logger.info(f"[OCR Batch API] Batch {batch_id} cancelled by user {request.env.uid}")
+
+            return Response(
+                json.dumps({"success": True, "data": batch.get_status()}),
+                content_type="application/json",
+                status=200
+            )
+        except Exception as e:
+            _logger.exception(f"[OCR Batch API] Error cancelling batch: {e}")
+            return Response(
+                json.dumps({"success": False, "error": str(e)}),
+                content_type="application/json",
+                status=500
+            )

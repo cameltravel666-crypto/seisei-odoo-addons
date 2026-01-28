@@ -177,6 +177,9 @@ class OcrBatchProgress(models.Model):
         self.write(vals)
         self.env.cr.commit()
 
+        # Send bus notification for real-time progress updates
+        self._send_progress_notification()
+
     def mark_failed(self, error=None):
         """Mark the entire batch as failed."""
         self.ensure_one()
@@ -267,3 +270,33 @@ class OcrBatchProgress(models.Model):
         ])
         old_batches.unlink()
         _logger.info(f"[OCR Batch] Cleaned up {len(old_batches)} old batch records")
+
+    def _send_progress_notification(self):
+        """
+        Send bus notification to update UI in real-time.
+        Uses Odoo's bus to push progress updates to the user's browser.
+        """
+        self.ensure_one()
+        try:
+            # Get the bus for the user who started the batch
+            channel = f"ocr_batch_progress_{self.user_id.id}"
+
+            # Prepare notification data
+            notification_data = {
+                "type": "ocr_batch_progress",
+                "batch_id": self.id,
+                "progress": self.get_status(),
+            }
+
+            # Send via Odoo bus
+            self.env["bus.bus"]._sendone(
+                channel,
+                "ocr_batch_progress",
+                notification_data
+            )
+
+            _logger.debug(f"[OCR Batch] Sent progress notification for batch {self.id}")
+
+        except Exception as e:
+            # Don't fail the main process if notification fails
+            _logger.warning(f"[OCR Batch] Failed to send notification: {e}")

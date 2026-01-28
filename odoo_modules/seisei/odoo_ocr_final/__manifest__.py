@@ -1,6 +1,6 @@
 {
     'name': 'Financial OCR Integration',
-    'version': '18.0.12.0.0',
+    'version': '18.0.13.0.0',
     'category': 'Accounting',
     'summary': 'AI-powered OCR for Purchase Orders, Invoices, and Expenses',
     'description': '''
@@ -40,6 +40,7 @@ Features:
     'assets': {
         'web.assets_backend': [
             'odoo_ocr_final/static/src/css/ocr_chatter_upload.css',
+            'odoo_ocr_final/static/src/css/ocr_batch_progress.css',
             'odoo_ocr_final/static/src/js/ocr_chatter_upload.js',
             'odoo_ocr_final/static/src/js/ocr_batch_progress.js',
         ],
