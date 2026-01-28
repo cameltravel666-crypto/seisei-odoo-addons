@@ -2,6 +2,7 @@
 """
 Central OCR Service - Managed by Odoo 19
 Handles all OCR API calls, tracks usage per tenant, hides API details from tenants.
+Version 1.2.0 - Dual prompt support (fast/full)
 """
 
 import os
@@ -12,7 +13,7 @@ import time
 import asyncio
 import re
 from datetime import datetime, date
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Literal
 from contextlib import asynccontextmanager
 
 import httpx
@@ -24,115 +25,38 @@ import asyncpg
 # Configuration
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
 DATABASE_URL = os.getenv('OCR_DATABASE_URL', 'postgresql://ocr:ocr@localhost:5432/ocr_service')
-SERVICE_KEY = os.getenv('OCR_SERVICE_KEY', '')  # For authenticating Odoo instances
+SERVICE_KEY = os.getenv('OCR_SERVICE_KEY', '')
 FREE_QUOTA_PER_MONTH = int(os.getenv('OCR_FREE_QUOTA', '30'))
-PRICE_PER_IMAGE = float(os.getenv('OCR_PRICE_PER_IMAGE', '20'))  # JPY
+PRICE_PER_IMAGE = float(os.getenv('OCR_PRICE_PER_IMAGE', '20'))
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Database pool
 db_pool: Optional[asyncpg.Pool] = None
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Manage database connection pool lifecycle"""
-    global db_pool
-    try:
-        db_pool = await asyncpg.create_pool(DATABASE_URL, min_size=2, max_size=10)
-        # Initialize tables
-        async with db_pool.acquire() as conn:
-            await conn.execute('''
-                CREATE TABLE IF NOT EXISTS ocr_usage (
-                    id SERIAL PRIMARY KEY,
-                    tenant_id VARCHAR(100) NOT NULL,
-                    year_month VARCHAR(7) NOT NULL,
-                    image_count INTEGER DEFAULT 0,
-                    billable_count INTEGER DEFAULT 0,
-                    total_cost DECIMAL(10,2) DEFAULT 0,
-                    created_at TIMESTAMP DEFAULT NOW(),
-                    updated_at TIMESTAMP DEFAULT NOW(),
-                    UNIQUE(tenant_id, year_month)
-                )
-            ''')
-            await conn.execute('''
-                CREATE TABLE IF NOT EXISTS ocr_requests (
-                    id SERIAL PRIMARY KEY,
-                    tenant_id VARCHAR(100) NOT NULL,
-                    request_time TIMESTAMP DEFAULT NOW(),
-                    success BOOLEAN,
-                    error_code VARCHAR(50),
-                    processing_time_ms INTEGER,
-                    file_size_bytes INTEGER
-                )
-            ''')
-        logger.info("Database initialized successfully")
-    except Exception as e:
-        logger.error(f"Failed to initialize database: {e}")
-        db_pool = None
+# ============== PROMPTS ==============
 
-    yield
+# FAST PROMPT - For quick extraction of totals only (~5-8s)
+PROMPT_FAST = '''日本のレシート/請求書から以下のJSONを抽出:
+{
+  "vendor": "店名/会社名",
+  "tax_id": "T+13桁 または null",
+  "date": "YYYY-MM-DD または null",
+  "gross": 税込合計(数値),
+  "net": 税抜合計(数値),
+  "tax": 消費税合計(数値),
+  "r8_net": 8%対象税抜(数値/0),
+  "r8_tax": 8%税額(数値/0),
+  "r10_net": 10%対象税抜(数値/0),
+  "r10_tax": 10%税額(数値/0)
+}
+税率判定:※☆軽減マーク/食品飲料→8%,その他→10%
+T番号なし→tax_id:null
+JSONのみ'''
 
-    if db_pool:
-        await db_pool.close()
-
-
-app = FastAPI(
-    title="Central OCR Service",
-    description="Centralized OCR service managed by Odoo 19",
-    version="1.1.0",
-    lifespan=lifespan
-)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-# Request/Response Models
-class OCRRequest(BaseModel):
-    image_data: str  # Base64 encoded
-    mime_type: str = 'image/jpeg'
-    template_fields: List[str] = []
-    tenant_id: str = 'default'
-
-
-class OCRResponse(BaseModel):
-    success: bool
-    extracted: Optional[Dict[str, Any]] = None
-    raw_response: Optional[str] = None
-    error_code: Optional[str] = None
-    usage: Optional[Dict[str, Any]] = None
-
-
-class UsageResponse(BaseModel):
-    tenant_id: str
-    year_month: str
-    image_count: int
-    free_remaining: int
-    billable_count: int
-    total_cost: float
-
-
-# Authentication
-async def verify_service_key(x_service_key: Optional[str] = Header(None)):
-    """Verify the service key from Odoo instances"""
-    if SERVICE_KEY and x_service_key != SERVICE_KEY:
-        raise HTTPException(status_code=401, detail="Invalid service key")
-    return True
-
-
-def build_ocr_prompt(template_fields: List[str] = None) -> str:
-    """
-    Build OCR prompt for Japanese accounting documents.
-    Supports 適格請求書 (Invoice System) and JGAAP standards.
-    """
-    return '''你是日本会计（日本基準/JGAAP）与适格請求書（インボイス制度）解析引擎。请从输入的小票/发票/请款单文本中，抽取"开票方信息 + 明细行 + 税率汇总 + 会计科目建议"，并进行严格交叉验证，尽量提高识别率。
+# FULL PROMPT - For detailed line-by-line extraction (~25-35s)
+PROMPT_FULL = '''你是日本会计（日本基準/JGAAP）与适格請求書（インボイス制度）解析引擎。请从输入的小票/发票/请款单文本中，抽取"开票方信息 + 明细行 + 税率汇总 + 会计科目建议"，并进行严格交叉验证，尽量提高识别率。
 
 【必须抽取的核心字段】
 1) issuer（开票方）
@@ -320,8 +244,119 @@ C) 总计校验（grand total）
 - 不能省略 lines；即使识别困难也要尽量输出候选行并用 null 标注不确定值'''
 
 
+# ============== LIFESPAN ==============
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage database connection pool lifecycle"""
+    global db_pool
+    try:
+        db_pool = await asyncpg.create_pool(DATABASE_URL, min_size=2, max_size=10)
+        async with db_pool.acquire() as conn:
+            await conn.execute('''
+                CREATE TABLE IF NOT EXISTS ocr_usage (
+                    id SERIAL PRIMARY KEY,
+                    tenant_id VARCHAR(100) NOT NULL,
+                    year_month VARCHAR(7) NOT NULL,
+                    image_count INTEGER DEFAULT 0,
+                    billable_count INTEGER DEFAULT 0,
+                    total_cost DECIMAL(10,2) DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    updated_at TIMESTAMP DEFAULT NOW(),
+                    UNIQUE(tenant_id, year_month)
+                )
+            ''')
+            await conn.execute('''
+                CREATE TABLE IF NOT EXISTS ocr_requests (
+                    id SERIAL PRIMARY KEY,
+                    tenant_id VARCHAR(100) NOT NULL,
+                    request_time TIMESTAMP DEFAULT NOW(),
+                    success BOOLEAN,
+                    error_code VARCHAR(50),
+                    processing_time_ms INTEGER,
+                    file_size_bytes INTEGER,
+                    prompt_version VARCHAR(10)
+                )
+            ''')
+            # Add prompt_version column if not exists
+            await conn.execute('''
+                DO $$
+                BEGIN
+                    ALTER TABLE ocr_requests ADD COLUMN IF NOT EXISTS prompt_version VARCHAR(10);
+                EXCEPTION WHEN duplicate_column THEN NULL;
+                END $$;
+            ''')
+        logger.info("Database initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize database: {e}")
+        db_pool = None
+
+    yield
+
+    if db_pool:
+        await db_pool.close()
+
+
+# ============== APP ==============
+
+app = FastAPI(
+    title="Central OCR Service",
+    description="Centralized OCR service with fast/full prompt modes",
+    version="1.2.0",
+    lifespan=lifespan
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# ============== MODELS ==============
+
+class OCRRequest(BaseModel):
+    image_data: str  # Base64 encoded
+    mime_type: str = 'image/jpeg'
+    prompt_version: Literal['fast', 'full'] = 'fast'  # Default to fast
+    template_fields: List[str] = []
+    tenant_id: str = 'default'
+
+
+class OCRResponse(BaseModel):
+    success: bool
+    extracted: Optional[Dict[str, Any]] = None
+    raw_response: Optional[str] = None
+    error_code: Optional[str] = None
+    usage: Optional[Dict[str, Any]] = None
+    prompt_version: Optional[str] = None
+    processing_time_ms: Optional[int] = None
+
+
+class UsageResponse(BaseModel):
+    tenant_id: str
+    year_month: str
+    image_count: int
+    free_remaining: int
+    billable_count: int
+    total_cost: float
+
+
+# ============== AUTH ==============
+
+async def verify_service_key(x_service_key: Optional[str] = Header(None)):
+    if SERVICE_KEY and x_service_key != SERVICE_KEY:
+        raise HTTPException(status_code=401, detail="Invalid service key")
+    return True
+
+
+# ============== CORE ==============
+
 def extract_json_from_text(text: str) -> dict:
     """Extract JSON from text response"""
+    # Try markdown code block
     json_match = re.search(r'```(?:json)?\s*([\s\S]*?)```', text)
     if json_match:
         try:
@@ -329,6 +364,7 @@ def extract_json_from_text(text: str) -> dict:
         except json.JSONDecodeError:
             pass
 
+    # Try raw JSON
     try:
         start = text.find('{')
         end = text.rfind('}') + 1
@@ -340,14 +376,34 @@ def extract_json_from_text(text: str) -> dict:
     return {'raw_text': text}
 
 
-async def call_gemini_api(image_data: str, mime_type: str, template_fields: List[str]) -> Dict[str, Any]:
-    """Call Gemini API - internal function, never exposed to tenants"""
+async def call_gemini_api(
+    image_data: str,
+    mime_type: str,
+    prompt_version: str = 'fast'
+) -> Dict[str, Any]:
+    """Call Gemini API with fast or full prompt"""
     if not GEMINI_API_KEY:
         logger.error("GEMINI_API_KEY not configured")
         return {'success': False, 'error_code': 'service_error'}
 
     url = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}'
-    prompt = build_ocr_prompt(template_fields)
+
+    # Select prompt and config based on version
+    if prompt_version == 'fast':
+        prompt = PROMPT_FAST
+        config = {
+            'temperature': 0,
+            'maxOutputTokens': 512,
+            'responseMimeType': 'application/json',  # JSON mode
+        }
+        timeout = 30
+    else:
+        prompt = PROMPT_FULL
+        config = {
+            'temperature': 0.1,
+            'maxOutputTokens': 4096,
+        }
+        timeout = 90
 
     payload = {
         'contents': [{
@@ -356,16 +412,13 @@ async def call_gemini_api(image_data: str, mime_type: str, template_fields: List
                 {'text': prompt}
             ]
         }],
-        'generationConfig': {
-            'temperature': 0.1,
-            'maxOutputTokens': 4096,
-        }
+        'generationConfig': config
     }
 
     max_retries = 3
     for attempt in range(max_retries):
         try:
-            async with httpx.AsyncClient(timeout=90) as client:
+            async with httpx.AsyncClient(timeout=timeout) as client:
                 response = await client.post(
                     url,
                     json=payload,
@@ -373,13 +426,13 @@ async def call_gemini_api(image_data: str, mime_type: str, template_fields: List
                 )
 
             if response.status_code == 429:
-                wait_time = (attempt + 1) * 5
+                wait_time = (attempt + 1) * 3
                 logger.warning(f"Rate limited, waiting {wait_time}s")
                 await asyncio.sleep(wait_time)
                 continue
 
             if response.status_code != 200:
-                logger.error(f"Gemini API error: {response.status_code}")
+                logger.error(f"Gemini API error: {response.status_code} - {response.text[:200]}")
                 return {'success': False, 'error_code': 'service_error'}
 
             result = response.json()
@@ -402,8 +455,9 @@ async def call_gemini_api(image_data: str, mime_type: str, template_fields: List
             }
 
         except httpx.TimeoutException:
+            logger.warning(f"Timeout on attempt {attempt + 1}")
             if attempt < max_retries - 1:
-                await asyncio.sleep(5)
+                await asyncio.sleep(2)
                 continue
             return {'success': False, 'error_code': 'timeout'}
         except Exception as e:
@@ -413,8 +467,14 @@ async def call_gemini_api(image_data: str, mime_type: str, template_fields: List
     return {'success': False, 'error_code': 'max_retries'}
 
 
-async def update_usage(tenant_id: str, success: bool, processing_time_ms: int, file_size: int):
-    """Update usage tracking for tenant"""
+async def update_usage(
+    tenant_id: str,
+    success: bool,
+    processing_time_ms: int,
+    file_size: int,
+    prompt_version: str = 'fast'
+):
+    """Update usage tracking"""
     if not db_pool:
         return None
 
@@ -422,14 +482,12 @@ async def update_usage(tenant_id: str, success: bool, processing_time_ms: int, f
 
     try:
         async with db_pool.acquire() as conn:
-            # Log the request
             await conn.execute('''
-                INSERT INTO ocr_requests (tenant_id, success, processing_time_ms, file_size_bytes)
-                VALUES ($1, $2, $3, $4)
-            ''', tenant_id, success, processing_time_ms, file_size)
+                INSERT INTO ocr_requests (tenant_id, success, processing_time_ms, file_size_bytes, prompt_version)
+                VALUES ($1, $2, $3, $4, $5)
+            ''', tenant_id, success, processing_time_ms, file_size, prompt_version)
 
             if success:
-                # Update monthly usage
                 await conn.execute('''
                     INSERT INTO ocr_usage (tenant_id, year_month, image_count, billable_count, total_cost)
                     VALUES ($1, $2, 1,
@@ -448,7 +506,6 @@ async def update_usage(tenant_id: str, success: bool, processing_time_ms: int, f
                         updated_at = NOW()
                 ''', tenant_id, year_month, FREE_QUOTA_PER_MONTH, PRICE_PER_IMAGE)
 
-                # Get current usage
                 row = await conn.fetchrow('''
                     SELECT image_count, billable_count, total_cost
                     FROM ocr_usage WHERE tenant_id = $1 AND year_month = $2
@@ -467,11 +524,16 @@ async def update_usage(tenant_id: str, success: bool, processing_time_ms: int, f
     return None
 
 
-# API Endpoints
+# ============== ENDPOINTS ==============
+
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
-    return {"status": "healthy", "version": "1.1.0", "timestamp": datetime.now().isoformat()}
+    return {
+        "status": "healthy",
+        "version": "1.2.0",
+        "prompts": ["fast", "full"],
+        "timestamp": datetime.now().isoformat()
+    }
 
 
 @app.post("/api/v1/ocr/process", response_model=OCRResponse)
@@ -479,28 +541,27 @@ async def process_ocr(
     request: OCRRequest,
     _: bool = Depends(verify_service_key)
 ):
-    """Process OCR request from Odoo 18 instance"""
+    """Process OCR request with fast or full prompt"""
     start_time = time.time()
-    file_size = len(request.image_data) * 3 // 4  # Approximate decoded size
+    file_size = len(request.image_data) * 3 // 4
 
-    logger.info(f"OCR request from tenant: {request.tenant_id}")
+    logger.info(f"OCR request from {request.tenant_id}, prompt={request.prompt_version}")
 
-    # Call Gemini API
     result = await call_gemini_api(
         request.image_data,
         request.mime_type,
-        request.template_fields
+        request.prompt_version
     )
 
     processing_time_ms = int((time.time() - start_time) * 1000)
-    logger.info(f"OCR completed in {processing_time_ms}ms, success={result.get('success')}")
+    logger.info(f"OCR completed in {processing_time_ms}ms, prompt={request.prompt_version}, success={result.get('success')}")
 
-    # Update usage tracking
     usage = await update_usage(
         request.tenant_id,
         result.get('success', False),
         processing_time_ms,
-        file_size
+        file_size,
+        request.prompt_version
     )
 
     if result.get('success'):
@@ -508,12 +569,16 @@ async def process_ocr(
             success=True,
             extracted=result.get('extracted'),
             raw_response=result.get('raw_response'),
-            usage=usage
+            usage=usage,
+            prompt_version=request.prompt_version,
+            processing_time_ms=processing_time_ms
         )
     else:
         return OCRResponse(
             success=False,
-            error_code=result.get('error_code', 'processing_failed')
+            error_code=result.get('error_code', 'processing_failed'),
+            prompt_version=request.prompt_version,
+            processing_time_ms=processing_time_ms
         )
 
 
@@ -523,7 +588,6 @@ async def get_usage(
     year_month: Optional[str] = None,
     _: bool = Depends(verify_service_key)
 ):
-    """Get usage statistics for a tenant"""
     if not db_pool:
         raise HTTPException(status_code=503, detail="Database unavailable")
 
@@ -561,7 +625,6 @@ async def list_all_usage(
     year_month: Optional[str] = None,
     _: bool = Depends(verify_service_key)
 ):
-    """List usage for all tenants (admin endpoint for Odoo 19)"""
     if not db_pool:
         raise HTTPException(status_code=503, detail="Database unavailable")
 
