@@ -25,4 +25,5 @@ if records:
     records.action_reset_ocr()
         </field>
     </record>
+
 </odoo>

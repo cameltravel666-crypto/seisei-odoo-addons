@@ -1,6 +1,6 @@
 {
     'name': 'Financial OCR Integration',
-    'version': '18.0.13.0.0',
+    'version': '18.0.13.1.0',
     'category': 'Accounting',
     'summary': 'AI-powered OCR for Purchase Orders, Invoices, and Expenses',
     'description': '''
@@ -33,6 +33,7 @@ Features:
     'data': [
         'security/ir.model.access.csv',
         'data/server_actions.xml',
+        'data/ocr_cron.xml',
         'views/account_move_views.xml',
         'views/purchase_order_views.xml',
         'wizard/ocr_data_wizard_views.xml',
@@ -53,4 +54,4 @@ Features:
     'auto_install': False,
     'license': 'LGPL-3',
 }
-# Build trigger: 1769531538
+# Build trigger: 1769531600
