@@ -13,7 +13,7 @@ from odoo.http import request
 _logger = logging.getLogger(__name__)
 
 # QR Ordering Build Version (version + timestamp for cache-busting)
-QR_ORDERING_VERSION = '18.0.1.0.3'
+QR_ORDERING_VERSION = '18.0.1.0.4'
 QR_ORDERING_BUILD = f"{QR_ORDERING_VERSION}-{int(time.time())}"
 
 

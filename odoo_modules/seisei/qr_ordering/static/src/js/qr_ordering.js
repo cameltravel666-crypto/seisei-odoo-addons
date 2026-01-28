@@ -1283,11 +1283,28 @@
         }
 
         // P1-7: 已下单列表 - 显示商品名、数量、金额，底部汇总
-        // 合并所有订单的商品
+        // 重要：多个 QR 订单可能链接到同一个 POS 订单，每个 QR 订单的 lines 都是完整的 POS 订单行
+        // 因此需要按 pos_order_id 去重，只显示一次订单行
+        const seenPosOrderIds = new Set();
         const allLines = [];
 
-        activeOrders.forEach(order => {
-            order.lines.forEach(l => {
+        // 按创建时间排序（最新的在前），这样会使用最新的订单数据
+        const sortedOrders = [...activeOrders].sort((a, b) => {
+            const timeA = a.order_time ? new Date(a.order_time).getTime() : 0;
+            const timeB = b.order_time ? new Date(b.order_time).getTime() : 0;
+            return timeB - timeA; // 最新的在前
+        });
+
+        sortedOrders.forEach(order => {
+            // 如果这个 POS 订单的行已经添加过，跳过
+            const posOrderId = order.pos_order_id || order.id;
+            if (seenPosOrderIds.has(posOrderId)) {
+                return;
+            }
+            seenPosOrderIds.add(posOrderId);
+
+            // 添加此订单的所有行
+            (order.lines || []).forEach(l => {
                 allLines.push({
                     name: l.product_name,
                     qty: l.qty,
@@ -1376,18 +1393,32 @@
         const hasOrdered = activeOrders.length > 0;
         const lastOrder = hasOrdered ? activeOrders[activeOrders.length - 1] : null;
         const orderRef = lastOrder ? lastOrder.name : '';
-        
+
         // 计算未结订单的含税合计、税额和税前合计
-        const totalOrderAmountInclTax = activeOrders.reduce((sum, o) => {
-            return sum + (o.amount_total_incl || o.total_amount || 0);
-        }, 0);
-        const totalOrderTaxAmount = activeOrders.reduce((sum, o) => {
-            return sum + (o.amount_tax || 0);
-        }, 0);
-        const totalOrderAmountUntaxed = activeOrders.reduce((sum, o) => {
-            // 优先使用后端返回的 amount_untaxed（来自 POS 订单），回退到 total_amount
-            return sum + (o.amount_untaxed || o.total_amount || 0);
-        }, 0);
+        // 重要：多个 QR 订单可能链接到同一个 POS 订单，需要按 pos_order_id 去重
+        const seenPosOrderIds = new Set();
+        let totalOrderAmountInclTax = 0;
+        let totalOrderTaxAmount = 0;
+        let totalOrderAmountUntaxed = 0;
+
+        // 按时间排序，使用最新的订单金额
+        const sortedOrders = [...activeOrders].sort((a, b) => {
+            const timeA = a.order_time ? new Date(a.order_time).getTime() : 0;
+            const timeB = b.order_time ? new Date(b.order_time).getTime() : 0;
+            return timeB - timeA;
+        });
+
+        sortedOrders.forEach(o => {
+            const posOrderId = o.pos_order_id || o.id;
+            if (seenPosOrderIds.has(posOrderId)) {
+                return; // 已经计算过这个 POS 订单
+            }
+            seenPosOrderIds.add(posOrderId);
+
+            totalOrderAmountInclTax += (o.amount_total_incl || o.total_amount || 0);
+            totalOrderTaxAmount += (o.amount_tax || 0);
+            totalOrderAmountUntaxed += (o.amount_untaxed || o.total_amount || 0);
+        });
         
         // 兼容旧字段（向后兼容）
         const totalOrderAmount = totalOrderAmountInclTax;
