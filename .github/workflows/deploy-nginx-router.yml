@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'nginx/default.conf'
+      - 'apps/qr-bff/nginx/odoo-router.conf'
       - '.github/workflows/deploy-nginx-router.yml'
   workflow_dispatch:
 
