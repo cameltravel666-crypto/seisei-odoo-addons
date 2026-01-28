@@ -130,11 +130,9 @@ class QrOrderingController(http.Controller):
             lang = kwargs.get('lang', self._detect_language())
             debug_mode = kwargs.get('debug') == '1' or request.httprequest.args.get('debug') == '1'
 
-            # Feature flag: menu_ui_v2
-            use_v2 = kwargs.get('menu_ui_v2') == '1' or request.httprequest.args.get('menu_ui_v2') == '1'
-            # 也可以从系统参数读取默认值
-            if not use_v2:
-                use_v2 = request.env['ir.config_parameter'].sudo().get_param('qr_ordering.menu_ui_v2', 'false') == 'true'
+            # Feature flag: menu_ui_v2 (V1 is default, V2 is backup)
+            # Only use V2 if explicitly requested via URL parameter ?v2=1
+            use_v2 = kwargs.get('v2') == '1' or request.httprequest.args.get('v2') == '1'
 
             template_name = 'qr_ordering.ordering_page_v2' if use_v2 else 'qr_ordering.ordering_page'
             _logger.info(f"[{trace_id}] Using template: {template_name}, v2={use_v2}")
