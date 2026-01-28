@@ -12,6 +12,11 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Separate projects with their own build systems:
+    "odoo_modules/**",
+    "apps/**",
+    "prisma/seed/**",
+    "services/**",
   ]),
 ]);
 
