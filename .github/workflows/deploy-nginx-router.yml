@@ -25,9 +25,9 @@ jobs:
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.PROD_SSH_PORT || 22 }}
-          source: "nginx/default.conf"
+          source: "apps/qr-bff/nginx/odoo-router.conf"
           target: "/tmp/nginx-deploy"
-          strip_components: 1
+          strip_components: 3
 
       - name: Deploy and reload nginx
         uses: appleboy/ssh-action@v1.0.3
@@ -42,8 +42,8 @@ jobs:
             # Backup current config on host
             sudo cp /opt/seisei-odoo/nginx/default.conf /opt/seisei-odoo/nginx/default.conf.bak.$(date +%Y%m%d%H%M%S) || true
 
-            # Copy new config to host volume mount point
-            sudo cp /tmp/nginx-deploy/default.conf /opt/seisei-odoo/nginx/default.conf
+            # Copy new config to host volume mount point (odoo-router.conf -> default.conf)
+            sudo cp /tmp/nginx-deploy/odoo-router.conf /opt/seisei-odoo/nginx/default.conf
 
             # Test nginx config
             sudo docker exec seisei-odoo-router nginx -t
@@ -64,14 +64,19 @@ jobs:
             # Test nginx health
             curl -sf http://localhost/nginx-health && echo "Nginx health check passed" || echo "Health check endpoint not available"
 
-            # Test QR ordering route
-            curl -sI https://demo.nagashiro.top/qr/order/test 2>&1 | head -5
+            # Test QR ordering route (should return 410)
+            echo "Testing /qr/order/ route (expect 410):"
+            curl -sI https://testodoo.seisei.tokyo/qr/order/test 2>&1 | head -3
+
+            # Test QR print route (should return 303 redirect to login)
+            echo "Testing /qr/print/ route (expect 303 to login):"
+            curl -sI https://testodoo.seisei.tokyo/qr/print/test 2>&1 | head -3
 
       - name: Deployment summary
         run: |
           echo "## Nginx Router Deployment Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **Config File**: nginx/default.conf" >> $GITHUB_STEP_SUMMARY
+          echo "- **Config File**: apps/qr-bff/nginx/odoo-router.conf" >> $GITHUB_STEP_SUMMARY
           echo "- **Container**: seisei-odoo-router" >> $GITHUB_STEP_SUMMARY
           echo "- **Operator**: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Time**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> $GITHUB_STEP_SUMMARY
