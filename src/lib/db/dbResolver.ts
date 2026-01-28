@@ -332,10 +332,10 @@ async function resolveTenantDb(ctx: RequestContext): Promise<ResolveResult> {
 async function getTenantDbName(tenantCode: string): Promise<string | null> {
   try {
     const tenant = await prisma.tenant.findUnique({
-      where: { code: tenantCode },
-      select: { dbName: true },
+      where: { tenantCode },
+      select: { odooDb: true },
     });
-    return tenant?.dbName || null;
+    return tenant?.odooDb || null;
   } catch (error) {
     console.error(`[DbResolver] Error looking up tenant ${tenantCode}:`, error);
     return null;
@@ -345,10 +345,10 @@ async function getTenantDbName(tenantCode: string): Promise<string | null> {
 /**
  * Resolve QR token to tenant code
  */
-async function resolveQrTokenToTenant(qrToken: string): Promise<string | null> {
+async function resolveQrTokenToTenant(qrToken: string): Promise<string | undefined> {
   // TODO: Implement QR token lookup from database
-  // For now, return null to require explicit tenant code
-  return null;
+  // For now, return undefined to require explicit tenant code
+  return undefined;
 }
 
 /**
