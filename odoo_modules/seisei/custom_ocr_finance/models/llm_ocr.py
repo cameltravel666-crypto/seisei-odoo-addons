@@ -356,7 +356,8 @@ def _normalize_extracted(extracted: dict) -> dict:
     - Legacy format: flat structure with Japanese keys
     """
     # Check if this is the fast prompt format
-    if 'vendor' in extracted and 'gross' in extracted and ('r8_tax' in extracted or 'r10_tax' in extracted):
+    # FAST format has: vendor_name, gross, net, r8_gross, r8_tax, r10_gross, r10_tax
+    if ('vendor_name' in extracted or 'vendor' in extracted) and 'gross' in extracted and ('r8_tax' in extracted or 'r10_tax' in extracted):
         return _normalize_fast_format(extracted)
 
     # Check if this is the new unified prompt format
