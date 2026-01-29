@@ -327,9 +327,20 @@ def _normalize_extracted(extracted: dict) -> dict:
     - Full format: nested issuer/document/lines
     - Legacy format: flat structure with Japanese keys
     """
+    import json
+    _logger.info(f'[OCR] _normalize_extracted called')
+    _logger.info(f'[OCR] extracted keys in normalize: {list(extracted.keys())}')
+    _logger.info(f'[OCR] extracted data in normalize: {json.dumps(extracted, ensure_ascii=False, indent=2)}')
+
     # Check if this is the fast prompt format
     # FAST format has: vendor_name, gross, net, r8_gross, r8_tax, r10_gross, r10_tax
-    if ('vendor_name' in extracted or 'vendor' in extracted) and 'gross' in extracted and ('r8_tax' in extracted or 'r8_net' in extracted):
+    has_vendor = 'vendor_name' in extracted or 'vendor' in extracted
+    has_gross = 'gross' in extracted
+    has_tax = 'r8_tax' in extracted or 'r8_net' in extracted
+    _logger.info(f'[OCR] FAST format check: has_vendor={has_vendor}, has_gross={has_gross}, has_tax={has_tax}')
+
+    if has_vendor and has_gross and has_tax:
+        _logger.info('[OCR] FAST format detected in _normalize_extracted, calling _normalize_fast_format')
         return _normalize_fast_format(extracted)
 
     # Check if this is the new unified prompt format
@@ -517,6 +528,7 @@ def _normalize_fast_format(extracted: dict) -> dict:
 
     Converts to Odoo format for accounting journal entries.
     """
+    _logger.info('[OCR] _normalize_fast_format called')
     normalized = {}
 
     # Basic fields
@@ -618,6 +630,7 @@ def _normalize_fast_format(extracted: dict) -> dict:
 
     _logger.info(f'[OCR] Normalized fast format: vendor={normalized.get("vendor_name")}, '
                  f'total={normalized.get("total")}, tax_8={r8_tax}, tax_10={r10_tax}')
+    _logger.info(f'[OCR] _normalize_fast_format returning with _prompt_version={normalized.get("_prompt_version")}')
 
     return normalized
 

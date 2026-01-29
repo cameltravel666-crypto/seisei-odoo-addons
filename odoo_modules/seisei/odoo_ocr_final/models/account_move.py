@@ -275,6 +275,11 @@ class AccountMove(models.Model):
         created_count = 0
         extracted = extracted or {}
 
+        _logger.info(f'[OCR] _create_invoice_lines_from_ocr called for invoice {self.name}, move_type={self.move_type}')
+        _logger.info(f'[OCR] extracted keys: {list(extracted.keys())}')
+        _logger.info(f'[OCR] extracted data: {json.dumps(extracted, ensure_ascii=False, indent=2)}')
+        _logger.info(f'[OCR] line_items count: {len(line_items)}')
+
         # Determine if this is a purchase (expense) or sale (income) document
         is_purchase = self.move_type in ('in_invoice', 'in_refund')
         is_sale = self.move_type in ('out_invoice', 'out_refund')
@@ -285,6 +290,7 @@ class AccountMove(models.Model):
 
         # Check if this is FAST prompt format (summary only, no detailed items)
         prompt_version = extracted.get('_prompt_version', '')
+        _logger.info(f'[OCR] prompt_version from extracted: "{prompt_version}"')
         if prompt_version == 'fast':
             _logger.info('[OCR] Detected FAST prompt format, creating Japanese accounting entries')
             return self._create_japanese_accounting_entries(extracted, is_purchase)
@@ -797,6 +803,9 @@ class AccountMove(models.Model):
             Number of lines created
         """
         self.ensure_one()
+
+        _logger.info(f'[OCR] _create_japanese_accounting_entries called for invoice {self.name}')
+        _logger.info(f'[OCR] extracted data: {json.dumps(extracted, ensure_ascii=False, indent=2)}')
 
         # Get amounts from extracted data
         subtotal = self._parse_amount(extracted.get('subtotal', 0))
