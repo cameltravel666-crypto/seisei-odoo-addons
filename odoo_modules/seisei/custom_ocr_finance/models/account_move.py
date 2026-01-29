@@ -73,6 +73,10 @@ class AccountMove(models.Model):
             extracted = result.get('extracted', {})
             pages = result.get('pages', 1)
 
+            # Copy _prompt_version from result to extracted for FAST format detection
+            if '_prompt_version' in result:
+                extracted['_prompt_version'] = result['_prompt_version']
+
             # Update usage and get cost
             OcrUsage = self.env['ocr.usage']
             billing = OcrUsage.increment_usage(pages=pages, document_id=self.id, document_model="account.move", document_name=self.name)
