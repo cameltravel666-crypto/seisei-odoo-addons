@@ -10,7 +10,6 @@ _logger = logging.getLogger(__name__)
 
 # Batch OCR configuration
 BATCH_OCR_DELAY = 2  # Seconds between each OCR call to avoid rate limiting
-BATCH_OCR_MAX_PER_RUN = 5  # Max records per cron run to prevent timeout
 
 
 class AccountMove(models.Model):
@@ -76,7 +75,7 @@ class AccountMove(models.Model):
 
             # Update usage and get cost
             OcrUsage = self.env['ocr.usage']
-            billing = OcrUsage.increment_usage(pages=pages)
+            billing = OcrUsage.increment_usage(pages=pages, document_id=self.id, document_model="account.move", document_name=self.name)
 
             update_vals = {
                 'ocr_status': 'done',
@@ -258,39 +257,49 @@ class AccountMove(models.Model):
     def _create_invoice_lines_from_ocr(self, line_items, is_tax_inclusive=False, extracted=None):
         """Create invoice lines from OCR extracted items.
 
-        Uses batch creation with check_move_validity=False to avoid
-        concurrent update errors during dynamic line sync.
+        Supports:
+        - in_invoice: Vendor Bills (uses expense account)
+        - in_refund: Vendor Credit Notes (uses expense account)
+        - out_invoice: Customer Invoices (uses income account)
+        - out_refund: Customer Credit Notes (uses income account)
+
+        Args:
+            line_items: List of extracted line items
+            is_tax_inclusive: Whether prices include tax (内税/税込)
+            extracted: Full extracted data dict for tax amounts
         """
         created_count = 0
         extracted = extracted or {}
 
         # Determine if this is a purchase (expense) or sale (income) document
-        is_purchase = self.move_type in ("in_invoice", "in_refund")
-        is_sale = self.move_type in ("out_invoice", "out_refund")
+        is_purchase = self.move_type in ('in_invoice', 'in_refund')
+        is_sale = self.move_type in ('out_invoice', 'out_refund')
 
         if not is_purchase and not is_sale:
-            _logger.warning(f"[OCR] Skipping line creation for move_type: {self.move_type}")
+            _logger.warning(f'[OCR] Skipping line creation for move_type: {self.move_type}')
             return 0
 
-        # Collect all line values first, then create in batch
-        lines_to_create = []
-        lines_to_update = []
+        # Check if this is FAST prompt format (summary only, no detailed items)
+        prompt_version = extracted.get('_prompt_version', '')
+        if prompt_version == 'fast':
+            _logger.info('[OCR] Detected FAST prompt format, creating Japanese accounting entries')
+            return self._create_japanese_accounting_entries(extracted, is_purchase)
 
         for item in line_items:
             # Support both old format (product_name) and new format (name)
-            product_name = item.get("product_name") or item.get("name", "")
+            product_name = item.get('product_name') or item.get('name', '')
             if not product_name:
                 continue
 
             # Parse quantity - support both 'quantity' and 'qty'
             try:
-                quantity = float(item.get("quantity") or item.get("qty") or 1)
+                quantity = float(item.get('quantity') or item.get('qty') or 1)
             except (ValueError, TypeError):
                 quantity = 1
 
             # Parse price (could be tax-inclusive)
             try:
-                unit_price = float(item.get("unit_price", 0) or 0)
+                unit_price = float(item.get('unit_price', 0) or 0)
             except (ValueError, TypeError):
                 unit_price = 0
 
@@ -298,7 +307,7 @@ class AccountMove(models.Model):
             # Support both 'amount' and 'gross_amount'
             if unit_price == 0:
                 try:
-                    amount = float(item.get("amount") or item.get("gross_amount") or 0)
+                    amount = float(item.get('amount') or item.get('gross_amount') or 0)
                     if amount > 0 and quantity > 0:
                         unit_price = amount / quantity
                 except (ValueError, TypeError):
@@ -306,7 +315,7 @@ class AccountMove(models.Model):
 
             # Get tax rate for this item (default to 8% - food items in Japan)
             # Handle multiple formats: decimal (0.08), integer (8), string ("8%")
-            tax_rate = item.get("tax_rate", 8)
+            tax_rate = item.get('tax_rate')
             try:
                 if tax_rate is not None:
                     # Handle string format like "8%" or "10%"
@@ -324,131 +333,71 @@ class AccountMove(models.Model):
                 tax_rate = 8
 
             # If tax-inclusive, convert to tax-exclusive price
+            # Formula: price_excl = price_incl / (1 + tax_rate/100)
             price_excl = unit_price
             if is_tax_inclusive and unit_price > 0:
                 price_excl = round(unit_price / (1 + tax_rate / 100), 2)
-                _logger.info(f"[OCR] Tax-inclusive conversion: {unit_price} -> {price_excl} (excl. {tax_rate}% tax)")
+                _logger.info(f'[OCR] Tax-inclusive conversion: {unit_price} -> {price_excl} (excl. {tax_rate}% tax)')
 
             # Find or create product
             product = self._find_or_create_product(product_name, price_excl, is_sale=is_sale)
             if not product:
-                _logger.warning(f"[OCR] Could not find/create product: {product_name}")
+                _logger.warning(f'[OCR] Could not find/create product: {product_name}')
                 continue
 
             # Check for existing line with same product
             existing = self.invoice_line_ids.filtered(lambda l: l.product_id.id == product.id)
 
             if existing:
-                # Queue update for existing line
-                lines_to_update.append((existing[0], quantity))
-                _logger.info(f"[OCR] Will update line: {product_name} (qty: +{quantity})")
+                # Update existing line quantity
+                existing[0].write({'quantity': existing[0].quantity + quantity})
+                _logger.info(f'[OCR] Updated line: {product_name} (qty: +{quantity})')
             else:
                 # Get default account based on document type
                 if is_purchase:
+                    # Expense account for vendor bills
                     account = product.property_account_expense_id or \
                               product.categ_id.property_account_expense_categ_id
                     if not account:
-                        account = self.env["ir.property"]._get(
-                            "property_account_expense_categ_id", "product.category"
+                        account = self.env['ir.property']._get(
+                            'property_account_expense_categ_id', 'product.category'
                         )
                     price = price_excl or product.standard_price
                 else:
+                    # Income account for customer invoices
                     account = product.property_account_income_id or \
                               product.categ_id.property_account_income_categ_id
                     if not account:
-                        account = self.env["ir.property"]._get(
-                            "property_account_income_categ_id", "product.category"
+                        account = self.env['ir.property']._get(
+                            'property_account_income_categ_id', 'product.category'
                         )
                     price = price_excl or product.list_price
 
                 line_vals = {
-                    "move_id": self.id,
-                    "product_id": product.id,
-                    "name": product.name,
-                    "quantity": quantity,
-                    "price_unit": price,
-                    "product_uom_id": product.uom_id.id,
+                    'move_id': self.id,
+                    'product_id': product.id,
+                    'name': product.name,
+                    'quantity': quantity,
+                    'price_unit': price,
+                    'product_uom_id': product.uom_id.id,
                 }
 
                 if account:
-                    line_vals["account_id"] = account.id
+                    line_vals['account_id'] = account.id
 
-                # Find and set appropriate tax
+                # Find and set appropriate tax based on tax_rate
                 tax = self._find_tax_by_rate(tax_rate, is_purchase)
                 if tax:
-                    line_vals["tax_ids"] = [(6, 0, [tax.id])]
+                    line_vals['tax_ids'] = [(6, 0, [tax.id])]
 
-                lines_to_create.append(line_vals)
-                _logger.info(f"[OCR] Will create line: {product_name} (qty: {quantity}, price: {price})")
+                self.env['account.move.line'].create(line_vals)
+                _logger.info(f'[OCR] Created line: {product_name} (qty: {quantity}, price: {price}, tax: {tax_rate}%)')
 
             created_count += 1
 
-        # Batch create all new lines
-        # Note: Do NOT use skip_invoice_sync=True as it prevents balance/debit/credit computation
-        if lines_to_create:
-            try:
-                # Use check_move_validity=False to avoid validation during batch creation
-                # But allow invoice_sync to happen so balance/debit/credit are computed
-                self.env["account.move.line"].with_context(
-                    check_move_validity=False,
-                ).create(lines_to_create)
-                _logger.info(f"[OCR] Batch created {len(lines_to_create)} invoice lines")
-            except Exception as e:
-                _logger.error(f"[OCR] Batch create failed: {e}")
-                # Try creating one by one as fallback
-                for line_vals in lines_to_create:
-                    try:
-                        self.env["account.move.line"].with_context(
-                            check_move_validity=False,
-                        ).create(line_vals)
-                    except Exception as e2:
-                        _logger.error(f"[OCR] Failed to create line: {e2}")
-
-        # Batch update existing lines
-        for line, add_qty in lines_to_update:
-            try:
-                line.with_context(check_move_validity=False).write({
-                    "quantity": line.quantity + add_qty
-                })
-            except Exception as e:
-                _logger.error(f"[OCR] Failed to update line: {e}")
-
-        # Odoo 18: Force synchronization and recomputation of all accounting fields
-        # This ensures balance/debit/credit and totals are computed correctly
-        try:
-            _logger.info(f"[OCR] Triggering full sync for invoice {self.id}")
-
-            # Method 1: Try _synchronize_business_models (Odoo 18 standard method)
-            if hasattr(self, '_synchronize_business_models'):
-                self.with_context(check_move_validity=False)._synchronize_business_models(['line_ids'])
-                _logger.info("[OCR] Used _synchronize_business_models")
-
-            # Method 2: Invalidate and recompute all line fields
-            for line in self.line_ids:
-                line.invalidate_recordset()
-                # Force balance computation by writing price_unit back
-                if line.display_type == 'product' and line.price_unit:
-                    try:
-                        line.with_context(check_move_validity=False).write({
-                            'price_unit': line.price_unit
-                        })
-                    except Exception:
-                        pass
-
-            # Method 3: Trigger onchange to sync tax and payment lines
-            if hasattr(self, '_onchange_quick_edit_line_ids'):
-                self.with_context(check_move_validity=False)._onchange_quick_edit_line_ids()
-
-            # Final: Invalidate move and access computed fields
-            self.invalidate_recordset()
-            _logger.info(f"[OCR] After sync: total={self.amount_total}, untaxed={self.amount_untaxed}, tax={self.amount_tax}")
-
-            # Log line balances for debugging
-            for line in self.line_ids.filtered(lambda l: l.display_type == 'product'):
-                _logger.info(f"[OCR] Line {line.name}: balance={line.balance}, debit={line.debit}, credit={line.credit}")
-
-        except Exception as e:
-            _logger.warning(f"[OCR] Sync warning: {e}")
+        # Validate tax amounts and reconcile if needed
+        if extracted:
+            self._validate_and_reconcile_tax(extracted)
 
         return created_count
 
@@ -484,6 +433,56 @@ class AccountMove(models.Model):
         # Fall back to any matching tax
         tax = Tax.search(domain, limit=1)
         return tax if tax else False
+
+    def _validate_and_reconcile_tax(self, extracted):
+        try:
+            ocr_tax = self._parse_amount(extracted.get('tax', 0))
+            ocr_total = self._parse_amount(extracted.get('total', 0))
+            if ocr_tax <= 0 or ocr_total <= 0:
+                _logger.info('[OCR] No OCR tax/total for validation')
+                return
+            self.invalidate_recordset()
+            calculated_tax = abs(self.amount_tax)
+            calculated_total = abs(self.amount_total)
+            _logger.info(f'[OCR] Tax: OCR={ocr_tax}, calc={calculated_tax}')
+            _logger.info(f'[OCR] Total: OCR={ocr_total}, calc={calculated_total}')
+            tax_diff = abs(calculated_tax - ocr_tax)
+            total_diff = abs(calculated_total - ocr_total)
+            if tax_diff <= 1 and total_diff > 1:
+                _logger.info(f'[OCR] Tax OK but total diff={total_diff}, adjusting')
+                self._adjust_line_for_total_diff(ocr_total, calculated_total)
+            elif tax_diff > 1:
+                _logger.warning(f'[OCR] Tax mismatch: OCR={ocr_tax}, calc={calculated_tax}')
+        except Exception as e:
+            _logger.warning(f'[OCR] Tax validation error: {e}')
+
+    def _adjust_line_for_total_diff(self, ocr_total, calculated_total):
+        try:
+            lines = self.invoice_line_ids.filtered(lambda l: l.price_unit > 0 and not l.display_type)
+            if not lines:
+                return
+            adjust_line = lines[-1]
+            total_diff = ocr_total - calculated_total
+            tax_rate = 8
+            if adjust_line.tax_ids:
+                tax_rate = adjust_line.tax_ids[0].amount or 8
+            price_diff = total_diff / (adjust_line.quantity * (1 + tax_rate / 100))
+            new_price = adjust_line.price_unit + price_diff
+            if new_price > 0:
+                adjust_line.write({'price_unit': round(new_price, 2)})
+                _logger.info(f'[OCR] Adjusted {adjust_line.name}: -> {round(new_price, 2)}')
+        except Exception as e:
+            _logger.warning(f'[OCR] Line adjustment error: {e}')
+
+    def _parse_amount(self, value):
+        if value is None:
+            return 0
+        if isinstance(value, (int, float)):
+            return float(value)
+        try:
+            return float(str(value).replace(',', '').replace('¥', '').replace('円', '').strip())
+        except:
+            return 0
 
     def _find_or_create_product(self, name, price=0, is_sale=False):
         """Find product by name, create if not found.
@@ -614,19 +613,17 @@ class AccountMove(models.Model):
             _logger.error(f'[OCR] Failed to create supplier: {e}')
             return False
 
-    # ==================== Batch OCR Methods (with Progress Tracking) ====================
+    # ==================== Batch OCR Methods ====================
 
     def action_batch_send_to_ocr(self):
         """
-        Queue invoices for background OCR processing with progress tracking.
-
-        Creates a batch progress record and returns action to open progress dialog.
-        A cron job processes the queue in the background.
+        Batch OCR processing for multiple selected invoices.
+        Queues records for processing and starts the batch job.
         """
         # Filter records that can be processed
         to_process = self.filtered(
             lambda r: r.message_main_attachment_id and
-                      r.ocr_status not in ('processing', 'done') and
+                      r.ocr_status != 'processing' and
                       r.move_type in ('in_invoice', 'in_refund', 'out_invoice', 'out_refund')
         )
 
@@ -642,178 +639,63 @@ class AccountMove(models.Model):
                 }
             }
 
-        # Create batch progress record (use sudo to bypass access control)
-        BatchProgress = self.env['ocr.batch.progress'].sudo()
-        batch = BatchProgress.create_batch(to_process.ids)
+        # Mark all as queued for processing
+        to_process.write({
+            'ocr_status': 'processing',
+            'ocr_error_message': _('Queued for batch processing...'),
+        })
 
-        if not batch:
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': _('Batch OCR'),
-                    'message': _('Failed to create batch job.'),
-                    'type': 'danger',
-                    'sticky': False,
-                }
-            }
+        # Commit to save the status before processing
+        self.env.cr.commit()
 
-        count = len(to_process)
-        _logger.info(f'[Batch OCR] Created batch {batch.id} with {count} invoices')
-
-        # Return client action to show progress dialog
-        return {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'title': _('Batch OCR Started'),
-                'message': _('%d invoice(s) queued for OCR processing (Batch #%d). Processing in background...') % (count, batch.id),
-                'type': 'success',
-                'sticky': True,
-                'links': [{
-                    'label': _('View Progress'),
-                    'url': f'/web#action=reload',
-                }],
-            }
-        }
-
-    @api.model
-    def cron_process_ocr_queue(self):
-        """
-        Cron job to process queued OCR records with progress tracking.
-
-        Runs every 2 minutes and processes batches in order.
-        Updates batch progress for real-time UI display.
-        """
-        _logger.info('[Batch OCR Cron] Starting queue processing')
-
-        BatchProgress = self.env['ocr.batch.progress']
-
-        # Find active batches to process
-        active_batches = BatchProgress.search([
-            ('state', 'in', ('queued', 'processing')),
-        ], order='create_date asc', limit=3)
-
-        if not active_batches:
-            # Fallback: Check for orphan records (processing status but no batch)
-            orphans = self.search([
-                ('ocr_status', '=', 'processing'),
-                ('message_main_attachment_id', '!=', False),
-                ('move_type', 'in', ('in_invoice', 'in_refund', 'out_invoice', 'out_refund')),
-            ], limit=BATCH_OCR_MAX_PER_RUN, order='write_date asc')
-
-            if orphans:
-                _logger.info(f'[Batch OCR Cron] Processing {len(orphans)} orphan records')
-                self._process_orphan_queue(orphans)
-            else:
-                _logger.info('[Batch OCR Cron] No queued records to process')
-            return
-
-        # Process each batch
-        for batch in active_batches:
-            try:
-                self._process_batch(batch)
-            except Exception as e:
-                _logger.error(f'[Batch OCR Cron] Batch {batch.id} failed: {e}')
-                batch.mark_failed(error=str(e))
-
-    def _process_batch(self, batch):
-        """Process records in a batch with progress updates."""
-        _logger.info(f'[Batch OCR] Processing batch {batch.id}')
-
-        # Start the batch if not already started
-        if batch.state == 'queued':
-            batch.start_processing()
-
-        # Get unprocessed records from this batch
-        to_process = batch.move_ids.filtered(
-            lambda m: m.ocr_status == 'processing'
-        )
-
-        if not to_process:
-            batch.write({'state': 'done', 'completed_at': fields.Datetime.now()})
-            _logger.info(f'[Batch OCR] Batch {batch.id} completed')
-            return
-
-        # Process up to BATCH_OCR_MAX_PER_RUN records per cron run
-        records_to_process = to_process[:BATCH_OCR_MAX_PER_RUN]
-        total = len(records_to_process)
-
-        for idx, record in enumerate(records_to_process):
-            try:
-                _logger.info(f'[Batch OCR] Batch {batch.id}: Processing {idx + 1}/{total}: Invoice {record.id}')
-
-                # Update status
-                record.write({
-                    'ocr_error_message': _('Processing... (Batch #%d)') % batch.id,
-                })
-                self.env.cr.commit()
-
-                # Process the record
-                record._process_single_ocr()
-
-                # Update batch progress
-                batch.update_progress(current_move=record, success=True)
-                self.env.cr.commit()
-
-                # Delay between API calls
-                if idx < total - 1:
-                    time.sleep(BATCH_OCR_DELAY)
-
-            except Exception as e:
-                error_msg = str(e)[:500]
-                _logger.error(f'[Batch OCR] Failed invoice {record.id}: {e}')
-
-                record.write({
-                    'ocr_status': 'failed',
-                    'ocr_error_message': error_msg,
-                })
-
-                # Update batch progress with failure
-                batch.update_progress(current_move=record, success=False, error=error_msg)
-                self.env.cr.commit()
-
-        _logger.info(f'[Batch OCR] Batch {batch.id}: Processed {total} records this run')
-
-    def _process_orphan_queue(self, records):
-        """Process orphan records that don't belong to any batch."""
+        # Process each record with delay
         success_count = 0
         fail_count = 0
-        total = len(records)
+        total = len(to_process)
 
-        for idx, record in enumerate(records):
+        for idx, record in enumerate(to_process):
             try:
-                _logger.info(f'[Batch OCR Orphan] Processing {idx + 1}/{total}: Invoice {record.id}')
-
-                record.write({
-                    'ocr_error_message': _('Processing... (%d/%d)') % (idx + 1, total),
-                })
-                self.env.cr.commit()
-
+                _logger.info(f'[Batch OCR] Processing {idx + 1}/{total}: Invoice {record.id}')
                 record._process_single_ocr()
                 success_count += 1
+
+                # Commit after each successful processing
                 self.env.cr.commit()
 
+                # Delay between API calls to avoid rate limiting
                 if idx < total - 1:
                     time.sleep(BATCH_OCR_DELAY)
 
             except Exception as e:
                 fail_count += 1
-                error_msg = str(e)[:500]
-                _logger.error(f'[Batch OCR Orphan] Failed invoice {record.id}: {e}')
-
+                _logger.error(f'[Batch OCR] Failed invoice {record.id}: {e}')
                 record.write({
                     'ocr_status': 'failed',
-                    'ocr_error_message': error_msg,
+                    'ocr_error_message': str(e)[:500],
                 })
                 self.env.cr.commit()
 
-        _logger.info(f'[Batch OCR Orphan] Completed: {success_count} succeeded, {fail_count} failed')
+        # Return notification with results
+        message = _('Batch OCR completed: %d succeeded, %d failed out of %d total.') % (
+            success_count, fail_count, total
+        )
+
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('Batch OCR Complete'),
+                'message': message,
+                'type': 'success' if fail_count == 0 else 'warning',
+                'sticky': True,
+                'next': {'type': 'ir.actions.client', 'tag': 'reload'},
+            }
+        }
 
     def _process_single_ocr(self):
         """
         Process OCR for a single record without UI interaction.
-        Used by batch processing and cron job.
+        Used by batch processing.
         """
         self.ensure_one()
 
@@ -841,7 +723,7 @@ class AccountMove(models.Model):
 
         # Update usage
         OcrUsage = self.env['ocr.usage']
-        OcrUsage.increment_usage(pages=pages)
+        OcrUsage.increment_usage(pages=pages, document_id=self.id, document_model="account.move", document_name=self.name)
 
         update_vals = {
             'ocr_status': 'done',
@@ -895,3 +777,203 @@ class AccountMove(models.Model):
         self.write({'ocr_matched_count': matched_count})
 
         _logger.info(f'[OCR] Invoice {self.id}: {pages} pages, {len(line_items)} items, {matched_count} matched')
+
+    def _create_japanese_accounting_entries(self, extracted, is_purchase=True):
+        """Create accounting entries according to Japanese GAAP for FAST prompt receipts.
+
+        For tax-exclusive (外税) receipts from OCR FAST prompt:
+        - Creates expense/income line for net amount
+        - Creates separate tax lines for 8% and 10% consumption tax
+
+        Args:
+            extracted: OCR extracted data with subtotal, tax_8_net, tax_8_amount, etc.
+            is_purchase: True for vendor bills (仕入), False for sales (売上)
+
+        Returns:
+            Number of lines created
+        """
+        self.ensure_one()
+
+        # Get amounts from extracted data
+        subtotal = self._parse_amount(extracted.get('subtotal', 0))
+        tax_8_net = self._parse_amount(extracted.get('tax_8_net', 0))
+        tax_8_amount = self._parse_amount(extracted.get('tax_8_amount', 0))
+        tax_10_net = self._parse_amount(extracted.get('tax_10_net', 0))
+        tax_10_amount = self._parse_amount(extracted.get('tax_10_amount', 0))
+        total = self._parse_amount(extracted.get('total', 0))
+
+        _logger.info(f'[OCR] Japanese entries: subtotal={subtotal}, tax_8={tax_8_amount}, tax_10={tax_10_amount}, total={total}')
+
+        if subtotal <= 0:
+            _logger.warning('[OCR] No subtotal found, cannot create accounting entries')
+            return 0
+
+        created_count = 0
+
+        # Get appropriate accounts based on document type
+        if is_purchase:
+            # Vendor bill - expense account (仕入高/経費)
+            expense_account = self._get_default_expense_account()
+            tax_account_8 = self._get_tax_account('purchase', 8)
+            tax_account_10 = self._get_tax_account('purchase', 10)
+            account_label = '仕入高/経費'
+        else:
+            # Customer invoice - income account (売上高)
+            expense_account = self._get_default_income_account()
+            tax_account_8 = self._get_tax_account('sale', 8)
+            tax_account_10 = self._get_tax_account('sale', 10)
+            account_label = '売上高'
+
+        if not expense_account:
+            raise UserError(f'No default {account_label} account found. Please configure chart of accounts.')
+
+        # Create main expense/income line (税抜金額)
+        line_vals = {
+            'move_id': self.id,
+            'name': f'{account_label} (OCR: {extracted.get("vendor_name", "不明")})',
+            'account_id': expense_account.id,
+            'quantity': 1,
+            'price_unit': subtotal,
+            'tax_ids': [(5, 0, 0)],  # Clear taxes (manual tax lines)
+        }
+
+        self.env['account.move.line'].with_context(check_move_validity=False).create(line_vals)
+        created_count += 1
+        _logger.info(f'[OCR] Created {account_label} line: ¥{subtotal}')
+
+        # Create 8% tax line if amount > 0
+        if tax_8_amount > 0 and tax_account_8:
+            tax_line_vals = {
+                'move_id': self.id,
+                'name': '仮払消費税 8%' if is_purchase else '仮受消費税 8%',
+                'account_id': tax_account_8.id,
+                'quantity': 1,
+                'price_unit': tax_8_amount,
+                'tax_ids': [(5, 0, 0)],
+            }
+            self.env['account.move.line'].with_context(check_move_validity=False).create(tax_line_vals)
+            created_count += 1
+            _logger.info(f'[OCR] Created 8% tax line: ¥{tax_8_amount} (on net: ¥{tax_8_net})')
+
+        # Create 10% tax line if amount > 0
+        if tax_10_amount > 0 and tax_account_10:
+            tax_line_vals = {
+                'move_id': self.id,
+                'name': '仮払消費税 10%' if is_purchase else '仮受消費税 10%',
+                'account_id': tax_account_10.id,
+                'quantity': 1,
+                'price_unit': tax_10_amount,
+                'tax_ids': [(5, 0, 0)],
+            }
+            self.env['account.move.line'].with_context(check_move_validity=False).create(tax_line_vals)
+            created_count += 1
+            _logger.info(f'[OCR] Created 10% tax line: ¥{tax_10_amount} (on net: ¥{tax_10_net})')
+
+        # Validate total
+        calculated_total = subtotal + tax_8_amount + tax_10_amount
+        if abs(calculated_total - total) > 2:
+            _logger.warning(f'[OCR] Total mismatch: calculated={calculated_total}, OCR={total}, diff={abs(calculated_total-total)}')
+
+        _logger.info(f'[OCR] Created {created_count} Japanese accounting entries (subtotal={subtotal}, tax={tax_8_amount+tax_10_amount}, total={total})')
+        return created_count
+
+    def _get_default_expense_account(self):
+        """Get default expense account (仕入高/経費) for purchases."""
+        # Try to get from company property
+        account = self.env['ir.property']._get(
+            'property_account_expense_categ_id', 'product.category'
+        )
+        if account:
+            return account
+
+        # Fallback: search for expense account by code/name
+        Account = self.env['account.account']
+        # Try Japanese: 仕入高
+        account = Account.search([
+            ('code', '=like', '510%'),  # Common code for 仕入高
+            ('company_id', '=', self.company_id.id)
+        ], limit=1)
+        if account:
+            return account
+
+        # Try more generic expense account
+        account = Account.search([
+            ('account_type', '=', 'expense'),
+            ('company_id', '=', self.company_id.id)
+        ], limit=1)
+        return account
+
+    def _get_default_income_account(self):
+        """Get default income account (売上高) for sales."""
+        # Try to get from company property
+        account = self.env['ir.property']._get(
+            'property_account_income_categ_id', 'product.category'
+        )
+        if account:
+            return account
+
+        # Fallback: search for income account by code/name
+        Account = self.env['account.account']
+        # Try Japanese: 売上高
+        account = Account.search([
+            ('code', '=like', '410%'),  # Common code for 売上高
+            ('company_id', '=', self.company_id.id)
+        ], limit=1)
+        if account:
+            return account
+
+        # Try more generic income account
+        account = Account.search([
+            ('account_type', '=', 'income'),
+            ('company_id', '=', self.company_id.id)
+        ], limit=1)
+        return account
+
+    def _get_tax_account(self, tax_type, rate):
+        """Get consumption tax account (仮払消費税/仮受消費税).
+
+        Args:
+            tax_type: 'purchase' or 'sale'
+            rate: 8 or 10
+
+        Returns:
+            account.account record or False
+        """
+        Account = self.env['account.account']
+
+        # For purchase: 仮払消費税 (prepaid consumption tax)
+        # For sale: 仮受消費税 (consumption tax payable)
+        if tax_type == 'purchase':
+            # Search for tax receivable account
+            # Common codes: 145x for 仮払消費税
+            account = Account.search([
+                ('code', '=like', '145%'),
+                ('company_id', '=', self.company_id.id)
+            ], limit=1)
+            if account:
+                return account
+
+            # Fallback to current asset type
+            account = Account.search([
+                ('account_type', '=', 'asset_current'),
+                ('name', 'ilike', '消費税'),
+                ('company_id', '=', self.company_id.id)
+            ], limit=1)
+        else:
+            # Search for tax payable account
+            # Common codes: 255x for 仮受消費税
+            account = Account.search([
+                ('code', '=like', '255%'),
+                ('company_id', '=', self.company_id.id)
+            ], limit=1)
+            if account:
+                return account
+
+            # Fallback to current liability type
+            account = Account.search([
+                ('account_type', '=', 'liability_current'),
+                ('name', 'ilike', '消費税'),
+                ('company_id', '=', self.company_id.id)
+            ], limit=1)
+
+        return account if account else False

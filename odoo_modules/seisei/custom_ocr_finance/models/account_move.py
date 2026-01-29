@@ -279,6 +279,12 @@ class AccountMove(models.Model):
             _logger.warning(f'[OCR] Skipping line creation for move_type: {self.move_type}')
             return 0
 
+        # Check if this is FAST prompt format (summary only, no detailed items)
+        prompt_version = extracted.get('_prompt_version', '')
+        if prompt_version == 'fast':
+            _logger.info('[OCR] Detected FAST prompt format, creating Japanese accounting entries')
+            return self._create_japanese_accounting_entries(extracted, is_purchase)
+
         for item in line_items:
             # Support both old format (product_name) and new format (name)
             product_name = item.get('product_name') or item.get('name', '')
@@ -771,3 +777,203 @@ class AccountMove(models.Model):
         self.write({'ocr_matched_count': matched_count})
 
         _logger.info(f'[OCR] Invoice {self.id}: {pages} pages, {len(line_items)} items, {matched_count} matched')
+
+    def _create_japanese_accounting_entries(self, extracted, is_purchase=True):
+        """Create accounting entries according to Japanese GAAP for FAST prompt receipts.
+
+        For tax-exclusive (外税) receipts from OCR FAST prompt:
+        - Creates expense/income line for net amount
+        - Creates separate tax lines for 8% and 10% consumption tax
+
+        Args:
+            extracted: OCR extracted data with subtotal, tax_8_net, tax_8_amount, etc.
+            is_purchase: True for vendor bills (仕入), False for sales (売上)
+
+        Returns:
+            Number of lines created
+        """
+        self.ensure_one()
+
+        # Get amounts from extracted data
+        subtotal = self._parse_amount(extracted.get('subtotal', 0))
+        tax_8_net = self._parse_amount(extracted.get('tax_8_net', 0))
+        tax_8_amount = self._parse_amount(extracted.get('tax_8_amount', 0))
+        tax_10_net = self._parse_amount(extracted.get('tax_10_net', 0))
+        tax_10_amount = self._parse_amount(extracted.get('tax_10_amount', 0))
+        total = self._parse_amount(extracted.get('total', 0))
+
+        _logger.info(f'[OCR] Japanese entries: subtotal={subtotal}, tax_8={tax_8_amount}, tax_10={tax_10_amount}, total={total}')
+
+        if subtotal <= 0:
+            _logger.warning('[OCR] No subtotal found, cannot create accounting entries')
+            return 0
+
+        created_count = 0
+
+        # Get appropriate accounts based on document type
+        if is_purchase:
+            # Vendor bill - expense account (仕入高/経費)
+            expense_account = self._get_default_expense_account()
+            tax_account_8 = self._get_tax_account('purchase', 8)
+            tax_account_10 = self._get_tax_account('purchase', 10)
+            account_label = '仕入高/経費'
+        else:
+            # Customer invoice - income account (売上高)
+            expense_account = self._get_default_income_account()
+            tax_account_8 = self._get_tax_account('sale', 8)
+            tax_account_10 = self._get_tax_account('sale', 10)
+            account_label = '売上高'
+
+        if not expense_account:
+            raise UserError(f'No default {account_label} account found. Please configure chart of accounts.')
+
+        # Create main expense/income line (税抜金額)
+        line_vals = {
+            'move_id': self.id,
+            'name': f'{account_label} (OCR: {extracted.get("vendor_name", "不明")})',
+            'account_id': expense_account.id,
+            'quantity': 1,
+            'price_unit': subtotal,
+            'tax_ids': [(5, 0, 0)],  # Clear taxes (manual tax lines)
+        }
+
+        self.env['account.move.line'].with_context(check_move_validity=False).create(line_vals)
+        created_count += 1
+        _logger.info(f'[OCR] Created {account_label} line: ¥{subtotal}')
+
+        # Create 8% tax line if amount > 0
+        if tax_8_amount > 0 and tax_account_8:
+            tax_line_vals = {
+                'move_id': self.id,
+                'name': '仮払消費税 8%' if is_purchase else '仮受消費税 8%',
+                'account_id': tax_account_8.id,
+                'quantity': 1,
+                'price_unit': tax_8_amount,
+                'tax_ids': [(5, 0, 0)],
+            }
+            self.env['account.move.line'].with_context(check_move_validity=False).create(tax_line_vals)
+            created_count += 1
+            _logger.info(f'[OCR] Created 8% tax line: ¥{tax_8_amount} (on net: ¥{tax_8_net})')
+
+        # Create 10% tax line if amount > 0
+        if tax_10_amount > 0 and tax_account_10:
+            tax_line_vals = {
+                'move_id': self.id,
+                'name': '仮払消費税 10%' if is_purchase else '仮受消費税 10%',
+                'account_id': tax_account_10.id,
+                'quantity': 1,
+                'price_unit': tax_10_amount,
+                'tax_ids': [(5, 0, 0)],
+            }
+            self.env['account.move.line'].with_context(check_move_validity=False).create(tax_line_vals)
+            created_count += 1
+            _logger.info(f'[OCR] Created 10% tax line: ¥{tax_10_amount} (on net: ¥{tax_10_net})')
+
+        # Validate total
+        calculated_total = subtotal + tax_8_amount + tax_10_amount
+        if abs(calculated_total - total) > 2:
+            _logger.warning(f'[OCR] Total mismatch: calculated={calculated_total}, OCR={total}, diff={abs(calculated_total-total)}')
+
+        _logger.info(f'[OCR] Created {created_count} Japanese accounting entries (subtotal={subtotal}, tax={tax_8_amount+tax_10_amount}, total={total})')
+        return created_count
+
+    def _get_default_expense_account(self):
+        """Get default expense account (仕入高/経費) for purchases."""
+        # Try to get from company property
+        account = self.env['ir.property']._get(
+            'property_account_expense_categ_id', 'product.category'
+        )
+        if account:
+            return account
+
+        # Fallback: search for expense account by code/name
+        Account = self.env['account.account']
+        # Try Japanese: 仕入高
+        account = Account.search([
+            ('code', '=like', '510%'),  # Common code for 仕入高
+            ('company_id', '=', self.company_id.id)
+        ], limit=1)
+        if account:
+            return account
+
+        # Try more generic expense account
+        account = Account.search([
+            ('account_type', '=', 'expense'),
+            ('company_id', '=', self.company_id.id)
+        ], limit=1)
+        return account
+
+    def _get_default_income_account(self):
+        """Get default income account (売上高) for sales."""
+        # Try to get from company property
+        account = self.env['ir.property']._get(
+            'property_account_income_categ_id', 'product.category'
+        )
+        if account:
+            return account
+
+        # Fallback: search for income account by code/name
+        Account = self.env['account.account']
+        # Try Japanese: 売上高
+        account = Account.search([
+            ('code', '=like', '410%'),  # Common code for 売上高
+            ('company_id', '=', self.company_id.id)
+        ], limit=1)
+        if account:
+            return account
+
+        # Try more generic income account
+        account = Account.search([
+            ('account_type', '=', 'income'),
+            ('company_id', '=', self.company_id.id)
+        ], limit=1)
+        return account
+
+    def _get_tax_account(self, tax_type, rate):
+        """Get consumption tax account (仮払消費税/仮受消費税).
+
+        Args:
+            tax_type: 'purchase' or 'sale'
+            rate: 8 or 10
+
+        Returns:
+            account.account record or False
+        """
+        Account = self.env['account.account']
+
+        # For purchase: 仮払消費税 (prepaid consumption tax)
+        # For sale: 仮受消費税 (consumption tax payable)
+        if tax_type == 'purchase':
+            # Search for tax receivable account
+            # Common codes: 145x for 仮払消費税
+            account = Account.search([
+                ('code', '=like', '145%'),
+                ('company_id', '=', self.company_id.id)
+            ], limit=1)
+            if account:
+                return account
+
+            # Fallback to current asset type
+            account = Account.search([
+                ('account_type', '=', 'asset_current'),
+                ('name', 'ilike', '消費税'),
+                ('company_id', '=', self.company_id.id)
+            ], limit=1)
+        else:
+            # Search for tax payable account
+            # Common codes: 255x for 仮受消費税
+            account = Account.search([
+                ('code', '=like', '255%'),
+                ('company_id', '=', self.company_id.id)
+            ], limit=1)
+            if account:
+                return account
+
+            # Fallback to current liability type
+            account = Account.search([
+                ('account_type', '=', 'liability_current'),
+                ('name', 'ilike', '消費税'),
+                ('company_id', '=', self.company_id.id)
+            ], limit=1)
+
+        return account if account else False
