@@ -292,6 +292,42 @@ def _call_ocr_service(file_data: bytes, mimetype: str, tenant_id: str,
                         }
                         line_items.append(item)
 
+            # Create synthetic line items from tax breakdown (fast prompt format)
+            if not line_items:
+                r8_gross = extracted.get('r8_gross') or 0
+                r8_tax = extracted.get('r8_tax') or 0
+                r10_gross = extracted.get('r10_gross') or 0
+                r10_tax = extracted.get('r10_tax') or 0
+
+                # Calculate net amounts: net = gross - tax
+                r8_net = r8_gross - r8_tax if r8_gross > 0 else 0
+                r10_net = r10_gross - r10_tax if r10_gross > 0 else 0
+
+                _logger.info(f'[OCR] Creating synthetic line items from tax breakdown')
+                _logger.info(f'[OCR] 8%: gross={r8_gross}, tax={r8_tax}, net={r8_net}')
+                _logger.info(f'[OCR] 10%: gross={r10_gross}, tax={r10_tax}, net={r10_net}')
+
+                line_items = []
+                if r8_net > 0:
+                    line_items.append({
+                        'product_name': '8%対象商品',
+                        'quantity': 1,
+                        'unit_price': r8_net,
+                        'amount': r8_gross,  # gross amount (tax-inclusive)
+                        'tax_rate': 8,
+                    })
+                if r10_net > 0:
+                    line_items.append({
+                        'product_name': '10%対象商品',
+                        'quantity': 1,
+                        'unit_price': r10_net,
+                        'amount': r10_gross,  # gross amount (tax-inclusive)
+                        'tax_rate': 10,
+                    })
+
+                # Set is_tax_inclusive flag in normalized data
+                normalized['is_tax_inclusive'] = True
+
             _logger.info(f'[OCR] Final line_items count: {len(line_items)}')
 
             return {
@@ -314,8 +350,15 @@ def _call_ocr_service(file_data: bytes, mimetype: str, tenant_id: str,
 def _normalize_extracted(extracted: dict) -> dict:
     """Normalize extracted data from OCR.
 
-    Handles both old format (flat structure) and new format (nested issuer/document/lines).
+    Handles multiple formats:
+    - Fast format: flat with vendor, tax_id, gross, net, r8_*, r10_*
+    - Full format: nested issuer/document/lines
+    - Legacy format: flat structure with Japanese keys
     """
+    # Check if this is the fast prompt format
+    if 'vendor' in extracted and 'gross' in extracted and ('r8_tax' in extracted or 'r10_tax' in extracted):
+        return _normalize_fast_format(extracted)
+
     # Check if this is the new unified prompt format
     if 'issuer' in extracted or 'document' in extracted or 'lines' in extracted:
         return _normalize_new_format(extracted)
@@ -348,6 +391,134 @@ def _normalize_extracted(extracted: dict) -> dict:
     for key, value in extracted.items():
         if key not in normalized and not any(key in sources for sources in key_mapping.values()):
             normalized[key] = value
+
+    return normalized
+
+
+def _normalize_fast_format(extracted: dict) -> dict:
+    """Normalize fast OCR format to Odoo-expected format.
+
+    Fast format structure (from fast prompt):
+    {
+        "vendor": "店名/会社名",
+        "tax_id": "T+13桁 or null",
+        "date": "YYYY-MM-DD or null",
+        "gross": 合計,
+        "net": 小計(税前),
+        "tax": 消費税合計,
+        "r8_gross": 8%対象額(税込, or 0 if 外税),
+        "r8_tax": 8%税額,
+        "r10_gross": 10%対象額(税込, or 0 if 外税),
+        "r10_tax": 10%税額
+    }
+
+    Handles two formats:
+    A. 内税 (tax-inclusive): r8_gross/r10_gross have values
+    B. 外税 (tax-exclusive): r8_gross/r10_gross = 0, calculate from tax amounts
+
+    Converts to Odoo format for accounting journal entries.
+    """
+    normalized = {}
+
+    # Basic fields
+    normalized['vendor_name'] = extracted.get('vendor')
+    normalized['tax_id'] = extracted.get('tax_id')
+    normalized['date'] = extracted.get('date')
+
+    # Totals
+    gross = extracted.get('gross') or 0
+    net = extracted.get('net') or 0
+    tax = extracted.get('tax') or 0
+
+    # Validation: net + tax should equal gross (±2 yen tolerance)
+    if abs((net + tax) - gross) > 2:
+        _logger.warning(f'[OCR] Amount mismatch: net={net} + tax={tax} != gross={gross}, diff={abs((net+tax)-gross)}')
+
+    normalized['total'] = gross
+    normalized['subtotal'] = net
+    normalized['tax'] = tax
+
+    # Tax breakdown by rate
+    r8_gross = extracted.get('r8_gross') or 0
+    r8_tax = extracted.get('r8_tax') or 0
+    r10_gross = extracted.get('r10_gross') or 0
+    r10_tax = extracted.get('r10_tax') or 0
+
+    # Validate tax breakdown
+    if abs((r8_tax + r10_tax) - tax) > 1:
+        _logger.warning(f'[OCR] Tax breakdown mismatch: r8_tax={r8_tax} + r10_tax={r10_tax} != tax={tax}')
+
+    # Calculate tax-exclusive amounts
+    # Format A: 内税 (r8_gross/r10_gross provided) - net = gross - tax
+    # Format B: 外税 (r8_gross/r10_gross = 0) - calculate net from tax
+    if r8_gross > 0 or r10_gross > 0:
+        # Format A: 内税 (tax-inclusive)
+        r8_net = r8_gross - r8_tax if r8_gross > 0 else 0
+        r10_net = r10_gross - r10_tax if r10_gross > 0 else 0
+        _logger.info(f'[OCR] Format: 内税 (tax-inclusive)')
+    else:
+        # Format B: 外税 (tax-exclusive) - calculate net from tax amounts
+        # r8_net = r8_tax / 0.08, r10_net = r10_tax / 0.10
+        r8_net = round(r8_tax / 0.08) if r8_tax > 0 else 0
+        r10_net = round(r10_tax / 0.10) if r10_tax > 0 else 0
+        _logger.info(f'[OCR] Format: 外税 (tax-exclusive), calculated net from tax')
+
+        # Cross-validate: calculated net should match subtotal
+        calculated_net = r8_net + r10_net
+        if abs(calculated_net - net) > 2:
+            _logger.warning(f'[OCR] Calculated net mismatch: {calculated_net} != {net}, using subtotal value')
+            # If mismatch, distribute subtotal proportionally by tax amounts
+            if r8_tax + r10_tax > 0:
+                ratio_8 = r8_tax / (r8_tax + r10_tax)
+                r8_net = round(net * ratio_8)
+                r10_net = net - r8_net
+
+    _logger.info(f'[OCR] Tax breakdown: 8%: gross={r8_gross}, tax={r8_tax}, net={r8_net}')
+    _logger.info(f'[OCR] Tax breakdown: 10%: gross={r10_gross}, tax={r10_tax}, net={r10_net}')
+
+    normalized['tax_8_net'] = r8_net
+    normalized['tax_8_amount'] = r8_tax
+    normalized['tax_10_net'] = r10_net
+    normalized['tax_10_amount'] = r10_tax
+
+    # For accounting journal entries:
+    # Debit: 仕入高 (net) + 仮払消費税8% (r8_tax) + 仮払消費税10% (r10_tax)
+    # Credit: 現金/買掛金 (gross)
+    normalized['debit_expense'] = normalized['subtotal']  # 仕入高/経費
+    normalized['debit_tax_8'] = r8_tax  # 仮払消費税 8%
+    normalized['debit_tax_10'] = r10_tax  # 仮払消費税 10%
+    normalized['credit_total'] = normalized['total']  # 現金/買掛金
+
+    # Create synthetic line items for compatibility (one line per tax rate)
+    line_items = []
+    if r8_net > 0:
+        line_items.append({
+            'product_name': '8%対象商品',
+            'quantity': 1,
+            'amount': r8_net + r8_tax,  # gross amount
+            'net_amount': r8_net,
+            'tax_amount': r8_tax,
+            'tax_rate': 8,
+        })
+    if r10_net > 0:
+        line_items.append({
+            'product_name': '10%対象商品',
+            'quantity': 1,
+            'amount': r10_net + r10_tax,  # gross amount
+            'net_amount': r10_net,
+            'tax_amount': r10_tax,
+            'tax_rate': 10,
+        })
+
+    normalized['line_items'] = line_items
+    normalized['is_tax_inclusive'] = True  # Fast format assumes tax-inclusive totals
+
+    # Keep original data
+    normalized['_original'] = extracted
+    normalized['_prompt_version'] = 'fast'
+
+    _logger.info(f'[OCR] Normalized fast format: vendor={normalized.get("vendor_name")}, '
+                 f'total={normalized.get("total")}, tax_8={r8_tax}, tax_10={r10_tax}')
 
     return normalized
 

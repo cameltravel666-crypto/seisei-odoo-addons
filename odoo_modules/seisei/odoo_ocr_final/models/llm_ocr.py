@@ -501,14 +501,18 @@ def _normalize_fast_format(extracted: dict) -> dict:
         "vendor": "店名/会社名",
         "tax_id": "T+13桁 or null",
         "date": "YYYY-MM-DD or null",
-        "gross": 税込合計,
-        "net": 税抜合計,
+        "gross": 合計,
+        "net": 小計(税前),
         "tax": 消費税合計,
-        "r8_net": 8%対象税抜,
+        "r8_gross": 8%対象額(税込, or 0 if 外税),
         "r8_tax": 8%税額,
-        "r10_net": 10%対象税抜,
+        "r10_gross": 10%対象額(税込, or 0 if 外税),
         "r10_tax": 10%税額
     }
+
+    Handles two formats:
+    A. 内税 (tax-inclusive): r8_gross/r10_gross have values
+    B. 外税 (tax-exclusive): r8_gross/r10_gross = 0, calculate from tax amounts
 
     Converts to Odoo format for accounting journal entries.
     """
@@ -520,15 +524,55 @@ def _normalize_fast_format(extracted: dict) -> dict:
     normalized['date'] = extracted.get('date')
 
     # Totals
-    normalized['total'] = extracted.get('gross')
-    normalized['subtotal'] = extracted.get('net')
-    normalized['tax'] = extracted.get('tax')
+    gross = extracted.get('gross') or 0
+    net = extracted.get('net') or 0
+    tax = extracted.get('tax') or 0
+
+    # Validation: net + tax should equal gross (±2 yen tolerance)
+    if abs((net + tax) - gross) > 2:
+        _logger.warning(f'[OCR] Amount mismatch: net={net} + tax={tax} != gross={gross}, diff={abs((net+tax)-gross)}')
+
+    normalized['total'] = gross
+    normalized['subtotal'] = net
+    normalized['tax'] = tax
 
     # Tax breakdown by rate
-    r8_net = extracted.get('r8_net') or 0
+    r8_gross = extracted.get('r8_gross') or 0
     r8_tax = extracted.get('r8_tax') or 0
-    r10_net = extracted.get('r10_net') or 0
+    r10_gross = extracted.get('r10_gross') or 0
     r10_tax = extracted.get('r10_tax') or 0
+
+    # Validate tax breakdown
+    if abs((r8_tax + r10_tax) - tax) > 1:
+        _logger.warning(f'[OCR] Tax breakdown mismatch: r8_tax={r8_tax} + r10_tax={r10_tax} != tax={tax}')
+
+    # Calculate tax-exclusive amounts
+    # Format A: 内税 (r8_gross/r10_gross provided) - net = gross - tax
+    # Format B: 外税 (r8_gross/r10_gross = 0) - calculate net from tax
+    if r8_gross > 0 or r10_gross > 0:
+        # Format A: 内税 (tax-inclusive)
+        r8_net = r8_gross - r8_tax if r8_gross > 0 else 0
+        r10_net = r10_gross - r10_tax if r10_gross > 0 else 0
+        _logger.info(f'[OCR] Format: 内税 (tax-inclusive)')
+    else:
+        # Format B: 外税 (tax-exclusive) - calculate net from tax amounts
+        # r8_net = r8_tax / 0.08, r10_net = r10_tax / 0.10
+        r8_net = round(r8_tax / 0.08) if r8_tax > 0 else 0
+        r10_net = round(r10_tax / 0.10) if r10_tax > 0 else 0
+        _logger.info(f'[OCR] Format: 外税 (tax-exclusive), calculated net from tax')
+
+        # Cross-validate: calculated net should match subtotal
+        calculated_net = r8_net + r10_net
+        if abs(calculated_net - net) > 2:
+            _logger.warning(f'[OCR] Calculated net mismatch: {calculated_net} != {net}, using subtotal value')
+            # If mismatch, distribute subtotal proportionally by tax amounts
+            if r8_tax + r10_tax > 0:
+                ratio_8 = r8_tax / (r8_tax + r10_tax)
+                r8_net = round(net * ratio_8)
+                r10_net = net - r8_net
+
+    _logger.info(f'[OCR] Tax breakdown: 8%: gross={r8_gross}, tax={r8_tax}, net={r8_net}')
+    _logger.info(f'[OCR] Tax breakdown: 10%: gross={r10_gross}, tax={r10_tax}, net={r10_net}')
 
     normalized['tax_8_net'] = r8_net
     normalized['tax_8_amount'] = r8_tax
