@@ -1,148 +1,148 @@
-你是 Claude Code（资深全栈架构/实施工程师）。请基于以下现状与目标，为 Seisei BizNexus 实施“OCR 识别 → 会计软件导入模板导出”的完整工程改造，并直接输出可执行的任务拆解、代码改动点、API 契约、数据结构、UI 方案与验收标准。
+你是 Claude Code（顶级 DevOps/Platform Engineer）。目标：在现有仓库 seisei-odoo-addons 的“工业级部署系统”（scripts/*.sh + docs/*.md）基础上，完成“最终部署闭环”= GitHub CI/CD（构建→发布→部署→回滚）+ 服务器安全与审计 + 配置漂移消除。要求：不重写现有 7 个脚本逻辑，只做补齐与集成；以 scripts/deploy.sh 和 scripts/rollback.sh 为唯一入口；严格遵守 preflight（禁 latest/禁 build/只 pull/Promotion）。
 
-# 0. 项目背景（现状）
-- 已有：单张发票/收据识别体验（Try OCR 落地页）与识别结果展示。
-- 订阅/权限：通过 Stripe 订阅，权限已配置完毕（不需要你重建 Stripe 产品）。
-- 定价体系：展示在 https://seisei.tokyo/pricing（基础计划 + 追加模块结构）。当前“追加模块”在财务/会计类已包含「現金出納帳」「会計Pro」「会計エンタープライズ」等。请把本次“导出能力”作为可控的模块/权限能力融入现有结构（不要求你改定价页内容，但要保证产品内的模块/权限可以挂载到该体系）。参考：定价页模块结构与展示。 
-- 计费中间件：前端/服务端需要调用 Odoo 19 的“中央服务”进行：
-  1) entitlement（订阅权限）校验
-  2) usage（识别用量）扣减与超额计费：每月 30 张免费，超出 20 日元/张（已存在）
-- 存储：识别文件/导出文件需要可追踪、可下载（建议 S3 + 签名 URL）。
-- 目标导出：优先支持日本主流财务软件的“仕訳导入/仕訳帳导入”模板导出，可由用户选择：
-  - freee
-  - マネーフォワード（MFクラウド会計）
-  - 弥生会計
-  （Phase2：奉行/PCA/TKC 等先留扩展接口即可）
+## 0. 关键信息（已确定）
+Repo Root（服务器）: /opt/seisei-odoo-addons
+本地工作目录（开发）: /Users/taozhang/Projects/seisei-odoo-addons
 
-# 1. 目标（必须达成）
-A) 落地页（Try OCR）漏斗升级（强获客、强转化）
-- 未登录也允许上传并完成 1 张识别（保持低摩擦）。
-- 识别完成后新增“导出预览（Preview）”区：用户可选择目标软件（freee/MF/弥生），并看到与模板列名一致的 3~10 行预览表格（或 1~2 行也可，但列名必须准确）。
-- “下载导出文件（Download Export）”作为价值闸门：
-  - 未登录：弹出登录/注册（继续/返回不丢失识别结果）
-  - 已登录但无导出权限：弹出升级/订阅引导（跳转到既有订阅流程）
-  - 已登录且有权限：生成并下载对应模板文件（CSV/TXT）
+Stack Map（来自 scripts/lib.sh STACK_MAP）：
+- odoo18-prod    -> /srv/stacks/odoo18-prod      domain https://demo.nagashiro.top
+- odoo18-staging -> /srv/stacks/odoo18-staging   domain https://staging.erp.seisei.tokyo
+- web-seisei     -> /srv/stacks/web-seisei       domain https://biznexus.seisei.tokyo
+- ocr            -> /srv/stacks/ocr              health http://localhost:8180/health
+- langbot        -> /srv/stacks/langbot
+- edge-traefik   -> /srv/stacks/edge-traefik
 
-B) 系统内模块能力（留存与扩展）
-- 在系统内（登录后）提供“凭证列表 / OCR Inbox”页面：查看已识别的票据、状态、可重复导出、可批量导出（批量可作为 Phase1.5 或 Phase2，但至少预留结构）。
-- 每条凭证具备：来源（try-ocr/系统内上传）、识别结构化结果、导出历史（导出过哪些模板、时间、下载人）。
+部署命令格式（必须保持一致）：
+- /opt/seisei-odoo-addons/scripts/deploy.sh odoo18-staging staging sha-<commit>
+- /opt/seisei-odoo-addons/scripts/deploy.sh odoo18-prod prod sha-<commit>   # 必须 staging verified
+- /opt/seisei-odoo-addons/scripts/deploy.sh web-seisei prod sha-<commit>
+- /opt/seisei-odoo-addons/scripts/deploy.sh ocr prod sha-<commit>
 
-C) 统一权限 + 用量计费
-- OCR 识别用量：继续使用 Odoo 19 中央服务作为唯一事实来源扣减/计费（30 免费/月，超出 20 日元/张）。
-- 导出下载权限：通过 entitlement 校验控制（Preview 允许，Download 受控）。
-- 所有入口一致：try-ocr 与系统内上传都走相同的 document/usage/entitlement 模型。
+版本变量名（来自 scripts/lib.sh get_version_var）：
+- odoo18-prod, odoo18-staging -> ODOO18_IMAGE_TAG
+- ocr -> OCR_IMAGE_TAG
+- web-seisei -> WWW_IMAGE_TAG
+- langbot -> VERSION
+- edge-traefik -> VERSION
 
-# 2. 非目标（本期不做）
-- 不重做 Stripe 产品与价格；只对接既有订阅/权限。
-- 不实现复杂会计全链路（采购/应付/审批工作流）——只做到“识别→生成仕訳→模板导出”闭环。
-- 不要求把所有税区分/科目表自动100%匹配：允许用户在导出前进行轻量修正（Minimal Edit），但必须保证导出文件格式正确、可导入率高。
+## 1. 目标交付（必须全部完成）
+A) GitHub Actions：构建并推送 GHCR 镜像（sha tag），并可触发服务器部署
+B) GitHub Actions：支持“一键回滚”（应用层回滚，默认不回滚 DB）
+C) 服务器侧：最小权限 SSH 用户/密钥/ sudo 规则（只允许运行 deploy/rollback/sync 与 docker compose 操作），并有审计日志
+D) 配置漂移治理：nginx router 配置不得手改；要纳入某个 stack 的“受控发布”路径（通过 deploy.sh / sync_to_srv.sh 同步或单独 stack 管理），避免再次白屏/登录问题
+E) 文档更新：补一份 docs/GITHUB_CICD.md（或同等）给出从 0 到 1 的操作步骤与回滚演练
 
-# 3. 总体设计（你需要输出）
-请输出完整设计与实现方案，至少包括：
+## 2. 约束与原则
+- 现有 scripts/* 是权威：deploy.sh/rollback.sh/preflight.sh/smoke.sh/backup.sh/sync_to_srv.sh/lib.sh 逻辑尽量不改；如需改，只允许“向后兼容的补充”，不得破坏既有命令行接口。
+- prod 只能 pull GHCR 的 sha-xxxx 镜像；不得在服务器 build。
+- prod 部署必须验证 staging（Promotion 机制）；Actions 也必须遵守。
+- 回滚默认只回滚镜像版本（应用层），不自动恢复 DB；DB restore 作为手工流程（明确提示风险）。
+- 所有 workflow 需可手动触发（workflow_dispatch），并支持输入 stack/env/sha；对 odoo18-prod 强制校验 staging verified。
+- 不能把任何 secret 明文写入仓库；使用 GitHub Secrets。
+- 兼容多个 stack，不要只写死 odoo18。
 
-## 3.1 领域模型（建议落地到 DB）
-- Document（凭证/票据）
-- OcrResult（结构化识别结果）
-- CanonicalJournal（标准化仕訳中间格式，建议 JSON + 可展开行）
-- ExportJob / ExportFile（导出记录：target=freee|mf|yayoi，文件路径，checksum，创建人，创建时间）
-- UsageLedger（可选：本地缓存用量事件，但最终以 Odoo 中央服务为准）
-- EntitlementCache（可选：短缓存，避免每次点击都打中央服务；需要 TTL 与回源）
+## 3. 需要你实现的具体内容（按步骤完成）
+### 3.1 新增 GitHub Actions workflows（在 .github/workflows）
+1) build_ghcr.yml
+- 在 push 到 main（以及 workflow_dispatch）时运行
+- 产物：至少构建并推送以下镜像 tag 格式（按现有 repo 约定，不确定的以现有 docs/WWW_GHCR_WORKFLOW.md 为准）：
+  - ghcr.io/<owner>/seisei-odoo18:sha-<shortsha>   （Odoo18 镜像）
+  - ghcr.io/<owner>/seisei-ocr:sha-<shortsha>      （OCR 镜像，如存在）
+  - ghcr.io/<owner>/seisei-www:sha-<shortsha>      （web-seisei 镜像，如存在）
+- 如果仓库里已有 Dockerfile/构建路径，请自动探测；没有就按当前 repo 结构写死路径，但要在 workflow 里清晰注明并可配置。
+- 使用 docker/build-push-action，开启 build cache（ghcr cache）。
+- 需要在镜像 labels 写入 org.opencontainers.image.revision=fullsha、source=repo url。
 
-说明字段定义、主键、索引（按 tenant_id / user_id / created_at / status）。
+2) deploy.yml
+- workflow_dispatch 输入：
+  - stack（choice: odoo18-staging, odoo18-prod, web-seisei, ocr, langbot, edge-traefik）
+  - env（choice: staging, prod, infra；但要自动约束：odoo18-staging=staging, odoo18-prod=prod, web-seisei=prod, ocr=prod, edge-traefik=infra, langbot=prod）
+  - sha（string，例如 sha-19b9b98；允许只输入短 commit，让 workflow 自动转成 sha-xxxx 格式）
+  - promote_to_prod（bool，仅当 stack=odoo18-staging 才可选；若 true 则 staging 成功并 verified 后自动触发 prod deploy）
+- 行为：
+  - 通过 SSH 连接服务器（47.245.12.205 或者从 secrets 提供 HOST）
+  - 在服务器上：
+    - cd /opt/seisei-odoo-addons && git fetch && git checkout main && git pull（或固定到某个 ref，需说明）
+    - chmod +x scripts/*.sh
+    - 确保目录存在：/srv/stacks /srv/backups /srv/releases/verified /srv/deploy-history.log
+    - 运行：./scripts/deploy.sh <stack> <env> <shaTag>
+  - 对 odoo18-prod：必须要求 /srv/releases/verified/odoo18-staging.txt == <shaTag>，否则失败。
+  - 把 deploy 输出保存为 Actions artifact（日志）并在 summary 里展示关键结果（最终镜像 tag、smoke pass/fail、domain check）。
 
-## 3.2 API 契约（前后端对齐）
-至少提供：
-- POST /api/ocr/recognize (已有则复用)：返回 document_id + 结构化结果摘要
-- GET /api/documents/:id : 获取 document + ocr + canonical + 导出历史
-- POST /api/export/preview : 入参 {document_id, target}，出参 {columns, rowsSample, warnings}
-- POST /api/export/download : 入参 {document_id, target}，流程：
-  1) 校验登录
-  2) entitlement 校验（导出权限）
-  3) 必要时触发 canonical 生成/修正
-  4) 生成文件 -> S3 -> 返回签名下载 URL（或直接 stream）
-  5) 记录 ExportFile
-- POST /api/entitlements/check : （可选）封装对 Odoo 中央服务的校验
-- POST /api/usage/consume : （可选）封装识别用量扣减（若 recognize 已做则不重复）
+3) rollback.yml
+- workflow_dispatch 输入：
+  - stack（同上）
+  - env（自动约束）
+  - steps_back（int，默认 1）
+  - target_sha（可选，若提供则回滚到指定 sha，否则按 steps_back 从 /srv/deploy-history.log 选择）
+- 在服务器执行：./scripts/rollback.sh <stack> <env> --steps <n> 或 --to <sha>（若 rollback.sh 目前没有这些参数，你需要以“兼容方式”补齐 rollback.sh 参数解析，但保留旧用法）
+- 同样保存回滚日志为 artifact，并在 summary 给出 “回滚到的 sha / smoke 结果 / domain check”。
 
-要求：所有 API 给出 request/response JSON schema、错误码规范（401/403/422/429/500），以及前端对应的用户提示文案。
+### 3.2 服务器侧最小权限部署用户（安全）
+新增 docs 和可执行脚本（例如 scripts/server_bootstrap_deployer.sh，必须幂等）完成：
+- 创建用户：deployer（无 shell 或受限 shell 可选，但要实用）
+- 配置 ~/.ssh/authorized_keys（由 GitHub Secret 注入，不写死）
+- /etc/sudoers.d/seisei-deployer：只允许执行以下命令（NOPASSWD）：
+  - /opt/seisei-odoo-addons/scripts/deploy.sh
+  - /opt/seisei-odoo-addons/scripts/rollback.sh
+  - /opt/seisei-odoo-addons/scripts/sync_to_srv.sh
+  - /usr/bin/docker, /usr/local/bin/docker（按实际路径探测）
+  - /usr/bin/docker-compose 或 docker compose（按实际）
+  - 以及必要的 systemctl reload nginx（如果你把 nginx 也纳入 stack 管理）
+- 明确记录审计：把每次 deploy/rollback 的调用（用户/时间/参数/sha）追加到 /srv/deploy-history.log（如果脚本已做就不重复；否则补齐）
 
-## 3.3 导出器（Exporter）实现
-实现 canonical -> target template 的插件化架构：
-- exporters/freee.ts
-- exporters/moneyforward.ts
-- exporters/yayoi.ts
+### 3.3 Nginx router 配置漂移治理（必须解决）
+背景：之前手改 /opt/seisei-odoo/nginx/default.conf 导致 demo 登录白屏/重定向错误，回滚后恢复。要求：
+- 任何 nginx 配置变更必须纳入受控发布（通过 repo + deploy.sh/sync_to_srv.sh 或单独 stack）。
+- 你需要选择一种方案并落地（优先 A）：
 
-每个 exporter 必须包含：
-- columns(): string[]  （模板列名）
-- buildRows(canonical): string[][] （生成行）
-- validate(canonical): warnings[] （缺税区分/贷借不平衡/金额为0等）
-- fileFormat: csv or txt，encoding（日本环境建议 Shift_JIS 可选；至少提供 UTF-8 + BOM 方案并可配置）
+方案 A（优先）：把 router 配置作为 edge-traefik 或新增 stack（例如 edge-nginx-router）纳入 /srv/stacks，并由 deploy.sh 同步配置到 /opt/seisei-odoo/nginx，然后 docker exec reload nginx。要求：
+- 配置文件版本化（仓库内路径固定，例如 infra/router-nginx/default.conf）
+- sync_to_srv.sh 把其同步到 /srv/stacks/<stack>/...
+- deploy.sh 对该 stack 做：preflight->backup config->sync->nginx -t -> reload -> smoke（/nginx-health + 关键域名 HEAD）
+- 不允许直接在 /opt/seisei-odoo/nginx 改；添加一个保护：docs 指定流程；可选：给 /opt/seisei-odoo/nginx 挂载只读或写入需要 root（提示即可）
 
-注意点：
-- freee：需要输出符合其“仕訳CSV模板”的列结构（包含 [明細行] 常量列的处理）。
-- MoneyForward：需要支持“仕訳帳”导入常见列（至少：取引No/取引日/借方科目/贷方科目/税区分/金額/摘要；其它列可先留空）。
-- 弥生：需要支持“識別フラグ”表达单行/多行仕訳（本期先实现单行仕訳即可，但接口要允许多行扩展）。
+方案 B：继续手工但增加监控/漂移检测（不推荐，除非 A 太大）。若选 B，必须提供 drift_check.sh 对比 repo 与 /opt/... 并在 deploy 前阻止。
 
-说明：由于我们不在本 prompt 中提供各厂商完整字段表，请你将“列定义”写成可配置映射（json/ts 常量），并在代码中加 TODO 与注释，便于后续补齐字段。重点是架构可扩展与端到端跑通。
+无论选 A/B，都要在 docs 里写清楚“如何修改 router 并发布”，并给出回滚方式。
 
-## 3.4 Canonical（标准中间格式）生成策略
-从 OCR 结果生成 canonical 仕訳（最小可用）：
-- 默认：借方=消耗品費/会議費/旅費交通費 等候选（可按票据类型/关键词做启发式）
-- 贷方=現金/普通預金/クレジットカード 等（可从支付方式推断）
-- 税区分/税率：从票面10%/8%/対象外推断；无法推断则标记 warning 并要求用户在导出前选择
-- 摘要：商户名 + 简述
+### 3.4 文档与验收
+新增/更新以下文档：
+- docs/GITHUB_CICD.md
+  - Secrets 列表（HOST, SSH_KEY, SSH_USER, GHCR_TOKEN 等）
+  - 如何触发 build、deploy、promote、rollback
+  - 演练：staging 部署 sha-xxxx -> 验证 -> promote prod -> rollback prod
+  - 常见故障排查（ssh、verified 不匹配、smoke fail）
+- 更新 docs/DEPLOYMENT.md：加一节 “CI/CD 模式（GitHub Actions）” 和 “Nginx router 变更流程”。
 
-需要提供“导出前最小编辑（Minimal Edit）”：
-- UI 允许用户改：日期、科目（借/贷）、税区分、摘要、部门（可选）
-- 修改结果写回 canonical（并记录修改人/时间）
+## 4. 实现细节要求（必须遵守）
+- Workflow 中所有敏感信息只从 GitHub Secrets 获取
+- SSH 需启用 StrictHostKeyChecking（可用 known_hosts 或 ssh-keyscan + pinned fingerprint；给出最小可行）
+- 对 stack/env 的约束必须在 workflow 层面强制（防止误操作）
+- 每个 workflow 的 Actions Summary 必须输出：
+  - stack/env
+  - requested sha、normalized shaTag（sha-xxxx）
+  - 服务器返回的最终运行镜像（docker inspect）
+  - smoke 结果（PASS/FAIL）
+  - 对应域名/health check 结果
 
-## 3.5 前端改造（Next.js 假设；若你的技术栈不同请适配）
-需要输出：
-- Try OCR 页面改造：
-  - ExportTargetSelector（freee/MF/弥生）
-  - ExportPreviewTable（列名+样例行）
-  - Download CTA（AuthGate + PaywallGate）
-  - 登录弹窗/升级弹窗的交互流程（不丢失识别结果）
-- 系统内页面新增：
-  - /documents（OCR Inbox 列表）
-  - /documents/:id（详情+预览+导出+历史）
-- 权限与状态展示：
-  - 展示“本月剩余免费识别张数/超额单价”
-  - 导出权限状态（可导出哪些目标）
+## 5. 你需要在 repo 中实际修改/新增哪些文件（输出清单）
+- .github/workflows/build_ghcr.yml
+- .github/workflows/deploy.yml
+- .github/workflows/rollback.yml
+- （可选）scripts/server_bootstrap_deployer.sh
+- （如需）scripts/rollback.sh 参数兼容增强
+- （如需）新增 stack/目录（例如 infra/router-nginx/* 或 /stacks/edge-nginx-router/*）
+- docs/GITHUB_CICD.md
+- docs/DEPLOYMENT.md（追加 CI/CD & router 流程）
 
-## 3.6 对接 Odoo 19 中央服务（计费/权限）
-请输出一套清晰的对接方式（不需要你写 Odoo 端业务逻辑，但要写调用方式与本地封装）：
-- Entitlement 校验：checkExportEntitlement(user, tenant, target)
-- Usage 扣减：consumeOcrUsage(user, tenant, document_id)
-- 重试与熔断：中央服务异常时，预览可以继续（读缓存），下载必须严格校验（Fail Closed）。
+## 6. 验收（你必须提供命令/步骤）
+提供一个“从 0 到 1 完整跑通”的验收步骤列表，包括：
+- 在 GitHub 上手动触发 build（输出生成的 sha tag）
+- 触发 deploy odoo18-staging
+- 确认 /srv/releases/verified/odoo18-staging.txt 被写入
+- 触发 promote（或 deploy odoo18-prod），确认门禁生效
+- 故意回滚 steps_back=1，确认恢复
+- router 配置变更示例：修改 server_name demo.nagashiro.top 的处理逻辑 -> 通过 stack 发布 -> nginx -t + reload -> 访问 demo 正常
 
-## 3.7 安全与合规
-- 文件下载：S3 私有桶 + 短时效 signed URL
-- 敏感字段：票据图片与导出文件都属于财务数据，必须记录 audit log（至少：谁在何时导出了哪个 document 的哪种模板）
-- 速率限制：避免被滥用（Try OCR 未登录也要有基础 rate limit）
-- 数据保留策略：导出文件可设置 7/30/90 天保留（可配置）
-
-## 3.8 可观测性与验收标准
-- 埋点事件：upload_started, ocr_success, exporter_selected, preview_loaded, download_clicked, auth_completed, paywall_view, export_generated, export_downloaded
-- 关键指标：preview->signup, signup->first_download, download_success_rate
-- 自动化测试：exporters 单元测试（给 3 个 canonical fixture），API 契约测试，前端 e2e（至少 try-ocr 流程）
-
-# 4. 输出要求（Claude 交付物）
-请直接输出以下内容（必须具体到文件路径/函数签名/伪代码/任务顺序）：
-1) 架构图（ASCII） + 数据流
-2) DB/数据结构定义（Prisma/SQL/TypeORM 任一，按现有项目栈）
-3) API 契约（OpenAPI-like 简化版即可）
-4) 前端组件拆分与路由（含状态机：未登录/无权限/有权限）
-5) 导出器代码骨架（TypeScript 伪代码或可直接运行的实现）
-6) Odoo 中央服务对接封装（client.ts）
-7) 分阶段实施计划：
-   - Phase0：最小跑通（preview + download gate）
-   - Phase1：系统内 inbox + 导出历史
-   - Phase2：批量导出 + 规则映射
-8) 每个 Phase 的验收清单（Given/When/Then）
-
-# 5. 约束（不要问我问题，做合理假设）
-- 假设前端为 Next.js（App Router）+ TypeScript
-- 假设后端为 Next.js API route 或独立 Node 服务（你自行选择最贴合现状的方式，但要一致）
-- 假设我们已有用户系统与 tenant 概念
-- 任何不确定项请用“合理默认 + TODO”处理，不要反问。
+现在开始执行：在本仓库内完成上述所有改动，给出最终变更文件内容（diff 或完整文件），并确保与现有 scripts/deploy.sh 接口一致。

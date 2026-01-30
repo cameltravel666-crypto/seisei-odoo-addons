@@ -1,14 +1,21 @@
 # =============================================================================
 # Seisei Odoo 18 Production Stack
 # =============================================================================
-# IMMUTABLE IMAGE DEPLOYMENT
-# - web service uses pre-built image from GHCR
+# IMMUTABLE IMAGE DEPLOYMENT - PULL ONLY, NO LOCAL BUILD
+# - Images are pre-built by GitHub Actions and pushed to GHCR
+# - Server ONLY pulls images, NEVER builds locally
 # - Config and addons are baked into the image
 # - Uses EXTERNAL database (seisei-db) for data persistence
 #
+# Deployment workflow:
+#   1. Push code to GitHub main branch
+#   2. GitHub Actions automatically builds and pushes image
+#   3. On server: update .env with new image tag
+#   4. Run: docker compose pull && docker compose up -d
+#
 # Required environment variables in .env:
 #   GITHUB_REPO_OWNER    - GitHub organization/user (e.g., cameltravel666-crypto)
-#   ODOO18_IMAGE_TAG     - Image tag (e.g., sha-abc1234 or latest)
+#   ODOO18_IMAGE_TAG     - Image tag (MUST use git SHA, e.g., sha-19b9b98)
 #   DB_PASSWORD          - PostgreSQL password (for seisei-db)
 #   REDIS_PASSWORD       - Redis password
 #   OCR_SERVICE_URL      - Central OCR service URL (e.g., http://172.17.0.1:8180/api/v1)
@@ -17,6 +24,9 @@
 # External dependencies:
 #   - seisei-db container must be running on seisei-odoo-network
 #   - edge network must exist for Traefik routing
+#
+# ⚠️  IMPORTANT: DO NOT use 'docker build' or 'build:' directive in this file
+# ⚠️  IMPORTANT: DO NOT use 'latest' tag in production, always use git SHA
 # =============================================================================
 
 services:

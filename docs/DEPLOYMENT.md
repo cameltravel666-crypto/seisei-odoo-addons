@@ -468,11 +468,255 @@ sudo /opt/seisei-odoo-addons/scripts/deploy.sh odoo18-prod prod sha-xxxxx --forc
 - [ ] 更新文档
 - [ ] 安全补丁更新
 
+## CI/CD 模式（GitHub Actions）
+
+除了直接在服务器上运行脚本，我们还支持通过 GitHub Actions 进行自动化部署。
+
+### 前提条件
+
+1. **配置 GitHub Secrets**（Settings → Secrets and variables → Actions）：
+   - `DEPLOY_SSH_HOST` - 服务器IP（默认：47.245.12.205）
+   - `DEPLOY_SSH_USER` - SSH用户（deployer 或 root）
+   - `DEPLOY_SSH_KEY` - SSH 私钥完整内容
+
+2. **服务器端准备**：
+   ```bash
+   # 创建部署用户（最小权限）
+   sudo /opt/seisei-odoo-addons/scripts/server_bootstrap_deployer.sh \
+     --user deployer \
+     --pubkey /path/to/github_deploy_key.pub
+   ```
+
+### 工作流
+
+#### 1. 构建镜像（自动）
+
+```
+Push to main → build_ghcr.yml 自动触发
+→ 构建 ghcr.io/owner/seisei-odoo18:sha-xxxxx
+→ 构建 ghcr.io/owner/seisei-ocr:sha-xxxxx
+→ Summary 显示 SHA tag
+```
+
+#### 2. 部署到 Staging（手动）
+
+```
+GitHub Actions → Deploy to Server
+→ stack: odoo18-staging
+→ sha: sha-xxxxx（从 build 获取）
+→ promote_to_prod: false
+→ Run workflow
+```
+
+#### 3. 部署到 Production（手动或自动）
+
+**方式 A：手动验证后部署**
+```
+测试 staging → GitHub Actions → Deploy to Server
+→ stack: odoo18-prod
+→ sha: sha-xxxxx（与 staging 相同）
+→ Workflow 自动验证 staging verified
+→ Run workflow
+```
+
+**方式 B：一键 Promote**
+```
+GitHub Actions → Deploy to Server
+→ stack: odoo18-staging
+→ sha: sha-xxxxx
+→ promote_to_prod: true ✅
+→ Staging 成功后自动部署到 Production
+```
+
+#### 4. 回滚（手动）
+
+```
+GitHub Actions → Rollback Deployment
+→ stack: odoo18-prod
+→ steps_back: 1（回滚到上一版本）
+→ 或 target_sha: sha-xxxxx（指定版本）
+→ Run workflow
+```
+
+### CI/CD 优势
+
+- ✅ **审计日志**：所有部署在 GitHub Actions 有记录
+- ✅ **权限控制**：通过 GitHub Teams 控制谁能部署
+- ✅ **统一入口**：无需直接 SSH 到服务器
+- ✅ **自动化**：Promote 流程一键完成
+- ✅ **可视化**：Workflow Summary 清晰展示结果
+
+### 注意事项
+
+- CI/CD 模式与服务器直接运行脚本**完全兼容**
+- 两种方式都使用相同的 `deploy.sh`、`rollback.sh` 等脚本
+- 都遵守相同的 preflight 检查和 promotion 机制
+- 都写入同一个 `/srv/deploy-history.log`
+
+**详细文档**：参见 [GITHUB_CICD.md](GITHUB_CICD.md)
+
+## Nginx Router 配置变更流程
+
+**⚠️ 重要：禁止直接修改生产服务器上的 nginx 配置文件！**
+
+所有 nginx router 配置变更必须通过版本控制和部署流程。
+
+### 背景
+
+之前手动修改 `/opt/seisei-odoo/nginx/default.conf` 导致了：
+- demo.nagashiro.top 登录白屏
+- 重定向错误
+- 配置漂移（生产与代码不一致）
+
+### 新流程（edge-nginx-router Stack）
+
+Nginx router 配置已纳入 `edge-nginx-router` stack，统一管理。
+
+#### 1. 修改配置
+
+```bash
+# 在本地或开发环境修改
+vim infra/stacks/edge-nginx-router/default.conf
+
+# 例如：添加新域名路由
+# 例如：修改 demo.nagashiro.top 的处理逻辑
+# 例如：调整 biznexus 重定向规则
+```
+
+#### 2. 提交到 Git
+
+```bash
+git add infra/stacks/edge-nginx-router/default.conf
+git commit -m "fix: update nginx router for demo.nagashiro.top redirect"
+git push origin main
+```
+
+#### 3. 部署配置变更
+
+**方式 A：服务器直接部署**
+```bash
+# SSH 到服务器
+ssh root@47.245.12.205
+
+# 同步配置
+sudo /opt/seisei-odoo-addons/scripts/sync_to_srv.sh edge-nginx-router
+
+# 部署（会自动 nginx -t 验证）
+sudo /opt/seisei-odoo-addons/scripts/deploy.sh edge-nginx-router infra latest
+```
+
+**方式 B：GitHub Actions**
+```
+GitHub Actions → Deploy to Server
+→ stack: edge-nginx-router
+→ sha: sha-xxxxx（最新 commit）
+→ Run workflow
+```
+
+#### 4. 部署流程会自动执行
+
+```
+1. Preflight 检查
+2. 备份当前配置到 /srv/backups/edge-nginx-router/
+3. Sync 新配置到 /srv/stacks/edge-nginx-router/
+4. 运行 nginx -t 验证语法
+5. 如果验证通过 → reload nginx
+6. 如果验证失败 → 自动回滚
+7. Smoke 测试关键域名
+8. 写入 deploy-history.log
+```
+
+#### 5. 验证生效
+
+```bash
+# 测试 nginx 配置
+nginx -t
+
+# 测试关键域名
+curl -I https://demo.nagashiro.top/web/login
+curl -I https://staging.erp.seisei.tokyo/web/login
+curl -I https://biznexus.seisei.tokyo
+
+# 查看 nginx 日志
+docker compose logs nginx-router
+```
+
+### 紧急回滚
+
+如果配置变更导致问题：
+
+**方式 A：使用 rollback.sh**
+```bash
+sudo /opt/seisei-odoo-addons/scripts/rollback.sh edge-nginx-router infra
+```
+
+**方式 B：GitHub Actions**
+```
+GitHub Actions → Rollback Deployment
+→ stack: edge-nginx-router
+→ steps_back: 1
+→ Run workflow
+```
+
+**方式 C：手动恢复**
+```bash
+# 从备份恢复
+LATEST_BACKUP=$(ls -t /srv/backups/edge-nginx-router/ | head -1)
+cp /srv/backups/edge-nginx-router/$LATEST_BACKUP/default.conf \
+   /srv/stacks/edge-nginx-router/default.conf
+
+# 重启 nginx
+cd /srv/stacks/edge-nginx-router
+docker compose restart nginx-router
+```
+
+### 配置漂移检测
+
+**定期检查生产配置是否与代码一致**：
+
+```bash
+# 对比生产配置与代码
+diff /srv/stacks/edge-nginx-router/default.conf \
+     /opt/seisei-odoo-addons/infra/stacks/edge-nginx-router/default.conf
+
+# 如果有差异（非预期）
+# 1. 确定哪个版本正确
+# 2. 更新代码或回滚生产配置
+# 3. 重新部署以消除漂移
+```
+
+### Router 配置最佳实践
+
+1. **测试优先**
+   - 在 staging 环境先测试配置变更
+   - 使用 `nginx -t` 验证语法
+   - 测试所有受影响的域名
+
+2. **小步变更**
+   - 一次只改一个路由规则
+   - 避免大规模重构
+
+3. **文档化**
+   - Commit message 说明变更原因
+   - 复杂规则在配置文件中注释
+
+4. **快速回滚**
+   - 发现问题立即回滚
+   - 修复后再重新部署
+
+5. **监控**
+   - 部署后检查 nginx error log
+   - 监控关键域名的 HTTP 响应
+
+**详细配置说明**：参见 [infra/stacks/edge-nginx-router/README.md](../infra/stacks/edge-nginx-router/README.md)
+
 ## 相关文档
 
+- [GITHUB_CICD.md](GITHUB_CICD.md) - GitHub Actions CI/CD 完整指南
 - [IMAGE_STRATEGY.md](IMAGE_STRATEGY.md) - 镜像策略
 - [WWW_GHCR_WORKFLOW.md](WWW_GHCR_WORKFLOW.md) - WWW镜像发布
 - [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) - 实现计划
+- [edge-nginx-router/README.md](../infra/stacks/edge-nginx-router/README.md) - Router 配置管理
 
 ## 联系方式
 

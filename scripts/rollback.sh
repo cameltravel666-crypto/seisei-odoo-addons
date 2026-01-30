@@ -2,9 +2,10 @@
 # =============================================================================
 # Rollback Script - Production-Grade Rollback
 # =============================================================================
-# Usage: ./rollback.sh <stack> <env> [--to <version>]
+# Usage: ./rollback.sh <stack> <env> [--to <version> | --steps <n>]
 # Example: ./rollback.sh odoo18-prod prod
 # Example: ./rollback.sh odoo18-prod prod --to sha-4b1ce21
+# Example: ./rollback.sh odoo18-prod prod --steps 2
 # =============================================================================
 
 set -euo pipefail
@@ -14,9 +15,10 @@ source "$SCRIPT_DIR/lib.sh"
 
 # Help
 if [[ "${1:-}" == "--help" ]]; then
-    echo "Usage: $0 <stack> <env> [--to <version>]"
+    echo "Usage: $0 <stack> <env> [--to <version> | --steps <n>]"
     echo "Example: $0 odoo18-prod prod"
     echo "Example: $0 odoo18-prod prod --to sha-4b1ce21"
+    echo "Example: $0 odoo18-prod prod --steps 2"
     exit 0
 fi
 
@@ -24,8 +26,9 @@ fi
 STACK="${1:-}"
 ENV="${2:-prod}"
 TARGET_VERSION=""
+STEPS_BACK=""
 
-[ -z "$STACK" ] && fail "Usage: $0 <stack> <env> [--to <version>]"
+[ -z "$STACK" ] && fail "Usage: $0 <stack> <env> [--to <version> | --steps <n>]"
 
 shift 2
 while [[ $# -gt 0 ]]; do
@@ -34,11 +37,20 @@ while [[ $# -gt 0 ]]; do
             TARGET_VERSION="$2"
             shift 2
             ;;
+        --steps)
+            STEPS_BACK="$2"
+            shift 2
+            ;;
         *)
             fail "Unknown argument: $1"
             ;;
     esac
 done
+
+# Validate --to and --steps are mutually exclusive
+if [[ -n "$TARGET_VERSION" ]] && [[ -n "$STEPS_BACK" ]]; then
+    fail "Cannot use --to and --steps together"
+fi
 
 log_step "Rollback: $STACK ($ENV)"
 
@@ -47,14 +59,28 @@ cd "$STACK_DIR" || fail "Cannot cd to $STACK_DIR"
 
 # Determine rollback version
 if [ -z "$TARGET_VERSION" ]; then
-    log_info "Finding last successful deployment..."
-    TARGET_VERSION=$(get_last_deployment "$STACK" "$ENV")
-    
-    if [ -z "$TARGET_VERSION" ]; then
-        fail "No previous successful deployment found in history"
+    if [ -n "$STEPS_BACK" ]; then
+        log_info "Finding deployment $STEPS_BACK steps back..."
+        # Get Nth successful deployment from history
+        TARGET_VERSION=$(grep "| $STACK | $ENV | deploy | .* | success |" "$HISTORY_FILE" 2>/dev/null | \
+            tail -n "+$((STEPS_BACK + 1))" | head -1 | \
+            awk -F'|' '{gsub(/^[ \t]+|[ \t]+$/, "", $5); print $5}')
+
+        if [ -z "$TARGET_VERSION" ]; then
+            fail "No deployment found $STEPS_BACK steps back in history"
+        fi
+
+        log_info "Rollback target ($STEPS_BACK steps back): $TARGET_VERSION"
+    else
+        log_info "Finding last successful deployment..."
+        TARGET_VERSION=$(get_last_deployment "$STACK" "$ENV")
+
+        if [ -z "$TARGET_VERSION" ]; then
+            fail "No previous successful deployment found in history"
+        fi
+
+        log_info "Rollback target (from history): $TARGET_VERSION"
     fi
-    
-    log_info "Rollback target (from history): $TARGET_VERSION"
 else
     log_info "Rollback target (manual): $TARGET_VERSION"
 fi

@@ -1,4 +1,4 @@
-name: Deploy
+name: Deploy to Server
 
 on:
   workflow_dispatch:
@@ -8,114 +8,259 @@ on:
         required: true
         type: choice
         options:
-          - erp-seisei
-          - web-seisei
-          - odoo18-test
+          - odoo18-staging
           - odoo18-prod
+          - web-seisei
           - ocr
           - langbot
           - edge-traefik
-      version:
-        description: 'Version/tag to deploy (default: latest)'
-        required: false
-        default: 'latest'
-      environment:
-        description: 'Environment'
+      sha:
+        description: 'SHA tag (e.g., sha-19b9b98 or just 19b9b98)'
         required: true
-        type: choice
-        options:
-          - stage
-          - prod
-        default: 'stage'
+        type: string
+      promote_to_prod:
+        description: 'Auto-promote to production after staging success (odoo18-staging only)'
+        required: false
+        type: boolean
+        default: false
 
-  workflow_run:
-    workflows: ["Build and Push Images"]
-    types: [completed]
-    branches: [main]
+permissions:
+  contents: read
+
+env:
+  SSH_HOST: ${{ secrets.DEPLOY_SSH_HOST || '47.245.12.205' }}
+  SSH_USER: ${{ secrets.DEPLOY_SSH_USER || 'root' }}
+  REPO_PATH: /opt/seisei-odoo-addons
 
 jobs:
-  deploy-stage:
+  validate:
+    name: Validate Input
     runs-on: ubuntu-latest
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
-    environment:
-      name: ${{ github.event.inputs.environment || 'stage' }}
+    outputs:
+      stack: ${{ steps.validate.outputs.stack }}
+      env: ${{ steps.validate.outputs.env }}
+      sha_tag: ${{ steps.validate.outputs.sha_tag }}
+      promote: ${{ steps.validate.outputs.promote }}
 
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Determine deployment params
-        id: params
+      - name: Validate and normalize inputs
+        id: validate
         run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "stack=${{ github.event.inputs.stack }}" >> $GITHUB_OUTPUT
-            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
-            echo "env=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
+          STACK="${{ inputs.stack }}"
+          SHA_INPUT="${{ inputs.sha }}"
+          PROMOTE="${{ inputs.promote_to_prod }}"
+
+          # Normalize SHA tag
+          if [[ "$SHA_INPUT" == sha-* ]]; then
+            SHA_TAG="$SHA_INPUT"
           else
-            # Auto-deploy ERP on main push
-            echo "stack=erp-seisei" >> $GITHUB_OUTPUT
-            echo "version=$(date +%Y%m%d)-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
-            echo "env=stage" >> $GITHUB_OUTPUT
+            SHA_TAG="sha-$SHA_INPUT"
           fi
 
-      - name: Deploy to server
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            cd /srv/scripts
-            ./deploy.sh ${{ steps.params.outputs.stack }} ${{ steps.params.outputs.version }} ${{ steps.params.outputs.env }}
+          # Map stack to environment
+          case "$STACK" in
+            odoo18-staging)
+              ENV="staging"
+              ;;
+            odoo18-prod)
+              ENV="prod"
+              ;;
+            web-seisei|ocr|langbot)
+              ENV="prod"
+              ;;
+            edge-traefik)
+              ENV="infra"
+              ;;
+            *)
+              echo "::error::Unknown stack: $STACK"
+              exit 1
+              ;;
+          esac
 
-      - name: Notify on failure
-        if: failure()
-        run: |
-          echo "Deployment failed!"
-          echo "Stack: ${{ steps.params.outputs.stack }}"
-          echo "Version: ${{ steps.params.outputs.version }}"
+          # Validate promotion
+          if [ "$PROMOTE" = "true" ] && [ "$STACK" != "odoo18-staging" ]; then
+            echo "::error::promote_to_prod only valid for odoo18-staging"
+            exit 1
+          fi
 
-  smoke-test:
+          echo "stack=$STACK" >> $GITHUB_OUTPUT
+          echo "env=$ENV" >> $GITHUB_OUTPUT
+          echo "sha_tag=$SHA_TAG" >> $GITHUB_OUTPUT
+          echo "promote=$PROMOTE" >> $GITHUB_OUTPUT
+
+          echo "### Deployment Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Stack:** \`$STACK\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment:** \`$ENV\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **SHA Tag:** \`$SHA_TAG\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Auto-promote:** \`$PROMOTE\`" >> $GITHUB_STEP_SUMMARY
+
+  deploy:
+    name: Deploy ${{ needs.validate.outputs.stack }}
     runs-on: ubuntu-latest
-    needs: deploy-stage
-    if: github.event.inputs.environment == 'stage' || github.event_name == 'workflow_run'
+    needs: validate
+    outputs:
+      deploy_status: ${{ steps.deploy.outputs.status }}
 
     steps:
-      - name: Run smoke tests
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            /srv/scripts/smoke-test.sh ${{ github.event.inputs.stack || 'erp-seisei' }}
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+          # Add known_hosts
+          ssh-keyscan -H ${{ env.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Deploy to server
+        id: deploy
+        run: |
+          STACK="${{ needs.validate.outputs.stack }}"
+          ENV="${{ needs.validate.outputs.env }}"
+          SHA_TAG="${{ needs.validate.outputs.sha_tag }}"
+
+          echo "::group::Deploying $STACK ($ENV) with $SHA_TAG"
+
+          # Execute deployment via SSH
+          ssh -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=accept-new \
+            -o ConnectTimeout=10 \
+            ${{ env.SSH_USER }}@${{ env.SSH_HOST }} bash -s <<'ENDSSH'
+          set -euo pipefail
+
+          # Navigate to repo
+          cd ${{ env.REPO_PATH }}
+
+          # Update repo (optional - ensure scripts are latest)
+          git fetch origin main
+          git checkout main
+          git pull origin main
+
+          # Ensure scripts executable
+          chmod +x scripts/*.sh
+
+          # Create required directories
+          mkdir -p /srv/stacks /srv/backups /srv/releases/verified
+          touch /srv/deploy-history.log
+
+          # Run deployment
+          STACK="${{ needs.validate.outputs.stack }}"
+          ENV="${{ needs.validate.outputs.env }}"
+          SHA_TAG="${{ needs.validate.outputs.sha_tag }}"
+
+          echo "Deploying $STACK ($ENV) with $SHA_TAG"
+
+          # For odoo18-prod, enforce staging verification
+          if [ "$STACK" = "odoo18-prod" ]; then
+            VERIFIED_SHA=$(cat /srv/releases/verified/odoo18-staging.txt 2>/dev/null || echo "")
+            if [ "$VERIFIED_SHA" != "$SHA_TAG" ]; then
+              echo "::error::Production deployment blocked: $SHA_TAG not verified in staging"
+              echo "Verified version: $VERIFIED_SHA"
+              echo "Requested version: $SHA_TAG"
+              exit 1
+            fi
+            echo "✅ Version $SHA_TAG verified in staging"
+          fi
+
+          # Execute deploy script
+          ./scripts/deploy.sh "$STACK" "$ENV" "$SHA_TAG" 2>&1 | tee /tmp/deploy.log
+
+          # Capture final status
+          if [ ${PIPESTATUS[0]} -eq 0 ]; then
+            echo "status=success" >> $GITHUB_OUTPUT
+            echo "✅ Deployment successful"
+          else
+            echo "status=failed" >> $GITHUB_OUTPUT
+            echo "❌ Deployment failed"
+            exit 1
+          fi
+          ENDSSH
+
+          echo "::endgroup::"
+
+      - name: Capture deployment results
+        if: always()
+        run: |
+          STACK="${{ needs.validate.outputs.stack }}"
+          ENV="${{ needs.validate.outputs.env }}"
+          SHA_TAG="${{ needs.validate.outputs.sha_tag }}"
+
+          echo "### Deployment Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Stack:** \`$STACK\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment:** \`$ENV\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **SHA Tag:** \`$SHA_TAG\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** \`${{ steps.deploy.outputs.status || 'failed' }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Get deployment details from server
+          ssh -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=accept-new \
+            ${{ env.SSH_USER }}@${{ env.SSH_HOST }} bash -s <<'ENDSSH' >> $GITHUB_STEP_SUMMARY
+
+          echo "**Recent deployment history:**"
+          echo '```'
+          grep "${{ needs.validate.outputs.stack }}" /srv/deploy-history.log | tail -5 || echo "No history found"
+          echo '```'
+          echo ""
+
+          # Check running containers
+          echo "**Running containers:**"
+          echo '```'
+          cd /srv/stacks/${{ needs.validate.outputs.stack }}
+          docker compose ps 2>/dev/null || echo "No containers found"
+          echo '```'
+          ENDSSH
+
+      - name: Cleanup SSH key
+        if: always()
+        run: |
+          rm -f ~/.ssh/deploy_key
 
   promote-to-prod:
+    name: Promote to Production
     runs-on: ubuntu-latest
-    needs: smoke-test
-    if: |
-      github.event_name == 'workflow_dispatch' &&
-      github.event.inputs.environment == 'prod'
-    environment:
-      name: production
+    needs: [validate, deploy]
+    if: needs.validate.outputs.promote == 'true' && needs.validate.outputs.stack == 'odoo18-staging' && needs.deploy.outputs.deploy_status == 'success'
 
     steps:
-      - name: Deploy to production
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            cd /srv/scripts
-            ./deploy.sh ${{ github.event.inputs.stack }} ${{ github.event.inputs.version }} prod
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ env.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
 
-      - name: Final smoke test
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            /srv/scripts/smoke-test.sh ${{ github.event.inputs.stack }}
+      - name: Deploy to production
+        run: |
+          SHA_TAG="${{ needs.validate.outputs.sha_tag }}"
+
+          echo "::group::Auto-promoting to production: $SHA_TAG"
+
+          ssh -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=accept-new \
+            ${{ env.SSH_USER }}@${{ env.SSH_HOST }} bash -s <<ENDSSH
+          set -euo pipefail
+          cd ${{ env.REPO_PATH }}
+
+          echo "Deploying odoo18-prod with verified version: $SHA_TAG"
+          ./scripts/deploy.sh odoo18-prod prod $SHA_TAG 2>&1 | tee /tmp/deploy-prod.log
+
+          if [ \${PIPESTATUS[0]} -eq 0 ]; then
+            echo "✅ Production deployment successful"
+          else
+            echo "❌ Production deployment failed"
+            exit 1
+          fi
+          ENDSSH
+
+          echo "::endgroup::"
+
+          echo "### Production Promotion" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Successfully promoted \`$SHA_TAG\` to production" >> $GITHUB_STEP_SUMMARY
+
+      - name: Cleanup SSH key
+        if: always()
+        run: |
+          rm -f ~/.ssh/deploy_key

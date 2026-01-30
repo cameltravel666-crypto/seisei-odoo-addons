@@ -1,0 +1,229 @@
+name: Rollback Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      stack:
+        description: 'Stack to rollback'
+        required: true
+        type: choice
+        options:
+          - odoo18-staging
+          - odoo18-prod
+          - web-seisei
+          - ocr
+          - langbot
+          - edge-traefik
+      steps_back:
+        description: 'Number of deployments to rollback (default: 1)'
+        required: false
+        type: number
+        default: 1
+      target_sha:
+        description: 'Target SHA to rollback to (optional, overrides steps_back)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  SSH_HOST: ${{ secrets.DEPLOY_SSH_HOST || '47.245.12.205' }}
+  SSH_USER: ${{ secrets.DEPLOY_SSH_USER || 'root' }}
+  REPO_PATH: /opt/seisei-odoo-addons
+
+jobs:
+  validate:
+    name: Validate Input
+    runs-on: ubuntu-latest
+    outputs:
+      stack: ${{ steps.validate.outputs.stack }}
+      env: ${{ steps.validate.outputs.env }}
+      steps_back: ${{ steps.validate.outputs.steps_back }}
+      target_sha: ${{ steps.validate.outputs.target_sha }}
+
+    steps:
+      - name: Validate and normalize inputs
+        id: validate
+        run: |
+          STACK="${{ inputs.stack }}"
+          STEPS_BACK="${{ inputs.steps_back }}"
+          TARGET_SHA="${{ inputs.target_sha }}"
+
+          # Map stack to environment
+          case "$STACK" in
+            odoo18-staging)
+              ENV="staging"
+              ;;
+            odoo18-prod)
+              ENV="prod"
+              ;;
+            web-seisei|ocr|langbot)
+              ENV="prod"
+              ;;
+            edge-traefik)
+              ENV="infra"
+              ;;
+            *)
+              echo "::error::Unknown stack: $STACK"
+              exit 1
+              ;;
+          esac
+
+          # Normalize target SHA if provided
+          if [ -n "$TARGET_SHA" ]; then
+            if [[ "$TARGET_SHA" != sha-* ]]; then
+              TARGET_SHA="sha-$TARGET_SHA"
+            fi
+          fi
+
+          echo "stack=$STACK" >> $GITHUB_OUTPUT
+          echo "env=$ENV" >> $GITHUB_OUTPUT
+          echo "steps_back=$STEPS_BACK" >> $GITHUB_OUTPUT
+          echo "target_sha=$TARGET_SHA" >> $GITHUB_OUTPUT
+
+          echo "### Rollback Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Stack:** \`$STACK\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment:** \`$ENV\`" >> $GITHUB_STEP_SUMMARY
+          if [ -n "$TARGET_SHA" ]; then
+            echo "- **Target SHA:** \`$TARGET_SHA\`" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- **Steps Back:** \`$STEPS_BACK\`" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  rollback:
+    name: Rollback ${{ needs.validate.outputs.stack }}
+    runs-on: ubuntu-latest
+    needs: validate
+    outputs:
+      rollback_status: ${{ steps.rollback.outputs.status }}
+      rollback_target: ${{ steps.rollback.outputs.target }}
+
+    steps:
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+          # Add known_hosts
+          ssh-keyscan -H ${{ env.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Execute rollback
+        id: rollback
+        run: |
+          STACK="${{ needs.validate.outputs.stack }}"
+          ENV="${{ needs.validate.outputs.env }}"
+          STEPS_BACK="${{ needs.validate.outputs.steps_back }}"
+          TARGET_SHA="${{ needs.validate.outputs.target_sha }}"
+
+          echo "::group::Rolling back $STACK ($ENV)"
+
+          # Execute rollback via SSH
+          ssh -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=accept-new \
+            -o ConnectTimeout=10 \
+            ${{ env.SSH_USER }}@${{ env.SSH_HOST }} bash -s <<'ENDSSH'
+          set -euo pipefail
+
+          # Navigate to repo
+          cd ${{ env.REPO_PATH }}
+
+          # Update repo to ensure latest rollback script
+          git fetch origin main
+          git checkout main
+          git pull origin main
+
+          # Ensure scripts executable
+          chmod +x scripts/*.sh
+
+          # Build rollback command
+          STACK="${{ needs.validate.outputs.stack }}"
+          ENV="${{ needs.validate.outputs.env }}"
+          STEPS_BACK="${{ needs.validate.outputs.steps_back }}"
+          TARGET_SHA="${{ needs.validate.outputs.target_sha }}"
+
+          if [ -n "$TARGET_SHA" ]; then
+            echo "Rolling back to specific SHA: $TARGET_SHA"
+            ./scripts/rollback.sh "$STACK" "$ENV" --to "$TARGET_SHA" 2>&1 | tee /tmp/rollback.log
+          else
+            echo "Rolling back $STEPS_BACK steps"
+            ./scripts/rollback.sh "$STACK" "$ENV" --steps "$STEPS_BACK" 2>&1 | tee /tmp/rollback.log
+          fi
+
+          # Capture rollback result
+          if [ ${PIPESTATUS[0]} -eq 0 ]; then
+            # Get the actual rolled back version
+            cd /srv/stacks/$STACK
+            ROLLBACK_IMAGE=$(docker compose ps --format json | jq -r '.[0].Image' | awk -F: '{print $NF}')
+            echo "status=success" >> $GITHUB_OUTPUT
+            echo "target=$ROLLBACK_IMAGE" >> $GITHUB_OUTPUT
+            echo "✅ Rollback successful to: $ROLLBACK_IMAGE"
+          else
+            echo "status=failed" >> $GITHUB_OUTPUT
+            echo "target=unknown" >> $GITHUB_OUTPUT
+            echo "❌ Rollback failed"
+            exit 1
+          fi
+          ENDSSH
+
+          echo "::endgroup::"
+
+      - name: Capture rollback results
+        if: always()
+        run: |
+          STACK="${{ needs.validate.outputs.stack }}"
+          ENV="${{ needs.validate.outputs.env }}"
+
+          echo "### Rollback Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Stack:** \`$STACK\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment:** \`$ENV\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** \`${{ steps.rollback.outputs.status || 'failed' }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Rolled back to:** \`${{ steps.rollback.outputs.target || 'unknown' }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Get deployment details from server
+          ssh -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=accept-new \
+            ${{ env.SSH_USER }}@${{ env.SSH_HOST }} bash -s <<'ENDSSH' >> $GITHUB_STEP_SUMMARY
+
+          echo "**Recent deployment history:**"
+          echo '```'
+          grep "${{ needs.validate.outputs.stack }}" /srv/deploy-history.log | tail -10 || echo "No history found"
+          echo '```'
+          echo ""
+
+          # Check running containers
+          echo "**Running containers:**"
+          echo '```'
+          cd /srv/stacks/${{ needs.validate.outputs.stack }}
+          docker compose ps 2>/dev/null || echo "No containers found"
+          echo '```'
+          echo ""
+
+          # Domain health check
+          echo "**Domain health check:**"
+          echo '```'
+          case "${{ needs.validate.outputs.stack }}" in
+            odoo18-prod)
+              curl -I https://demo.nagashiro.top/nginx-health 2>&1 | head -5
+              ;;
+            odoo18-staging)
+              curl -I https://staging.erp.seisei.tokyo/nginx-health 2>&1 | head -5
+              ;;
+            web-seisei)
+              curl -I https://biznexus.seisei.tokyo 2>&1 | head -5
+              ;;
+            ocr)
+              curl http://localhost:8180/health 2>&1 | head -5
+              ;;
+          esac
+          echo '```'
+          ENDSSH
+
+      - name: Cleanup SSH key
+        if: always()
+        run: |
+          rm -f ~/.ssh/deploy_key

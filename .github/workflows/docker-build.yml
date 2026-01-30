@@ -1,0 +1,126 @@
+name: Build Docker Images
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'odoo_modules/**'
+      - 'infra/stacks/odoo18-prod/**'
+      - '.github/workflows/docker-build.yml'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:  # 允许手动触发
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-odoo18:
+    name: Build Odoo18 Image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 获取完整历史，用于标签
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/seisei-odoo18
+          tags: |
+            # Git commit SHA (short)
+            type=sha,prefix=sha-,format=short
+            # Branch name
+            type=ref,event=branch
+            # Latest on main branch
+            type=raw,value=latest,enable={{is_default_branch}}
+            # Semver tags (if pushing a tag)
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+          labels: |
+            org.opencontainers.image.title=Seisei Odoo18
+            org.opencontainers.image.description=Odoo 18 production image with custom modules
+            org.opencontainers.image.vendor=Seisei
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: infra/stacks/odoo18-prod/Dockerfile
+          platforms: linux/amd64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/seisei-odoo18:latest
+          cache-to: type=inline
+          build-args: |
+            BUILD_DATE=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.created'] }}
+            VCS_REF=${{ github.sha }}
+
+      - name: Output image tags
+        run: |
+          echo "### 🐳 Docker Image Built" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Tags:**" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Deploy command:**" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "# On production server:" >> $GITHUB_STEP_SUMMARY
+          echo "cd /root/seisei-odoo-addons/infra/stacks/odoo18-prod" >> $GITHUB_STEP_SUMMARY
+          echo "sed -i 's/ODOO18_IMAGE_TAG=.*/ODOO18_IMAGE_TAG=sha-${GITHUB_SHA::7}/' .env" >> $GITHUB_STEP_SUMMARY
+          echo "docker compose pull && docker compose up -d" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+  test-image:
+    name: Test Built Image
+    runs-on: ubuntu-latest
+    needs: build-odoo18
+    if: github.event_name != 'pull_request'
+
+    steps:
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull and test image
+        run: |
+          IMAGE="ghcr.io/${{ github.repository_owner }}/seisei-odoo18:sha-${GITHUB_SHA::7}"
+          echo "Testing image: $IMAGE"
+
+          # Pull the image
+          docker pull "$IMAGE"
+
+          # Basic smoke test - check if image runs
+          docker run --rm "$IMAGE" odoo --version
+
+          # Check if required Python packages are installed
+          echo "Checking Python dependencies..."
+          docker run --rm "$IMAGE" python3 -c "import fitz; import boto3; import qrcode; print('✅ All required packages installed')"
+
+          echo "✅ Image test passed"
+
+      - name: Image test summary
+        run: |
+          echo "### ✅ Image Tests Passed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Image \`ghcr.io/${{ github.repository_owner }}/seisei-odoo18:sha-${GITHUB_SHA::7}\` is ready for deployment." >> $GITHUB_STEP_SUMMARY

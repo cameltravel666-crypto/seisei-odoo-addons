@@ -95,3 +95,29 @@ ios/App/DerivedData/
 # 日志
 *.log
 logs/
+
+# === Operations/DevOps ===
+
+# Runtime exports (keep locks, ignore runtime)
+audit/runtime/
+
+# Release artifacts (built locally)
+dist/releases/
+
+# Backup files
+*.bak
+*.backup
+*.backup.*
+*.orig
+*.old
+*~
+
+# macOS extras
+._*
+Thumbs.db
+desktop.ini
+
+# Editor extras
+*.swn
+.#*
+\#*#
