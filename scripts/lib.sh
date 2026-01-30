@@ -184,11 +184,24 @@ resolve_verified_stack() {
         echo "$stack"
     fi
 }
-get_verified() {
+get_verified_file() {
     local stack="$1"
     local src
     src="$(resolve_verified_stack "$stack")"
     echo "$RELEASE_ROOT/verified/${src}.txt"
+}
+
+# Get verified version for stack (returns version string, empty if not found)
+get_verified() {
+    local stack="$1"
+    local verified_file
+    verified_file="$(get_verified_file "$stack")"
+
+    if [ -f "$verified_file" ]; then
+        cat "$verified_file"
+    else
+        echo ""
+    fi
 }
 
 # Check if version is verified (for production deployment)
@@ -197,29 +210,21 @@ check_verified() {
     local version="$2"
     local force="${3:-false}"
 
-    if [[ "$force" == "true" ]]; then
+    if [ "$force" = "true" ]; then
         log_warn "FORCE MODE ENABLED - Skipping promotion check"
         return 0
     fi
 
-    local vf
-    vf="$(get_verified "$stack")"
+    local verified
+    verified="$(get_verified "$stack")"
 
-    if [[ ! -f "$vf" ]]; then
+    if [ -z "$verified" ]; then
         log_error "No verified version found for $stack. Deploy to staging first."
         return 1
     fi
 
-    local verified
-    verified="$(cat "$vf" | tr -d ' \t\r\n')"
-
-    if [[ -z "$verified" ]]; then
-        log_error "Verified file is empty: $vf"
-        return 1
-    fi
-
-    if [[ "$verified" != "$version" ]]; then
-        log_error "Version $version is NOT verified for $stack (verified=$verified)"
+    if [ "$verified" != "$version" ]; then
+        log_error "Version $version is NOT verified for $stack (verified: $verified)"
         return 1
     fi
 
