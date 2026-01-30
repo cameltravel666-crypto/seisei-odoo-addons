@@ -146,17 +146,17 @@ jobs:
 
           if [ -n "$TARGET_SHA" ]; then
             echo "Rolling back to specific SHA: $TARGET_SHA"
-            ./scripts/rollback.sh "$STACK" "$ENV" --to "$TARGET_SHA" 2>&1 | tee /tmp/rollback.log
+            sudo ./scripts/rollback.sh "$STACK" "$ENV" --to "$TARGET_SHA" 2>&1 | tee /tmp/rollback.log
           else
             echo "Rolling back $STEPS_BACK steps"
-            ./scripts/rollback.sh "$STACK" "$ENV" --steps "$STEPS_BACK" 2>&1 | tee /tmp/rollback.log
+            sudo ./scripts/rollback.sh "$STACK" "$ENV" --steps "$STEPS_BACK" 2>&1 | tee /tmp/rollback.log
           fi
 
           # Capture rollback result
           if [ ${PIPESTATUS[0]} -eq 0 ]; then
             # Get the actual rolled back version
             cd /srv/stacks/$STACK
-            ROLLBACK_IMAGE=$(docker compose ps --format json | jq -r '.[0].Image' | awk -F: '{print $NF}')
+            ROLLBACK_IMAGE=$(sudo docker compose ps --format json | jq -r '.[0].Image' | awk -F: '{print $NF}')
             echo "status=success" >> $GITHUB_OUTPUT
             echo "target=$ROLLBACK_IMAGE" >> $GITHUB_OUTPUT
             echo "✅ Rollback successful to: $ROLLBACK_IMAGE"
@@ -199,7 +199,7 @@ jobs:
           echo "**Running containers:**"
           echo '```'
           cd /srv/stacks/${{ needs.validate.outputs.stack }}
-          docker compose ps 2>/dev/null || echo "No containers found"
+          sudo docker compose ps 2>/dev/null || echo "No containers found"
           echo '```'
           echo ""
 
