@@ -136,7 +136,7 @@ jobs:
           git pull origin main
 
           # Ensure scripts executable
-          chmod +x scripts/*.sh
+          chmod +x ${{ env.REPO_PATH }}/scripts/*.sh
 
           # Build rollback command
           STACK="${{ needs.validate.outputs.stack }}"
@@ -146,10 +146,10 @@ jobs:
 
           if [ -n "$TARGET_SHA" ]; then
             echo "Rolling back to specific SHA: $TARGET_SHA"
-            sudo ./scripts/rollback.sh "$STACK" "$ENV" --to "$TARGET_SHA" 2>&1 | tee /tmp/rollback.log
+            sudo ${{ env.REPO_PATH }}/scripts/rollback.sh "$STACK" "$ENV" --to "$TARGET_SHA" 2>&1 | tee /tmp/rollback.log
           else
             echo "Rolling back $STEPS_BACK steps"
-            sudo ./scripts/rollback.sh "$STACK" "$ENV" --steps "$STEPS_BACK" 2>&1 | tee /tmp/rollback.log
+            sudo ${{ env.REPO_PATH }}/scripts/rollback.sh "$STACK" "$ENV" --steps "$STEPS_BACK" 2>&1 | tee /tmp/rollback.log
           fi
 
           # Capture rollback result

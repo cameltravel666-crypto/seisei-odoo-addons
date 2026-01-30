@@ -137,7 +137,7 @@ jobs:
           git pull origin main
 
           # Ensure scripts executable
-          chmod +x scripts/*.sh
+          chmod +x ${{ env.REPO_PATH }}/scripts/*.sh
 
           # Create required directories
           sudo mkdir -p /srv/stacks /srv/backups /srv/releases/verified
@@ -163,8 +163,8 @@ jobs:
             echo "✅ Version $SHA_TAG verified in staging"
           fi
 
-          # Execute deploy script with sudo
-          sudo ./scripts/deploy.sh "$STACK" "$ENV" "$SHA_TAG" 2>&1 | tee /tmp/deploy.log
+          # Execute deploy script with sudo (MUST use absolute path for sudoers NOPASSWD rule)
+          sudo ${{ env.REPO_PATH }}/scripts/deploy.sh "$STACK" "$ENV" "$SHA_TAG" 2>&1 | tee /tmp/deploy.log
 
           # Capture final status
           if [ ${PIPESTATUS[0]} -eq 0 ]; then
@@ -245,7 +245,7 @@ jobs:
           cd ${{ env.REPO_PATH }}
 
           echo "Deploying odoo18-prod with verified version: $SHA_TAG"
-          ./scripts/deploy.sh odoo18-prod prod $SHA_TAG 2>&1 | tee /tmp/deploy-prod.log
+          sudo ${{ env.REPO_PATH }}/scripts/deploy.sh odoo18-prod prod $SHA_TAG 2>&1 | tee /tmp/deploy-prod.log
 
           if [ \${PIPESTATUS[0]} -eq 0 ]; then
             echo "✅ Production deployment successful"
