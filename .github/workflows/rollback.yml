@@ -152,23 +152,36 @@ jobs:
             sudo ${{ env.REPO_PATH }}/scripts/rollback.sh "$STACK" "$ENV" --steps "$STEPS_BACK" 2>&1 | tee /tmp/rollback.log
           fi
 
-          # Capture rollback result
+          # Check rollback status
           if [ ${PIPESTATUS[0]} -eq 0 ]; then
-            # Get the actual rolled back version
-            cd /srv/stacks/$STACK
-            ROLLBACK_IMAGE=$(sudo docker compose ps --format json | jq -r '.[0].Image' | awk -F: '{print $NF}')
-            echo "status=success" >> $GITHUB_OUTPUT
-            echo "target=$ROLLBACK_IMAGE" >> $GITHUB_OUTPUT
-            echo "✅ Rollback successful to: $ROLLBACK_IMAGE"
+            echo "✅ Rollback successful"
+            exit 0
           else
-            echo "status=failed" >> $GITHUB_OUTPUT
-            echo "target=unknown" >> $GITHUB_OUTPUT
             echo "❌ Rollback failed"
             exit 1
           fi
           ENDSSH
 
+          ROLLBACK_EXIT_CODE=$?
           echo "::endgroup::"
+
+          # Set GitHub Actions outputs based on SSH result
+          if [ $ROLLBACK_EXIT_CODE -eq 0 ]; then
+            echo "status=success" >> $GITHUB_OUTPUT
+
+            # Get the rolled back version from the remote server
+            ROLLBACK_IMAGE=$(ssh -i ~/.ssh/deploy_key \
+              -o StrictHostKeyChecking=accept-new \
+              ${{ env.SSH_USER }}@${{ env.SSH_HOST }} \
+              "cd /srv/stacks/${{ needs.validate.outputs.stack }} && sudo docker compose ps --format json | jq -r '.[0].Image' | awk -F: '{print \$NF}'")
+
+            echo "target=${ROLLBACK_IMAGE:-unknown}" >> $GITHUB_OUTPUT
+            echo "Rolled back to: ${ROLLBACK_IMAGE:-unknown}"
+          else
+            echo "status=failed" >> $GITHUB_OUTPUT
+            echo "target=unknown" >> $GITHUB_OUTPUT
+            exit 1
+          fi
 
       - name: Capture rollback results
         if: always()

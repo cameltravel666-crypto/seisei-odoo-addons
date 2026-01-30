@@ -164,18 +164,25 @@ jobs:
           # Execute deploy script with sudo (MUST use absolute path for sudoers NOPASSWD rule)
           sudo ${{ env.REPO_PATH }}/scripts/deploy.sh "$STACK" "$ENV" "$SHA_TAG" 2>&1 | tee /tmp/deploy.log
 
-          # Capture final status
+          # Check exit status (script will exit 1 on failure)
           if [ ${PIPESTATUS[0]} -eq 0 ]; then
-            echo "status=success" >> $GITHUB_OUTPUT
             echo "✅ Deployment successful"
+            exit 0
           else
-            echo "status=failed" >> $GITHUB_OUTPUT
             echo "❌ Deployment failed"
             exit 1
           fi
           ENDSSH
 
           echo "::endgroup::"
+
+          # Set GitHub Actions output based on SSH command result
+          if [ $? -eq 0 ]; then
+            echo "status=success" >> $GITHUB_OUTPUT
+          else
+            echo "status=failed" >> $GITHUB_OUTPUT
+            exit 1
+          fi
 
       - name: Capture deployment results
         if: always()
