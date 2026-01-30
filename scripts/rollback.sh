@@ -62,7 +62,7 @@ if [ -z "$TARGET_VERSION" ]; then
     if [ -n "$STEPS_BACK" ]; then
         log_info "Finding deployment $STEPS_BACK steps back..."
         # Get Nth successful deployment from history
-        TARGET_VERSION=$(grep "| $STACK | $ENV | deploy | .* | success |" "$HISTORY_FILE" 2>/dev/null | \
+        TARGET_VERSION=$(grep "| $STACK | $ENV | deploy | .* | success |" "$DEPLOY_HISTORY" 2>/dev/null | \
             tail -n "+$((STEPS_BACK + 1))" | head -1 | \
             awk -F'|' '{gsub(/^[ \t]+|[ \t]+$/, "", $5); print $5}')
 
