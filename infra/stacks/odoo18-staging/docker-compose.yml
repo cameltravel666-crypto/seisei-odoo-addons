@@ -1,0 +1,131 @@
+# =============================================================================
+# Seisei Odoo 18 Staging Stack
+# =============================================================================
+# STAGING ENVIRONMENT - Uses SAME images as production, different configuration
+# - Images are pre-built by GitHub Actions and pushed to GHCR
+# - Staging tests the EXACT same image that will be deployed to production
+# - Server ONLY pulls images, NEVER builds locally
+# - Uses独立database (staging-db) to avoid affecting production data
+#
+# Deployment workflow:
+#   1. GitHub Actions builds and pushes image on main branch
+#   2. On staging server: update .env with new image tag
+#   3. Run: docker compose pull && docker compose up -d
+#   4. Run smoke tests to verify the deployment
+#   5. If tests pass, deploy same image to production
+#
+# Required environment variables in .env:
+#   GITHUB_REPO_OWNER    - GitHub organization/user (e.g., cameltravel666-crypto)
+#   ODOO18_IMAGE_TAG     - Image tag (can use 'latest' for staging, or specific SHA)
+#   DB_PASSWORD          - PostgreSQL password (for staging-db)
+#   REDIS_PASSWORD       - Redis password
+#   OCR_SERVICE_URL      - Central OCR service URL
+#   OCR_SERVICE_KEY      - OCR service API key
+#
+# External dependencies:
+#   - staging-db container running on seisei-odoo-network (OR use separate DB)
+#   - edge network must exist for Traefik routing
+#
+# ⚠️  IMPORTANT: Staging and Production must use the SAME image
+# ⚠️  Test thoroughly on staging before deploying to production
+# =============================================================================
+
+services:
+  web:
+    # SAME image as production - only configuration differs
+    image: ghcr.io/${GITHUB_REPO_OWNER}/seisei-odoo18:${ODOO18_IMAGE_TAG:-latest}
+    container_name: odoo18-staging-web
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_started
+    environment:
+      # Database connection - use external seisei-db with staging databases
+      # OR use dedicated staging-db (recommended)
+      - HOST=${DB_HOST:-seisei-db}
+      - USER=${DB_USER:-odoo}
+      - PASSWORD=${DB_PASSWORD}
+      # S3 Storage - use staging bucket or folder
+      - SEISEI_S3_BUCKET=${SEISEI_S3_BUCKET:-seisei-staging}
+      - SEISEI_S3_REGION=${SEISEI_S3_REGION:-ap-northeast-1}
+      - SEISEI_S3_ACCESS_KEY=${SEISEI_S3_ACCESS_KEY}
+      - SEISEI_S3_SECRET_KEY=${SEISEI_S3_SECRET_KEY}
+      # OCR Service (shared with production)
+      - OCR_SERVICE_URL=${OCR_SERVICE_URL:-http://172.17.0.1:8180/api/v1}
+      - OCR_SERVICE_KEY=${OCR_SERVICE_KEY}
+    volumes:
+      - odoo18-staging-data:/var/lib/odoo
+      - ./config/odoo.conf:/etc/odoo/odoo.conf:ro
+    networks:
+      - seisei-odoo-network
+      - odoo18-staging-internal
+      - edge
+    ports:
+      # Expose on different port for local access
+      - "8069:8069"
+      - "8072:8072"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8069/web/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 3G  # Slightly less than production
+          cpus: '1.5'
+    labels:
+      - "traefik.enable=true"
+      # =================================================================
+      # Router: staging.erp.seisei.tokyo
+      # =================================================================
+      - "traefik.http.routers.odoo18-staging.rule=Host(`staging.erp.seisei.tokyo`)"
+      - "traefik.http.routers.odoo18-staging.entrypoints=websecure"
+      - "traefik.http.routers.odoo18-staging.tls.certresolver=cloudflare"
+      - "traefik.http.routers.odoo18-staging.middlewares=secure-headers@file"
+      - "traefik.http.routers.odoo18-staging.service=odoo18-staging"
+      - "traefik.http.services.odoo18-staging.loadbalancer.server.port=8069"
+      - "traefik.http.services.odoo18-staging.loadbalancer.sticky.cookie=true"
+      - "traefik.http.services.odoo18-staging.loadbalancer.sticky.cookie.name=odoo_staging_session"
+      # Longpolling / WebSocket
+      - "traefik.http.routers.odoo18-staging-lp.rule=Host(`staging.erp.seisei.tokyo`) && (PathPrefix(`/longpolling`) || PathPrefix(`/websocket`))"
+      - "traefik.http.routers.odoo18-staging-lp.entrypoints=websecure"
+      - "traefik.http.routers.odoo18-staging-lp.tls.certresolver=cloudflare"
+      - "traefik.http.routers.odoo18-staging-lp.middlewares=odoo-websocket@file"
+      - "traefik.http.routers.odoo18-staging-lp.service=odoo18-staging-lp"
+      - "traefik.http.services.odoo18-staging-lp.loadbalancer.server.port=8072"
+      - "traefik.http.routers.odoo18-staging-lp.priority=100"
+
+  redis:
+    image: redis:7-alpine
+    container_name: odoo18-staging-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD}
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --save 60 1000
+      --appendonly yes
+    volumes:
+      - odoo18-staging-redis:/data
+    networks:
+      - odoo18-staging-internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  odoo18-staging-data:
+  odoo18-staging-redis:
+
+networks:
+  odoo18-staging-internal:
+    driver: bridge
+  seisei-odoo-network:
+    external: true
+  edge:
+    external: true
