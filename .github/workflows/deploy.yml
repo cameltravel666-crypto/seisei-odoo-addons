@@ -140,8 +140,9 @@ jobs:
           chmod +x scripts/*.sh
 
           # Create required directories
-          mkdir -p /srv/stacks /srv/backups /srv/releases/verified
-          touch /srv/deploy-history.log
+          sudo mkdir -p /srv/stacks /srv/backups /srv/releases/verified
+          sudo touch /srv/deploy-history.log
+          sudo chown -R deployer:deployer /srv/stacks /srv/backups /srv/releases /srv/deploy-history.log
 
           # Run deployment
           STACK="${{ needs.validate.outputs.stack }}"
@@ -162,8 +163,8 @@ jobs:
             echo "✅ Version $SHA_TAG verified in staging"
           fi
 
-          # Execute deploy script
-          ./scripts/deploy.sh "$STACK" "$ENV" "$SHA_TAG" 2>&1 | tee /tmp/deploy.log
+          # Execute deploy script with sudo
+          sudo ./scripts/deploy.sh "$STACK" "$ENV" "$SHA_TAG" 2>&1 | tee /tmp/deploy.log
 
           # Capture final status
           if [ ${PIPESTATUS[0]} -eq 0 ]; then
@@ -208,7 +209,7 @@ jobs:
           echo "**Running containers:**"
           echo '```'
           cd /srv/stacks/${{ needs.validate.outputs.stack }}
-          docker compose ps 2>/dev/null || echo "No containers found"
+          sudo docker compose ps 2>/dev/null || echo "No containers found"
           echo '```'
           ENDSSH
 
