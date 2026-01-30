@@ -139,10 +139,8 @@ jobs:
           # Ensure scripts executable
           chmod +x ${{ env.REPO_PATH }}/scripts/*.sh
 
-          # Create required directories
-          sudo mkdir -p /srv/stacks /srv/backups /srv/releases/verified
-          sudo touch /srv/deploy-history.log
-          sudo chown -R deployer:deployer /srv/stacks /srv/backups /srv/releases /srv/deploy-history.log
+          # Note: Required directories already created by server_bootstrap_deployer.sh
+          # /srv/stacks, /srv/backups, /srv/releases/verified owned by deployer
 
           # Run deployment
           STACK="${{ needs.validate.outputs.stack }}"
