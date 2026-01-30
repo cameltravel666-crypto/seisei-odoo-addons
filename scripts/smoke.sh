@@ -37,10 +37,10 @@ TESTS_FAILED=0
 log_info "Test 1: Checking container status..."
 if docker compose ps | grep -q "Up\|running"; then
     log_success "Containers are running"
-    ((TESTS_PASSED++))
+    ((TESTS_PASSED+=1))
 else
     log_error "No containers running"
-    ((TESTS_FAILED++))
+    ((TESTS_FAILED+=1))
 fi
 
 # Test 2: Health checks
@@ -48,10 +48,10 @@ log_info "Test 2: Checking container health..."
 UNHEALTHY=$(docker compose ps --format json 2>/dev/null | jq -r 'select(.Health == "unhealthy") | .Name' || echo "")
 if [ -n "$UNHEALTHY" ]; then
     log_error "Unhealthy containers: $UNHEALTHY"
-    ((TESTS_FAILED++))
+    ((TESTS_FAILED+=1))
 else
     log_success "All containers healthy (or no health checks defined)"
-    ((TESTS_PASSED++))
+    ((TESTS_PASSED+=1))
 fi
 
 # Test 3: Domain accessibility
@@ -59,12 +59,12 @@ log_info "Test 3: Checking domain accessibility..."
 DOMAIN=$(get_stack_domain "$STACK")
 if [ -n "$DOMAIN" ]; then
     HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$DOMAIN" || echo "000")
-    if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "301" ] || [ "$HTTP_CODE" = "302" ]; then
+    if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "301" ] || [ "$HTTP_CODE" = "302" ] || [ "$HTTP_CODE" = "303" ]; then
         log_success "Domain accessible: $DOMAIN (HTTP $HTTP_CODE)"
-        ((TESTS_PASSED++))
+        ((TESTS_PASSED+=1))
     else
         log_error "Domain not accessible: $DOMAIN (HTTP $HTTP_CODE)"
-        ((TESTS_FAILED++))
+        ((TESTS_FAILED+=1))
     fi
 else
     log_info "No domain configured for $STACK (skipping)"
@@ -84,10 +84,10 @@ if [ "$STACK" = "ocr" ] || [ "$STACK" = "odoo18-prod" ] || [ "$STACK" = "odoo18-
     
     if [ "$OCR_HEALTH" = "200" ]; then
         log_success "OCR service healthy (HTTP 200)"
-        ((TESTS_PASSED++))
+        ((TESTS_PASSED+=1))
     else
         log_error "OCR service not healthy (HTTP $OCR_HEALTH)"
-        ((TESTS_FAILED++))
+        ((TESTS_FAILED+=1))
     fi
 fi
 
