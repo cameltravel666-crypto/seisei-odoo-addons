@@ -170,15 +170,25 @@ mark_verified() {
 }
 
 # Get verified version for stack
+
+# Promotion source (which staging stack certifies which prod stack)
+# Example: odoo18-prod must be verified by odoo18-staging
+declare -gA VERIFIED_ALIAS
+VERIFIED_ALIAS["odoo18-prod"]="odoo18-staging"
+
+resolve_verified_stack() {
+    local stack="$1"
+    if [[ -n "${VERIFIED_ALIAS[$stack]+_}" ]]; then
+        echo "${VERIFIED_ALIAS[$stack]}"
+    else
+        echo "$stack"
+    fi
+}
 get_verified() {
     local stack="$1"
-    local verified_file="$RELEASE_ROOT/verified/$stack.txt"
-
-    if [ -f "$verified_file" ]; then
-        cat "$verified_file"
-    else
-        echo ""
-    fi
+    local src
+    src="$(resolve_verified_stack "$stack")"
+    echo "$RELEASE_ROOT/verified/${src}.txt"
 }
 
 # Check if version is verified (for production deployment)
@@ -187,23 +197,34 @@ check_verified() {
     local version="$2"
     local force="${3:-false}"
 
-    if [ "$force" = "true" ]; then
-        log_warn "Skipping verification check (--force flag)"
+    if [[ "$force" == "true" ]]; then
+        log_warn "FORCE MODE ENABLED - Skipping promotion check"
         return 0
     fi
 
-    local verified_version
-    verified_version=$(get_verified "$stack")
+    local vf
+    vf="$(get_verified "$stack")"
 
-    if [ -z "$verified_version" ]; then
-        fail "No verified version found for $stack. Deploy to staging first."
+    if [[ ! -f "$vf" ]]; then
+        log_error "No verified version found for $stack. Deploy to staging first."
+        return 1
     fi
 
-    if [ "$verified_version" != "$version" ]; then
-        fail "Version $version is not verified. Verified version: $verified_version. Deploy to staging first, or use --force"
+    local verified
+    verified="$(cat "$vf" | tr -d ' \t\r\n')"
+
+    if [[ -z "$verified" ]]; then
+        log_error "Verified file is empty: $vf"
+        return 1
+    fi
+
+    if [[ "$verified" != "$version" ]]; then
+        log_error "Version $version is NOT verified for $stack (verified=$verified)"
+        return 1
     fi
 
     log_success "Version $version is verified for $stack"
+    return 0
 }
 
 # =============================================================================
