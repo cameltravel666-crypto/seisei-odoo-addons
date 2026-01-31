@@ -92,6 +92,23 @@ jobs:
             echo "- **⚠️ Break-glass:** \`$BREAK_GLASS_REASON\`" >> $GITHUB_STEP_SUMMARY
           fi
 
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history to resolve short SHA
+
+      - name: Extract and resolve SHA from image_tag
+        id: extract_sha
+        run: |
+          IMAGE_TAG="${{ inputs.image_tag }}"
+          SHA7=$(echo "$IMAGE_TAG" | sed 's/^sha-//')
+          echo "sha7=$SHA7" >> $GITHUB_OUTPUT
+
+          # Resolve short SHA to full SHA
+          FULL_SHA=$(git rev-parse $SHA7)
+          echo "full_sha=$FULL_SHA" >> $GITHUB_OUTPUT
+          echo "Resolved $SHA7 to $FULL_SHA"
+
       - name: Download digest manifest from build
         uses: dawidd6/action-download-artifact@v3
         with:
@@ -100,8 +117,8 @@ jobs:
           # Match artifact by name
           name: image-digests
           path: dist
-          # Search for the most recent successful build on main branch
-          branch: main
+          # Match by exact commit SHA
+          commit: ${{ steps.extract_sha.outputs.full_sha }}
           # Allow searching through recent workflow runs
           search_artifacts: true
           github_token: ${{ secrets.GITHUB_TOKEN }}
