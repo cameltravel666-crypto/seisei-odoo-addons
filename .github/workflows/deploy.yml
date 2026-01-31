@@ -93,15 +93,18 @@ jobs:
           fi
 
       - name: Download digest manifest from build
-        uses: actions/download-artifact@v4
+        uses: dawidd6/action-download-artifact@v3
         with:
-          # Match the image_tag to find the corresponding build artifact
-          # Artifact name is always "image-digests" from build_ghcr.yml
+          # Download from the build workflow (cross-workflow artifact download)
+          workflow: build_ghcr.yml
+          # Match artifact by name
           name: image-digests
           path: dist
-          # Note: This requires the build workflow to have completed
-          # The artifact is created by build_ghcr.yml::create-digest-manifest job
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          # Search for the most recent successful build on main branch
+          branch: main
+          # Allow searching through recent workflow runs
+          search_artifacts: true
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Verify digest manifest
         run: |
