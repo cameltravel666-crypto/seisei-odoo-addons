@@ -223,11 +223,8 @@ jobs:
           cat /tmp/image-digests.json
           echo ""
 
-          # Ensure scripts are executable (deploy.sh should exist in /opt repo)
-          # Scripts should already be executable from server setup, but verify with sudo
-          sudo chmod +x ${{ env.REPO_PATH }}/scripts/deploy.sh ${{ env.REPO_PATH }}/scripts/rollback.sh
-
           # Execute deploy script
+          # Scripts are already executable (set during server preparation)
           # NO git pull - code in /opt is for scripts only
           # Runtime state is managed through /srv/releases/stacks
           $DEPLOY_CMD 2>&1 | tee /tmp/deploy.log
