@@ -164,7 +164,7 @@ fi
 # =============================================================================
 # Configuration
 # =============================================================================
-REPO_ROOT="/opt/seisei-odoo-addons"
+# REPO_ROOT is defined in lib.sh as readonly
 SRC_STACK_DIR="$REPO_ROOT/infra/stacks/$STACK"
 RELEASES_BASE="/srv/releases"
 STACKS_BASE="/srv/stacks"
