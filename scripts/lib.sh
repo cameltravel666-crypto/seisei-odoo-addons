@@ -40,7 +40,7 @@ declare -gA DOMAIN_MAP=(
     ["langbot"]=""
     ["ocr"]="http://172.17.0.1:8180/health"
     ["odoo18-prod"]="https://demo.nagashiro.top"
-    ["odoo18-staging"]="https://staging.erp.seisei.tokyo"
+    ["odoo18-staging"]="https://staging.odoo.seisei.tokyo"
     ["web-seisei"]="https://biznexus.seisei.tokyo"
 )
 
