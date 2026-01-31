@@ -79,9 +79,9 @@ services:
     labels:
       - "traefik.enable=true"
       # =================================================================
-      # Router: staging.erp.seisei.tokyo
+      # Router: staging.odoo.seisei.tokyo
       # =================================================================
-      - "traefik.http.routers.odoo18-staging.rule=Host(`staging.erp.seisei.tokyo`)"
+      - "traefik.http.routers.odoo18-staging.rule=Host(`staging.odoo.seisei.tokyo`)"
       - "traefik.http.routers.odoo18-staging.entrypoints=websecure"
       - "traefik.http.routers.odoo18-staging.tls.certresolver=cloudflare"
       - "traefik.http.routers.odoo18-staging.middlewares=secure-headers@file"
@@ -90,7 +90,7 @@ services:
       - "traefik.http.services.odoo18-staging.loadbalancer.sticky.cookie=true"
       - "traefik.http.services.odoo18-staging.loadbalancer.sticky.cookie.name=odoo_staging_session"
       # Longpolling / WebSocket
-      - "traefik.http.routers.odoo18-staging-lp.rule=Host(`staging.erp.seisei.tokyo`) && (PathPrefix(`/longpolling`) || PathPrefix(`/websocket`))"
+      - "traefik.http.routers.odoo18-staging-lp.rule=Host(`staging.odoo.seisei.tokyo`) && (PathPrefix(`/longpolling`) || PathPrefix(`/websocket`))"
       - "traefik.http.routers.odoo18-staging-lp.entrypoints=websecure"
       - "traefik.http.routers.odoo18-staging-lp.tls.certresolver=cloudflare"
       - "traefik.http.routers.odoo18-staging-lp.middlewares=odoo-websocket@file"
