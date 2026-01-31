@@ -224,7 +224,8 @@ jobs:
           echo ""
 
           # Ensure scripts are executable (deploy.sh should exist in /opt repo)
-          chmod +x ${{ env.REPO_PATH }}/scripts/*.sh
+          # Scripts should already be executable from server setup, but verify with sudo
+          sudo chmod +x ${{ env.REPO_PATH }}/scripts/deploy.sh ${{ env.REPO_PATH }}/scripts/rollback.sh
 
           # Execute deploy script
           # NO git pull - code in /opt is for scripts only

@@ -114,7 +114,8 @@ jobs:
           echo ""
 
           # Ensure scripts are executable
-          chmod +x ${{ env.REPO_PATH }}/scripts/*.sh
+          # Scripts should already be executable from server setup, but verify with sudo
+          sudo chmod +x ${{ env.REPO_PATH }}/scripts/deploy.sh ${{ env.REPO_PATH }}/scripts/rollback.sh
 
           # Execute rollback script
           # NO git pull - code in /opt is for scripts only
