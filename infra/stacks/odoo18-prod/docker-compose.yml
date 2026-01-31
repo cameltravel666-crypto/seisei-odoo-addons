@@ -32,7 +32,8 @@
 services:
   web:
     # Immutable image from GHCR - config and addons baked in
-    image: ghcr.io/${GITHUB_REPO_OWNER}/seisei-odoo18:${ODOO18_IMAGE_TAG:-latest}
+    # IMAGE_REF must include full digest (image@sha256:...) for production deployments
+    image: ${IMAGE_REF}
     container_name: odoo18-prod-web
     restart: unless-stopped
     depends_on:

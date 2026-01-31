@@ -34,6 +34,7 @@ jobs:
     outputs:
       sha_tag: ${{ steps.meta.outputs.tags }}
       short_sha: ${{ steps.vars.outputs.short_sha }}
+      digest: ${{ steps.digest.outputs.digest }}
 
     steps:
       - name: Checkout code
@@ -75,6 +76,7 @@ jobs:
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
 
       - name: Build and push Odoo18 image
+        id: build
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -88,6 +90,15 @@ jobs:
           build-args: |
             BUILD_DATE=${{ github.event.head_commit.timestamp }}
             VCS_REF=${{ github.sha }}
+          outputs: type=image,push=true
+
+      - name: Get image digest
+        id: digest
+        run: |
+          # Get the digest of the pushed image
+          DIGEST=$(docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.OWNER }}/seisei-odoo18:sha-${GITHUB_SHA::7} --format '{{.Manifest.Digest}}')
+          echo "digest=$DIGEST" >> $GITHUB_OUTPUT
+          echo "Image digest: $DIGEST"
 
   build-ocr:
     name: Build OCR Service Image
@@ -95,6 +106,7 @@ jobs:
     outputs:
       sha_tag: ${{ steps.meta.outputs.tags }}
       short_sha: ${{ steps.vars.outputs.short_sha }}
+      digest: ${{ steps.digest.outputs.digest }}
 
     steps:
       - name: Checkout code
@@ -133,6 +145,7 @@ jobs:
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
 
       - name: Build and push OCR image
+        id: build
         uses: docker/build-push-action@v5
         with:
           context: services/ocr_service
@@ -146,32 +159,88 @@ jobs:
           build-args: |
             BUILD_DATE=${{ github.event.head_commit.timestamp }}
             VCS_REF=${{ github.sha }}
+          outputs: type=image,push=true
+
+      - name: Get image digest
+        id: digest
+        run: |
+          # Get the digest of the pushed image
+          DIGEST=$(docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.OWNER }}/seisei-ocr:sha-${GITHUB_SHA::7} --format '{{.Manifest.Digest}}')
+          echo "digest=$DIGEST" >> $GITHUB_OUTPUT
+          echo "Image digest: $DIGEST"
+
+  create-digest-manifest:
+    name: Create Digest Manifest
+    runs-on: ubuntu-latest
+    needs: [build-odoo18, build-ocr]
+    steps:
+      - name: Create digest manifest JSON
+        run: |
+          mkdir -p dist
+
+          cat > dist/image-digests.json << EOF
+          {
+            "git_sha": "${{ github.sha }}",
+            "git_sha7": "${GITHUB_SHA::7}",
+            "built_at_utc": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+            "images": {
+              "seisei-odoo18": {
+                "tag": "sha-${GITHUB_SHA::7}",
+                "ref": "${{ env.REGISTRY }}/${{ env.OWNER }}/seisei-odoo18@${{ needs.build-odoo18.outputs.digest }}",
+                "digest": "${{ needs.build-odoo18.outputs.digest }}"
+              },
+              "seisei-ocr": {
+                "tag": "sha-${GITHUB_SHA::7}",
+                "ref": "${{ env.REGISTRY }}/${{ env.OWNER }}/seisei-ocr@${{ needs.build-ocr.outputs.digest }}",
+                "digest": "${{ needs.build-ocr.outputs.digest }}"
+              }
+            }
+          }
+          EOF
+
+          echo "Digest manifest created:"
+          cat dist/image-digests.json
+
+          # Validate JSON
+          python3 -m json.tool dist/image-digests.json > /dev/null && echo "✅ JSON is valid"
+
+      - name: Upload digest manifest as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-digests
+          path: dist/image-digests.json
+          retention-days: 90
 
   summary:
     name: Build Summary
     runs-on: ubuntu-latest
-    needs: [build-odoo18, build-ocr]
+    needs: [build-odoo18, build-ocr, create-digest-manifest]
     steps:
+      - name: Download digest manifest
+        uses: actions/download-artifact@v4
+        with:
+          name: image-digests
+          path: dist
+
       - name: Output summary
         run: |
           echo "### 🐳 Docker Images Built" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**SHA Tag:** \`sha-${GITHUB_SHA::7}\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Images:**" >> $GITHUB_STEP_SUMMARY
+          echo "**Images with Digests:**" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "${{ env.REGISTRY }}/${{ env.OWNER }}/seisei-odoo18:sha-${GITHUB_SHA::7}" >> $GITHUB_STEP_SUMMARY
-          echo "${{ env.REGISTRY }}/${{ env.OWNER }}/seisei-ocr:sha-${GITHUB_SHA::7}" >> $GITHUB_STEP_SUMMARY
+          echo "${{ env.REGISTRY }}/${{ env.OWNER }}/seisei-odoo18@${{ needs.build-odoo18.outputs.digest }}" >> $GITHUB_STEP_SUMMARY
+          echo "${{ env.REGISTRY }}/${{ env.OWNER }}/seisei-ocr@${{ needs.build-ocr.outputs.digest }}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Digest Manifest:**" >> $GITHUB_STEP_SUMMARY
+          echo '```json' >> $GITHUB_STEP_SUMMARY
+          cat dist/image-digests.json >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Deploy to staging:**" >> $GITHUB_STEP_SUMMARY
           echo '```bash' >> $GITHUB_STEP_SUMMARY
-          echo "# Use GitHub Actions deploy workflow, or on server:" >> $GITHUB_STEP_SUMMARY
-          echo "sudo /opt/seisei-odoo-addons/scripts/deploy.sh odoo18-staging staging sha-${GITHUB_SHA::7}" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Verify images:**" >> $GITHUB_STEP_SUMMARY
-          echo '```bash' >> $GITHUB_STEP_SUMMARY
-          echo "docker manifest inspect ${{ env.REGISTRY }}/${{ env.OWNER }}/seisei-odoo18:sha-${GITHUB_SHA::7}" >> $GITHUB_STEP_SUMMARY
-          echo "docker manifest inspect ${{ env.REGISTRY }}/${{ env.OWNER }}/seisei-ocr:sha-${GITHUB_SHA::7}" >> $GITHUB_STEP_SUMMARY
+          echo "# Use GitHub Actions deploy workflow with digest-file artifact" >> $GITHUB_STEP_SUMMARY
+          echo "# Digest manifest is available as artifact: image-digests" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY

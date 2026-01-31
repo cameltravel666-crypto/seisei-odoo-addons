@@ -18,7 +18,8 @@ services:
       retries: 5
 
   app:
-    image: ghcr.io/seisei/erp:${VERSION:-latest}
+    # IMAGE_REF must include full digest (image@sha256:...) for production deployments
+    image: ${IMAGE_REF}
     container_name: seisei-erp-app
     restart: unless-stopped
     environment:

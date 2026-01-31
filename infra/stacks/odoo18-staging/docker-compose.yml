@@ -33,7 +33,8 @@
 services:
   web:
     # SAME image as production - only configuration differs
-    image: ghcr.io/${GITHUB_REPO_OWNER}/seisei-odoo18:${ODOO18_IMAGE_TAG:-latest}
+    # IMAGE_REF must include full digest (image@sha256:...) for staging deployments
+    image: ${IMAGE_REF}
     container_name: odoo18-staging-web
     restart: unless-stopped
     depends_on:

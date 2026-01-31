@@ -1,108 +1,139 @@
-name: Deploy to Server
+name: Deploy to Environment
 
 on:
   workflow_dispatch:
     inputs:
-      stack:
-        description: 'Stack to deploy'
+      environment:
+        description: 'Target environment'
         required: true
         type: choice
         options:
-          - odoo18-staging
-          - odoo18-prod
-          - web-seisei
-          - ocr
-          - langbot
-          - edge-traefik
-      sha:
-        description: 'SHA tag (e.g., sha-19b9b98 or just 19b9b98)'
+          - staging
+          - production
+      stack:
+        description: 'Stack to deploy (odoo18-staging, odoo18-prod, erp-seisei, etc.)'
         required: true
         type: string
-      promote_to_prod:
-        description: 'Auto-promote to production after staging success (odoo18-staging only)'
+      image_tag:
+        description: 'Image tag (must be sha-xxxxxxx format, e.g., sha-abc123)'
+        required: true
+        type: string
+      break_glass:
+        description: '[PRODUCTION ONLY] Emergency bypass of verified gate'
         required: false
         type: boolean
         default: false
+      break_glass_reason:
+        description: '[Required with break_glass] Emergency reason'
+        required: false
+        type: string
 
 permissions:
   contents: read
 
 env:
-  SSH_HOST: ${{ secrets.DEPLOY_SSH_HOST || '47.245.12.205' }}
-  SSH_USER: ${{ secrets.DEPLOY_SSH_USER || 'root' }}
+  SSH_HOST: ${{ secrets.DEPLOY_SSH_HOST || '54.65.127.141' }}
+  SSH_USER: ${{ secrets.DEPLOY_SSH_USER || 'ubuntu' }}
   REPO_PATH: /opt/seisei-odoo-addons
 
 jobs:
-  validate:
-    name: Validate Input
+  deploy:
+    name: Deploy ${{ inputs.stack }} to ${{ inputs.environment }}
     runs-on: ubuntu-latest
-    outputs:
-      stack: ${{ steps.validate.outputs.stack }}
-      env: ${{ steps.validate.outputs.env }}
-      sha_tag: ${{ steps.validate.outputs.sha_tag }}
-      promote: ${{ steps.validate.outputs.promote }}
+    # Use GitHub Environments for protection rules (approval, secrets, etc.)
+    environment: ${{ inputs.environment }}
 
     steps:
-      - name: Validate and normalize inputs
-        id: validate
+      - name: Validate inputs
         run: |
           STACK="${{ inputs.stack }}"
-          SHA_INPUT="${{ inputs.sha }}"
-          PROMOTE="${{ inputs.promote_to_prod }}"
+          ENV="${{ inputs.environment }}"
+          IMAGE_TAG="${{ inputs.image_tag }}"
+          BREAK_GLASS="${{ inputs.break_glass }}"
+          BREAK_GLASS_REASON="${{ inputs.break_glass_reason }}"
 
-          # Normalize SHA tag
-          if [[ "$SHA_INPUT" == sha-* ]]; then
-            SHA_TAG="$SHA_INPUT"
-          else
-            SHA_TAG="sha-$SHA_INPUT"
+          # Validate image tag format
+          if [[ ! "$IMAGE_TAG" =~ ^sha-[a-f0-9]{7}$ ]]; then
+            echo "::error::Invalid image_tag format: $IMAGE_TAG"
+            echo "::error::Must be sha-xxxxxxx (7 hex chars)"
+            exit 1
           fi
 
-          # Map stack to environment
+          # Validate stack
           case "$STACK" in
-            odoo18-staging)
-              ENV="staging"
-              ;;
-            odoo18-prod)
-              ENV="prod"
-              ;;
-            web-seisei|ocr|langbot)
-              ENV="prod"
-              ;;
-            edge-traefik)
-              ENV="infra"
+            odoo18-staging|odoo18-prod|erp-seisei|erp-seisei-staging|ocr)
               ;;
             *)
               echo "::error::Unknown stack: $STACK"
+              echo "::error::Supported: odoo18-staging, odoo18-prod, erp-seisei, erp-seisei-staging, ocr"
               exit 1
               ;;
           esac
 
-          # Validate promotion
-          if [ "$PROMOTE" = "true" ] && [ "$STACK" != "odoo18-staging" ]; then
-            echo "::error::promote_to_prod only valid for odoo18-staging"
-            exit 1
+          # Validate break-glass logic
+          if [ "$BREAK_GLASS" = "true" ]; then
+            if [ "$ENV" != "production" ]; then
+              echo "::warning::break_glass only meaningful for production"
+            fi
+            if [ -z "$BREAK_GLASS_REASON" ]; then
+              echo "::error::break_glass requires break_glass_reason"
+              exit 1
+            fi
           fi
-
-          echo "stack=$STACK" >> $GITHUB_OUTPUT
-          echo "env=$ENV" >> $GITHUB_OUTPUT
-          echo "sha_tag=$SHA_TAG" >> $GITHUB_OUTPUT
-          echo "promote=$PROMOTE" >> $GITHUB_OUTPUT
 
           echo "### Deployment Configuration" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Stack:** \`$STACK\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Environment:** \`$ENV\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **SHA Tag:** \`$SHA_TAG\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Auto-promote:** \`$PROMOTE\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image Tag:** \`$IMAGE_TAG\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Actor:** \`${{ github.actor }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Run ID:** \`${{ github.run_id }}\`" >> $GITHUB_STEP_SUMMARY
+          if [ "$BREAK_GLASS" = "true" ]; then
+            echo "- **⚠️ Break-glass:** \`$BREAK_GLASS_REASON\`" >> $GITHUB_STEP_SUMMARY
+          fi
 
-  deploy:
-    name: Deploy ${{ needs.validate.outputs.stack }}
-    runs-on: ubuntu-latest
-    needs: validate
-    outputs:
-      deploy_status: ${{ steps.deploy.outputs.status }}
+      - name: Download digest manifest from build
+        uses: actions/download-artifact@v4
+        with:
+          # Match the image_tag to find the corresponding build artifact
+          # Artifact name is always "image-digests" from build_ghcr.yml
+          name: image-digests
+          path: dist
+          # Note: This requires the build workflow to have completed
+          # The artifact is created by build_ghcr.yml::create-digest-manifest job
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
-    steps:
+      - name: Verify digest manifest
+        run: |
+          if [ ! -f dist/image-digests.json ]; then
+            echo "::error::Digest manifest not found: dist/image-digests.json"
+            echo "::error::Make sure build workflow has run for this image_tag"
+            exit 1
+          fi
+
+          echo "Digest manifest content:"
+          cat dist/image-digests.json
+
+          # Validate JSON
+          jq empty dist/image-digests.json || {
+            echo "::error::Invalid JSON in digest manifest"
+            exit 1
+          }
+
+          # Validate manifest contains our image_tag
+          MANIFEST_TAG=$(jq -r '.git_sha7' dist/image-digests.json)
+          EXPECTED_TAG="${{ inputs.image_tag }}"
+          EXPECTED_SHA7=$(echo "$EXPECTED_TAG" | sed 's/^sha-//')
+
+          if [ "$MANIFEST_TAG" != "$EXPECTED_SHA7" ]; then
+            echo "::error::Digest manifest SHA mismatch"
+            echo "::error::Expected: $EXPECTED_SHA7, Got: $MANIFEST_TAG"
+            echo "::error::Make sure you downloaded the correct build artifact"
+            exit 1
+          fi
+
+          echo "✅ Digest manifest validated"
+
       - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
@@ -112,71 +143,98 @@ jobs:
           # Add known_hosts
           ssh-keyscan -H ${{ env.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
 
+      - name: Upload digest manifest to server
+        run: |
+          # Upload digest manifest to server temp directory
+          scp -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=accept-new \
+            dist/image-digests.json \
+            ${{ env.SSH_USER }}@${{ env.SSH_HOST }}:/tmp/image-digests.json
+
+          echo "✅ Digest manifest uploaded to server: /tmp/image-digests.json"
+
       - name: Deploy to server
         id: deploy
         run: |
-          STACK="${{ needs.validate.outputs.stack }}"
-          ENV="${{ needs.validate.outputs.env }}"
-          SHA_TAG="${{ needs.validate.outputs.sha_tag }}"
+          STACK="${{ inputs.stack }}"
+          ENV="${{ inputs.environment }}"
+          IMAGE_TAG="${{ inputs.image_tag }}"
+          BREAK_GLASS="${{ inputs.break_glass }}"
+          BREAK_GLASS_REASON="${{ inputs.break_glass_reason }}"
+          ACTOR="${{ github.actor }}"
+          RUN_ID="${{ github.run_id }}"
 
-          echo "::group::Deploying $STACK ($ENV) with $SHA_TAG"
+          echo "::group::Deploying $STACK ($ENV) with $IMAGE_TAG"
 
-          # Execute deployment via SSH
+          # Build deploy command
+          DEPLOY_CMD="sudo ${{ env.REPO_PATH }}/scripts/deploy.sh \"$STACK\" \"$ENV\" \"$IMAGE_TAG\" \
+            --digest-file /tmp/image-digests.json \
+            --actor \"$ACTOR\" \
+            --run-id \"$RUN_ID\""
+
+          if [ "$BREAK_GLASS" = "true" ]; then
+            DEPLOY_CMD="$DEPLOY_CMD --break-glass --reason \"$BREAK_GLASS_REASON\""
+          fi
+
+          # Execute deployment via SSH (NO git pull - immutable release pattern)
           ssh -i ~/.ssh/deploy_key \
             -o StrictHostKeyChecking=accept-new \
             -o ConnectTimeout=10 \
-            ${{ env.SSH_USER }}@${{ env.SSH_HOST }} bash -s <<'ENDSSH'
+            ${{ env.SSH_USER }}@${{ env.SSH_HOST }} bash -s <<ENDSSH
           set -euo pipefail
 
-          # Navigate to repo
-          cd ${{ env.REPO_PATH }}
+          echo "=========================================="
+          echo "Image as Source of Truth Deployment"
+          echo "Stack:       $STACK"
+          echo "Environment: $ENV"
+          echo "Image Tag:   $IMAGE_TAG"
+          echo "Actor:       $ACTOR"
+          echo "Run ID:      $RUN_ID"
+          echo "=========================================="
+          echo ""
 
-          # Update repo (optional - ensure scripts are latest)
-          git fetch origin main
-          git checkout main
-          git pull origin main
-
-          # Ensure scripts executable
-          chmod +x ${{ env.REPO_PATH }}/scripts/*.sh
-
-          # Note: Required directories already created by server_bootstrap_deployer.sh
-          # /srv/stacks, /srv/backups, /srv/releases/verified owned by deployer
-
-          # Run deployment
-          STACK="${{ needs.validate.outputs.stack }}"
-          ENV="${{ needs.validate.outputs.env }}"
-          SHA_TAG="${{ needs.validate.outputs.sha_tag }}"
-
-          echo "Deploying $STACK ($ENV) with $SHA_TAG"
-
-          # For odoo18-prod, enforce staging verification
-          if [ "$STACK" = "odoo18-prod" ]; then
-            VERIFIED_SHA=$(cat /srv/releases/verified/odoo18-staging.txt 2>/dev/null || echo "")
-            if [ "$VERIFIED_SHA" != "$SHA_TAG" ]; then
-              echo "::error::Production deployment blocked: $SHA_TAG not verified in staging"
-              echo "Verified version: $VERIFIED_SHA"
-              echo "Requested version: $SHA_TAG"
-              exit 1
-            fi
-            echo "✅ Version $SHA_TAG verified in staging"
+          # Verify digest file exists on server
+          if [ ! -f /tmp/image-digests.json ]; then
+            echo "::error::Digest manifest not found on server: /tmp/image-digests.json"
+            exit 1
           fi
 
-          # Execute deploy script with sudo (MUST use absolute path for sudoers NOPASSWD rule)
-          sudo ${{ env.REPO_PATH }}/scripts/deploy.sh "$STACK" "$ENV" "$SHA_TAG" 2>&1 | tee /tmp/deploy.log
+          echo "Digest manifest on server:"
+          cat /tmp/image-digests.json
+          echo ""
 
-          # Check exit status (script will exit 1 on failure)
-          if [ ${PIPESTATUS[0]} -eq 0 ]; then
+          # Ensure scripts are executable (deploy.sh should exist in /opt repo)
+          chmod +x ${{ env.REPO_PATH }}/scripts/*.sh
+
+          # Execute deploy script
+          # NO git pull - code in /opt is for scripts only
+          # Runtime state is managed through /srv/releases/stacks
+          $DEPLOY_CMD 2>&1 | tee /tmp/deploy.log
+
+          # Check exit status
+          EXIT_CODE=\${PIPESTATUS[0]}
+          if [ \$EXIT_CODE -eq 0 ]; then
+            echo ""
             echo "✅ Deployment successful"
+
+            # Display current manifest
+            if [ -f /srv/releases/current/${STACK}.json ]; then
+              echo ""
+              echo "Current deployment manifest:"
+              cat /srv/releases/current/${STACK}.json | jq .
+            fi
+
             exit 0
           else
-            echo "❌ Deployment failed"
-            exit 1
+            echo ""
+            echo "❌ Deployment failed (exit code: \$EXIT_CODE)"
+            exit \$EXIT_CODE
           fi
           ENDSSH
 
           echo "::endgroup::"
 
-          # Set GitHub Actions output based on SSH command result
+          # Set output based on result
           if [ $? -eq 0 ]; then
             echo "status=success" >> $GITHUB_OUTPUT
           else
@@ -187,15 +245,12 @@ jobs:
       - name: Capture deployment results
         if: always()
         run: |
-          STACK="${{ needs.validate.outputs.stack }}"
-          ENV="${{ needs.validate.outputs.env }}"
-          SHA_TAG="${{ needs.validate.outputs.sha_tag }}"
+          STACK="${{ inputs.stack }}"
+          ENV="${{ inputs.environment }}"
+          IMAGE_TAG="${{ inputs.image_tag }}"
 
           echo "### Deployment Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **Stack:** \`$STACK\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Environment:** \`$ENV\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **SHA Tag:** \`$SHA_TAG\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Status:** \`${{ steps.deploy.outputs.status || 'failed' }}\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
@@ -204,67 +259,29 @@ jobs:
             -o StrictHostKeyChecking=accept-new \
             ${{ env.SSH_USER }}@${{ env.SSH_HOST }} bash -s <<'ENDSSH' >> $GITHUB_STEP_SUMMARY
 
-          echo "**Recent deployment history:**"
-          echo '```'
-          grep "${{ needs.validate.outputs.stack }}" /srv/deploy-history.log | tail -5 || echo "No history found"
+          echo "**Current deployment manifest:**"
+          echo '```json'
+          cat /srv/releases/current/${{ inputs.stack }}.json 2>/dev/null | jq . || echo "Manifest not found"
           echo '```'
           echo ""
 
-          # Check running containers
+          echo "**Recent deployment history:**"
+          echo '```'
+          grep "${{ inputs.stack }}" /srv/releases/deploy_history.log 2>/dev/null | tail -5 || echo "No history found"
+          echo '```'
+          echo ""
+
           echo "**Running containers:**"
           echo '```'
-          cd /srv/stacks/${{ needs.validate.outputs.stack }}
-          sudo docker compose ps 2>/dev/null || echo "No containers found"
+          cd /srv/stacks/${{ inputs.stack }} 2>/dev/null && sudo docker compose ps || echo "Stack not found"
+          echo '```'
+          echo ""
+
+          echo "**Symlink verification:**"
+          echo '```'
+          readlink -f /srv/stacks/${{ inputs.stack }} || echo "Symlink not found"
           echo '```'
           ENDSSH
-
-      - name: Cleanup SSH key
-        if: always()
-        run: |
-          rm -f ~/.ssh/deploy_key
-
-  promote-to-prod:
-    name: Promote to Production
-    runs-on: ubuntu-latest
-    needs: [validate, deploy]
-    if: needs.validate.outputs.promote == 'true' && needs.validate.outputs.stack == 'odoo18-staging' && needs.deploy.outputs.deploy_status == 'success'
-
-    steps:
-      - name: Setup SSH key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ env.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
-
-      - name: Deploy to production
-        run: |
-          SHA_TAG="${{ needs.validate.outputs.sha_tag }}"
-
-          echo "::group::Auto-promoting to production: $SHA_TAG"
-
-          ssh -i ~/.ssh/deploy_key \
-            -o StrictHostKeyChecking=accept-new \
-            ${{ env.SSH_USER }}@${{ env.SSH_HOST }} bash -s <<ENDSSH
-          set -euo pipefail
-          cd ${{ env.REPO_PATH }}
-
-          echo "Deploying odoo18-prod with verified version: $SHA_TAG"
-          sudo ${{ env.REPO_PATH }}/scripts/deploy.sh odoo18-prod prod $SHA_TAG 2>&1 | tee /tmp/deploy-prod.log
-
-          if [ \${PIPESTATUS[0]} -eq 0 ]; then
-            echo "✅ Production deployment successful"
-          else
-            echo "❌ Production deployment failed"
-            exit 1
-          fi
-          ENDSSH
-
-          echo "::endgroup::"
-
-          echo "### Production Promotion" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Successfully promoted \`$SHA_TAG\` to production" >> $GITHUB_STEP_SUMMARY
 
       - name: Cleanup SSH key
         if: always()

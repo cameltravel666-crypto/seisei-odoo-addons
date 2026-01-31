@@ -3,104 +3,70 @@ name: Rollback Deployment
 on:
   workflow_dispatch:
     inputs:
-      stack:
-        description: 'Stack to rollback'
+      environment:
+        description: 'Target environment'
         required: true
         type: choice
         options:
-          - odoo18-staging
-          - odoo18-prod
-          - web-seisei
-          - ocr
-          - langbot
-          - edge-traefik
+          - staging
+          - production
+      stack:
+        description: 'Stack to rollback (odoo18-staging, odoo18-prod, erp-seisei, etc.)'
+        required: true
+        type: string
       steps_back:
-        description: 'Number of deployments to rollback (default: 1)'
+        description: 'Number of successful deployments to rollback (default: 1)'
         required: false
         type: number
         default: 1
-      target_sha:
-        description: 'Target SHA to rollback to (optional, overrides steps_back)'
-        required: false
-        type: string
 
 permissions:
   contents: read
 
 env:
-  SSH_HOST: ${{ secrets.DEPLOY_SSH_HOST || '47.245.12.205' }}
-  SSH_USER: ${{ secrets.DEPLOY_SSH_USER || 'root' }}
+  SSH_HOST: ${{ secrets.DEPLOY_SSH_HOST || '54.65.127.141' }}
+  SSH_USER: ${{ secrets.DEPLOY_SSH_USER || 'ubuntu' }}
   REPO_PATH: /opt/seisei-odoo-addons
 
 jobs:
-  validate:
-    name: Validate Input
+  rollback:
+    name: Rollback ${{ inputs.stack }} in ${{ inputs.environment }}
     runs-on: ubuntu-latest
-    outputs:
-      stack: ${{ steps.validate.outputs.stack }}
-      env: ${{ steps.validate.outputs.env }}
-      steps_back: ${{ steps.validate.outputs.steps_back }}
-      target_sha: ${{ steps.validate.outputs.target_sha }}
+    # Use GitHub Environments for protection rules
+    environment: ${{ inputs.environment }}
 
     steps:
-      - name: Validate and normalize inputs
-        id: validate
+      - name: Validate inputs
         run: |
           STACK="${{ inputs.stack }}"
+          ENV="${{ inputs.environment }}"
           STEPS_BACK="${{ inputs.steps_back }}"
-          TARGET_SHA="${{ inputs.target_sha }}"
 
-          # Map stack to environment
+          # Validate stack
           case "$STACK" in
-            odoo18-staging)
-              ENV="staging"
-              ;;
-            odoo18-prod)
-              ENV="prod"
-              ;;
-            web-seisei|ocr|langbot)
-              ENV="prod"
-              ;;
-            edge-traefik)
-              ENV="infra"
+            odoo18-staging|odoo18-prod|erp-seisei|erp-seisei-staging|ocr)
               ;;
             *)
               echo "::error::Unknown stack: $STACK"
+              echo "::error::Supported: odoo18-staging, odoo18-prod, erp-seisei, erp-seisei-staging, ocr"
               exit 1
               ;;
           esac
 
-          # Normalize target SHA if provided
-          if [ -n "$TARGET_SHA" ]; then
-            if [[ "$TARGET_SHA" != sha-* ]]; then
-              TARGET_SHA="sha-$TARGET_SHA"
-            fi
+          # Validate steps_back
+          if [ "$STEPS_BACK" -lt 1 ]; then
+            echo "::error::steps_back must be >= 1"
+            exit 1
           fi
-
-          echo "stack=$STACK" >> $GITHUB_OUTPUT
-          echo "env=$ENV" >> $GITHUB_OUTPUT
-          echo "steps_back=$STEPS_BACK" >> $GITHUB_OUTPUT
-          echo "target_sha=$TARGET_SHA" >> $GITHUB_OUTPUT
 
           echo "### Rollback Configuration" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Stack:** \`$STACK\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Environment:** \`$ENV\`" >> $GITHUB_STEP_SUMMARY
-          if [ -n "$TARGET_SHA" ]; then
-            echo "- **Target SHA:** \`$TARGET_SHA\`" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "- **Steps Back:** \`$STEPS_BACK\`" >> $GITHUB_STEP_SUMMARY
-          fi
+          echo "- **Steps Back:** \`$STEPS_BACK\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Actor:** \`${{ github.actor }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Run ID:** \`${{ github.run_id }}\`" >> $GITHUB_STEP_SUMMARY
 
-  rollback:
-    name: Rollback ${{ needs.validate.outputs.stack }}
-    runs-on: ubuntu-latest
-    needs: validate
-    outputs:
-      rollback_status: ${{ steps.rollback.outputs.status }}
-      rollback_target: ${{ steps.rollback.outputs.target }}
-
-    steps:
       - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
@@ -113,70 +79,87 @@ jobs:
       - name: Execute rollback
         id: rollback
         run: |
-          STACK="${{ needs.validate.outputs.stack }}"
-          ENV="${{ needs.validate.outputs.env }}"
-          STEPS_BACK="${{ needs.validate.outputs.steps_back }}"
-          TARGET_SHA="${{ needs.validate.outputs.target_sha }}"
+          STACK="${{ inputs.stack }}"
+          ENV="${{ inputs.environment }}"
+          STEPS_BACK="${{ inputs.steps_back }}"
+          ACTOR="${{ github.actor }}"
+          RUN_ID="${{ github.run_id }}"
 
-          echo "::group::Rolling back $STACK ($ENV)"
+          echo "::group::Rolling back $STACK ($ENV) by $STEPS_BACK steps"
 
-          # Execute rollback via SSH
+          # Execute rollback via SSH (NO git pull - immutable release pattern)
           ssh -i ~/.ssh/deploy_key \
             -o StrictHostKeyChecking=accept-new \
             -o ConnectTimeout=10 \
-            ${{ env.SSH_USER }}@${{ env.SSH_HOST }} bash -s <<'ENDSSH'
+            ${{ env.SSH_USER }}@${{ env.SSH_HOST }} bash -s <<ENDSSH
           set -euo pipefail
 
-          # Navigate to repo
-          cd ${{ env.REPO_PATH }}
+          echo "=========================================="
+          echo "Image as Source of Truth Rollback"
+          echo "Stack:       $STACK"
+          echo "Environment: $ENV"
+          echo "Steps Back:  $STEPS_BACK"
+          echo "Actor:       $ACTOR"
+          echo "Run ID:      $RUN_ID"
+          echo "=========================================="
+          echo ""
 
-          # Update repo to ensure latest rollback script
-          git fetch origin main
-          git checkout main
-          git pull origin main
+          # Display current state
+          echo "Current deployment manifest:"
+          if [ -f /srv/releases/current/${STACK}.json ]; then
+            cat /srv/releases/current/${STACK}.json | jq .
+          else
+            echo "No current manifest found"
+          fi
+          echo ""
 
-          # Ensure scripts executable
+          # Ensure scripts are executable
           chmod +x ${{ env.REPO_PATH }}/scripts/*.sh
 
-          # Build rollback command
-          STACK="${{ needs.validate.outputs.stack }}"
-          ENV="${{ needs.validate.outputs.env }}"
-          STEPS_BACK="${{ needs.validate.outputs.steps_back }}"
-          TARGET_SHA="${{ needs.validate.outputs.target_sha }}"
+          # Execute rollback script
+          # NO git pull - code in /opt is for scripts only
+          # Runtime state is managed through /srv/releases/stacks
+          sudo ${{ env.REPO_PATH }}/scripts/rollback.sh "$STACK" "$ENV" \
+            --steps "$STEPS_BACK" \
+            --actor "$ACTOR" \
+            --run-id "$RUN_ID" 2>&1 | tee /tmp/rollback.log
 
-          if [ -n "$TARGET_SHA" ]; then
-            echo "Rolling back to specific SHA: $TARGET_SHA"
-            sudo ${{ env.REPO_PATH }}/scripts/rollback.sh "$STACK" "$ENV" --to "$TARGET_SHA" 2>&1 | tee /tmp/rollback.log
-          else
-            echo "Rolling back $STEPS_BACK steps"
-            sudo ${{ env.REPO_PATH }}/scripts/rollback.sh "$STACK" "$ENV" --steps "$STEPS_BACK" 2>&1 | tee /tmp/rollback.log
-          fi
-
-          # Check rollback status
-          if [ ${PIPESTATUS[0]} -eq 0 ]; then
+          # Check exit status
+          EXIT_CODE=\${PIPESTATUS[0]}
+          if [ \$EXIT_CODE -eq 0 ]; then
+            echo ""
             echo "✅ Rollback successful"
+
+            # Display new current manifest
+            if [ -f /srv/releases/current/${STACK}.json ]; then
+              echo ""
+              echo "New deployment manifest:"
+              cat /srv/releases/current/${STACK}.json | jq .
+            fi
+
             exit 0
           else
-            echo "❌ Rollback failed"
-            exit 1
+            echo ""
+            echo "❌ Rollback failed (exit code: \$EXIT_CODE)"
+            exit \$EXIT_CODE
           fi
           ENDSSH
 
           ROLLBACK_EXIT_CODE=$?
           echo "::endgroup::"
 
-          # Set GitHub Actions outputs based on SSH result
+          # Set output based on result
           if [ $ROLLBACK_EXIT_CODE -eq 0 ]; then
             echo "status=success" >> $GITHUB_OUTPUT
 
-            # Get the rolled back version from the remote server
-            ROLLBACK_IMAGE=$(ssh -i ~/.ssh/deploy_key \
+            # Get rolled back version from current manifest
+            ROLLBACK_TAG=$(ssh -i ~/.ssh/deploy_key \
               -o StrictHostKeyChecking=accept-new \
               ${{ env.SSH_USER }}@${{ env.SSH_HOST }} \
-              "cd /srv/stacks/${{ needs.validate.outputs.stack }} && sudo docker compose ps --format json | jq -r '.[0].Image' | awk -F: '{print \$NF}'")
+              "cat /srv/releases/current/${{ inputs.stack }}.json 2>/dev/null | jq -r '.image_tag' || echo 'unknown'")
 
-            echo "target=${ROLLBACK_IMAGE:-unknown}" >> $GITHUB_OUTPUT
-            echo "Rolled back to: ${ROLLBACK_IMAGE:-unknown}"
+            echo "target=${ROLLBACK_TAG}" >> $GITHUB_OUTPUT
+            echo "Rolled back to: ${ROLLBACK_TAG}"
           else
             echo "status=failed" >> $GITHUB_OUTPUT
             echo "target=unknown" >> $GITHUB_OUTPUT
@@ -186,13 +169,11 @@ jobs:
       - name: Capture rollback results
         if: always()
         run: |
-          STACK="${{ needs.validate.outputs.stack }}"
-          ENV="${{ needs.validate.outputs.env }}"
+          STACK="${{ inputs.stack }}"
+          ENV="${{ inputs.environment }}"
 
           echo "### Rollback Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **Stack:** \`$STACK\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Environment:** \`$ENV\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Status:** \`${{ steps.rollback.outputs.status || 'failed' }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Rolled back to:** \`${{ steps.rollback.outputs.target || 'unknown' }}\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -202,37 +183,27 @@ jobs:
             -o StrictHostKeyChecking=accept-new \
             ${{ env.SSH_USER }}@${{ env.SSH_HOST }} bash -s <<'ENDSSH' >> $GITHUB_STEP_SUMMARY
 
+          echo "**Current deployment manifest:**"
+          echo '```json'
+          cat /srv/releases/current/${{ inputs.stack }}.json 2>/dev/null | jq . || echo "Manifest not found"
+          echo '```'
+          echo ""
+
           echo "**Recent deployment history:**"
           echo '```'
-          grep "${{ needs.validate.outputs.stack }}" /srv/deploy-history.log | tail -10 || echo "No history found"
+          grep "${{ inputs.stack }}" /srv/releases/deploy_history.log 2>/dev/null | tail -10 || echo "No history found"
           echo '```'
           echo ""
 
-          # Check running containers
           echo "**Running containers:**"
           echo '```'
-          cd /srv/stacks/${{ needs.validate.outputs.stack }}
-          sudo docker compose ps 2>/dev/null || echo "No containers found"
+          cd /srv/stacks/${{ inputs.stack }} 2>/dev/null && sudo docker compose ps || echo "Stack not found"
           echo '```'
           echo ""
 
-          # Domain health check
-          echo "**Domain health check:**"
+          echo "**Symlink verification:**"
           echo '```'
-          case "${{ needs.validate.outputs.stack }}" in
-            odoo18-prod)
-              curl -I https://demo.nagashiro.top/nginx-health 2>&1 | head -5
-              ;;
-            odoo18-staging)
-              curl -I https://staging.erp.seisei.tokyo/nginx-health 2>&1 | head -5
-              ;;
-            web-seisei)
-              curl -I https://biznexus.seisei.tokyo 2>&1 | head -5
-              ;;
-            ocr)
-              curl http://localhost:8180/health 2>&1 | head -5
-              ;;
-          esac
+          readlink -f /srv/stacks/${{ inputs.stack }} || echo "Symlink not found"
           echo '```'
           ENDSSH
 
