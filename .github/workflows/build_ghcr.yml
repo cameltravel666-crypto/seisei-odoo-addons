@@ -95,10 +95,9 @@ jobs:
       - name: Get image digest
         id: digest
         run: |
-          # Get the digest of the pushed image
-          DIGEST=$(docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.OWNER }}/seisei-odoo18:sha-${GITHUB_SHA::7} --format '{{.Manifest.Digest}}')
-          echo "digest=$DIGEST" >> $GITHUB_OUTPUT
-          echo "Image digest: $DIGEST"
+          # Use the digest from the build step output
+          echo "digest=${{ steps.build.outputs.digest }}" >> $GITHUB_OUTPUT
+          echo "Image digest: ${{ steps.build.outputs.digest }}"
 
   build-ocr:
     name: Build OCR Service Image
@@ -164,10 +163,9 @@ jobs:
       - name: Get image digest
         id: digest
         run: |
-          # Get the digest of the pushed image
-          DIGEST=$(docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.OWNER }}/seisei-ocr:sha-${GITHUB_SHA::7} --format '{{.Manifest.Digest}}')
-          echo "digest=$DIGEST" >> $GITHUB_OUTPUT
-          echo "Image digest: $DIGEST"
+          # Use the digest from the build step output
+          echo "digest=${{ steps.build.outputs.digest }}" >> $GITHUB_OUTPUT
+          echo "Image digest: ${{ steps.build.outputs.digest }}"
 
   create-digest-manifest:
     name: Create Digest Manifest
