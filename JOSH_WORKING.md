@@ -71,11 +71,11 @@
 
 ### 部署环境
 
-我们有两个独立的运行环境：
+我们有两个**完整的**独立运行环境：
 
 | 环境 | 用途 | Odoo访问地址 | BizNexus访问地址 | 谁在用 |
 |------|------|-------------|-----------------|--------|
-| **Staging（测试）** | 测试新功能 | https://staging.erp.seisei.tokyo | (使用生产BizNexus) | 内部团队 |
+| **Staging（测试）** | 测试新功能 | https://staging.erp.seisei.tokyo | https://staging.biznexus.seisei.tokyo | 内部团队 |
 | **Production（生产）** | 正式运营 | https://*.erp.seisei.tokyo<br>https://demo.nagashiro.top | https://biznexus.seisei.tokyo | 客户使用 |
 
 **重要理解：**
@@ -151,10 +151,11 @@
 3. 按照功能需求文档测试新功能
 
 **B. 如果是 BizNexus 前端功能（客户界面）**
-1. 打开浏览器访问：https://biznexus.seisei.tokyo
+1. 打开浏览器访问：**https://staging.biznexus.seisei.tokyo** ✅
 2. 使用测试账号登录
 3. 验证前端界面的新功能
 4. （可选）如果需要，也检查 Odoo 后台数据是否正确
+   - 访问 https://staging.erp.seisei.tokyo 查看后台数据
 
 **验收检查表：**
 - [ ] 功能是否按照需求实现
