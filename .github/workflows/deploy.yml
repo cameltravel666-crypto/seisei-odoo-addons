@@ -52,10 +52,10 @@ jobs:
           BREAK_GLASS="${{ inputs.break_glass }}"
           BREAK_GLASS_REASON="${{ inputs.break_glass_reason }}"
 
-          # Validate image tag format
-          if [[ ! "$IMAGE_TAG" =~ ^sha-[a-f0-9]{7}$ ]]; then
+          # Validate image tag format (sha-xxxxxxx where x is hex)
+          if ! echo "$IMAGE_TAG" | grep -qE '^sha-[0-9a-f]{7}$'; then
             echo "::error::Invalid image_tag format: $IMAGE_TAG"
-            echo "::error::Must be sha-xxxxxxx (7 hex chars)"
+            echo "::error::Must be sha-xxxxxxx (7 hex chars, lowercase)"
             exit 1
           fi
 
