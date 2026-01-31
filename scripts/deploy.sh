@@ -397,7 +397,18 @@ fi
 
 # Atomic symlink update
 log_info "Switching $SYMLINK_TARGET -> $RELEASE_DIR ..."
-ln -sfn "$RELEASE_DIR" "$SYMLINK_TARGET" || fail "Failed to create symlink"
+
+# If target exists and is a directory (not a symlink), we need to remove it first
+# ln -sfn will create a link INSIDE a directory instead of replacing it
+if [ -e "$SYMLINK_TARGET" ] && [ ! -L "$SYMLINK_TARGET" ]; then
+    log_warn "Target is a real directory, backing up and removing..."
+    mv "$SYMLINK_TARGET" "${SYMLINK_TARGET}.backup-$(date +%Y%m%d-%H%M%S)" || fail "Failed to backup existing directory"
+fi
+
+# Create symlink atomically using temporary + mv approach
+TEMP_LINK="${SYMLINK_TARGET}.tmp.$$"
+ln -sfn "$RELEASE_DIR" "$TEMP_LINK" || fail "Failed to create temporary symlink"
+mv -T "$TEMP_LINK" "$SYMLINK_TARGET" || fail "Failed to move symlink atomically"
 log_success "Symlink updated: $SYMLINK_TARGET -> $RELEASE_DIR"
 
 # Verify symlink
