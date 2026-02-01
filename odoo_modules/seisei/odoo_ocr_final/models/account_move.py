@@ -79,7 +79,7 @@ class AccountMove(models.Model):
 
             # Update usage and get cost
             OcrUsage = self.env['ocr.usage']
-            billing = OcrUsage.increment_usage(pages=pages, document_id=self.id, document_model="account.move", document_name=self.name)
+            billing = OcrUsage.increment_usage(pages=pages)
 
             update_vals = {
                 'ocr_status': 'done',
@@ -733,7 +733,7 @@ class AccountMove(models.Model):
 
         # Update usage
         OcrUsage = self.env['ocr.usage']
-        OcrUsage.increment_usage(pages=pages, document_id=self.id, document_model="account.move", document_name=self.name)
+        OcrUsage.increment_usage(pages=pages)
 
         update_vals = {
             'ocr_status': 'done',
