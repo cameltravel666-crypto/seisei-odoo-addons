@@ -57,6 +57,8 @@ services:
     volumes:
       - odoo18-staging-data:/var/lib/odoo
       - ./config/odoo.conf:/etc/odoo/odoo.conf:ro
+      - ../../../odoo_modules/seisei:/mnt/extra-addons/seisei:ro
+      - ../../../odoo_modules/community:/mnt/extra-addons/community:ro
     networks:
       - seisei-odoo-network
       - odoo18-staging-internal
