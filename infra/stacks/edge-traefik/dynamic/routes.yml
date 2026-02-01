@@ -1,14 +1,26 @@
 http:
   routers:
-    # Odoo Production - Main domains (Cloudflare DNS)
+    # Seisei Corporate Website
+    seisei-www:
+      rule: "Host(`seisei.tokyo`) || Host(`www.seisei.tokyo`)"
+      service: seisei-www
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: cloudflare
+      middlewares:
+        - secure-headers@file
+        - rate-limit@file
+
+    # Odoo Production - ERP domains only
     odoo-prod:
-      rule: "Host(`seisei.tokyo`) || Host(`www.seisei.tokyo`) || Host(`odoo.seisei.tokyo`) || Host(`erp.seisei.tokyo`)"
+      rule: "Host(`odoo.seisei.tokyo`) || Host(`erp.seisei.tokyo`)"
       service: odoo-prod
       entryPoints:
         - websecure
       tls:
         certResolver: cloudflare
-    
+
     # Odoo Production - demo.nagashiro.top (HTTP Challenge)
     odoo-demo-nagashiro:
       rule: "Host(`demo.nagashiro.top`)"
@@ -21,7 +33,7 @@ http:
         - secure-headers@file
         - rate-limit@file
         - nagashiro-dbfilter@file
-    
+
     # Odoo Production - Wildcard subdomains for multi-tenancy
     odoo-prod-wildcard:
       rule: "HostRegexp(`{subdomain:[a-z0-9-]+}.erp.seisei.tokyo`)"
@@ -34,7 +46,7 @@ http:
           - main: "erp.seisei.tokyo"
             sans:
               - "*.erp.seisei.tokyo"
-    
+
     # BizNexus Production
     biznexus-prod:
       rule: "Host(`biznexus.seisei.tokyo`)"
@@ -45,12 +57,18 @@ http:
         certResolver: cloudflare
 
   services:
+    # Seisei Corporate Website Service
+    seisei-www:
+      loadBalancer:
+        servers:
+          - url: "http://seisei-www:3000"
+
     # Odoo Production Service
     odoo-prod:
       loadBalancer:
         servers:
           - url: "http://odoo18-prod-web:8069"
-    
+
     # BizNexus Production Service
     biznexus-prod:
       loadBalancer:

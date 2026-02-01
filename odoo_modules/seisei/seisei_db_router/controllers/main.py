@@ -103,7 +103,7 @@ def custom_db_filter(dbs, host=None, httprequest=None):
         _logger.exception(f"[custom_db_filter] Error in custom database filter: {e}")
 
     # Fall back to original Odoo logic
-    return _original_db_router(dbs, httprequest=httprequest, host=host)
+    return _original_db_router(dbs, host=host)
 
 
 # Apply the monkey patch
