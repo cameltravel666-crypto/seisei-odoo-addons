@@ -961,7 +961,6 @@ class AccountMove(models.Model):
             # Common codes: 145x for 仮払消費税
             account = Account.search([
                 ('code', '=like', '145%'),
-                ('company_id', '=', self.company_id.id)
             ], limit=1)
             if account:
                 return account
@@ -970,14 +969,12 @@ class AccountMove(models.Model):
             account = Account.search([
                 ('account_type', '=', 'asset_current'),
                 ('name', 'ilike', '消費税'),
-                ('company_id', '=', self.company_id.id)
             ], limit=1)
         else:
             # Search for tax payable account
             # Common codes: 255x for 仮受消費税
             account = Account.search([
                 ('code', '=like', '255%'),
-                ('company_id', '=', self.company_id.id)
             ], limit=1)
             if account:
                 return account
@@ -986,7 +983,6 @@ class AccountMove(models.Model):
             account = Account.search([
                 ('account_type', '=', 'liability_current'),
                 ('name', 'ilike', '消費税'),
-                ('company_id', '=', self.company_id.id)
             ], limit=1)
 
         return account if account else False
