@@ -1,0 +1,79 @@
+name: Configure GHCR Authentication
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Target server(s) to configure'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+          - both
+
+permissions:
+  contents: read
+
+jobs:
+  configure-staging:
+    name: Configure Staging EC2 (54.178.13.108)
+    runs-on: ubuntu-latest
+    if: ${{ inputs.target == 'staging' || inputs.target == 'both' }}
+
+    steps:
+      - name: Configure SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H 54.178.13.108 >> ~/.ssh/known_hosts
+
+      - name: Configure Docker login on Staging
+        run: |
+          ssh -i ~/.ssh/id_rsa ubuntu@54.178.13.108 << 'EOF'
+            echo "Configuring Docker login for GHCR..."
+            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u cameltravel666-crypto --password-stdin
+
+            echo "Verifying GHCR access..."
+            docker pull ghcr.io/cameltravel666-crypto/seisei-odoo18@sha256:1db6436ca7e084705cffcf3e760b6659cce449bd636edf94917b28de2df3fbe5
+
+            echo "Docker login configured successfully!"
+            docker images | grep ghcr.io
+          EOF
+
+      - name: Summary
+        run: |
+          echo "✅ Staging EC2 (54.178.13.108) Docker login configured"
+          echo "✅ Successfully pulled test image from GHCR"
+
+  configure-production:
+    name: Configure Production EC2 (57.180.39.58)
+    runs-on: ubuntu-latest
+    if: ${{ inputs.target == 'production' || inputs.target == 'both' }}
+
+    steps:
+      - name: Configure SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H 57.180.39.58 >> ~/.ssh/known_hosts
+
+      - name: Configure Docker login on Production
+        run: |
+          ssh -i ~/.ssh/id_rsa ubuntu@57.180.39.58 << 'EOF'
+            echo "Configuring Docker login for GHCR..."
+            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u cameltravel666-crypto --password-stdin
+
+            echo "Verifying GHCR access..."
+            docker pull ghcr.io/cameltravel666-crypto/seisei-odoo18@sha256:1db6436ca7e084705cffcf3e760b6659cce449bd636edf94917b28de2df3fbe5
+
+            echo "Docker login configured successfully!"
+            docker images | grep ghcr.io
+          EOF
+
+      - name: Summary
+        run: |
+          echo "✅ Production EC2 (57.180.39.58) Docker login configured"
+          echo "✅ Successfully pulled test image from GHCR"
