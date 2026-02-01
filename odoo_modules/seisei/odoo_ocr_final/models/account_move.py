@@ -893,9 +893,13 @@ class AccountMove(models.Model):
     def _get_default_expense_account(self):
         """Get default expense account (仕入高/経費) for purchases."""
         # Try to get from company property
-        account = self.env['ir.property']._get(
-            'property_account_expense_categ_id', 'product.category'
-        )
+        account = None
+        try:
+            account = self.env['ir.property']._get(
+                'property_account_expense_categ_id', 'product.category'
+            )
+        except (KeyError, AttributeError):
+            pass
         if account:
             return account
 
@@ -904,7 +908,6 @@ class AccountMove(models.Model):
         # Try Japanese: 仕入高
         account = Account.search([
             ('code', '=like', '510%'),  # Common code for 仕入高
-            ('company_id', '=', self.company_id.id)
         ], limit=1)
         if account:
             return account
@@ -912,7 +915,6 @@ class AccountMove(models.Model):
         # Try more generic expense account
         account = Account.search([
             ('account_type', '=', 'expense'),
-            ('company_id', '=', self.company_id.id)
         ], limit=1)
         return account
 
