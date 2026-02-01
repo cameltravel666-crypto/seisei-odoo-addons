@@ -1,0 +1,77 @@
+http:
+  routers:
+    # Seisei Corporate Website Staging
+    seisei-www-staging:
+      rule: "Host(`staging.seisei.tokyo`) || Host(`staging.www.seisei.tokyo`)"
+      service: seisei-www-staging
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: cloudflare
+      middlewares:
+        - secure-headers@file
+        - rate-limit@file
+
+    # BizNexus Staging
+    biznexus-staging:
+      rule: "Host(`staging.biznexus.seisei.tokyo`)"
+      service: biznexus-staging
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: cloudflare
+      middlewares:
+        - secure-headers@file
+        - rate-limit@file
+
+    # Odoo Staging - ERP only
+    odoo-staging-domain:
+      rule: "Host(`staging.erp.seisei.tokyo`) || Host(`staging.odoo.seisei.tokyo`)"
+      service: odoo-staging
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: cloudflare
+      middlewares:
+        - secure-headers@file
+        - rate-limit@file
+
+    # Odoo Staging - IP access
+    odoo-staging-ip:
+      rule: "Host(`54.178.13.108`)"
+      service: odoo-staging
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: httpchallenge
+      middlewares:
+        - secure-headers@file
+        - rate-limit@file
+
+    # HTTP redirect for all
+    staging-http-redirect:
+      rule: "Host(`staging.seisei.tokyo`) || Host(`staging.www.seisei.tokyo`) || Host(`staging.biznexus.seisei.tokyo`) || Host(`staging.erp.seisei.tokyo`) || Host(`staging.odoo.seisei.tokyo`) || Host(`54.178.13.108`)"
+      service: odoo-staging
+      entryPoints:
+        - web
+      middlewares:
+        - https-redirect@file
+
+  services:
+    # Seisei Corporate Website Service
+    seisei-www-staging:
+      loadBalancer:
+        servers:
+          - url: "http://seisei-www:3000"
+
+    # BizNexus Staging Service
+    biznexus-staging:
+      loadBalancer:
+        servers:
+          - url: "http://biznexus-app:9527"
+
+    # Odoo Staging Service
+    odoo-staging:
+      loadBalancer:
+        servers:
+          - url: "http://odoo18-staging-web:8069"
