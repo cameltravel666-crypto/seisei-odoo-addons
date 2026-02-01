@@ -64,7 +64,7 @@ Configure GitHub Container Registry (GHCR) authentication to enable pulling cust
 
 ```bash
 # SSH into Staging EC2
-ssh -i /Users/taozhang/Projects/Pem/odoo-2025.pem ubuntu@54.178.13.108
+ssh -i /Users/taozhang/Projects/Pem/odoo-2025.pem ubuntu@13.231.24.250
 
 # Test current GHCR access (should fail)
 docker pull ghcr.io/cameltravel666-crypto/seisei-odoo18:latest
@@ -114,7 +114,7 @@ docker images | grep seisei-odoo18
 ### Verify Staging EC2
 
 ```bash
-ssh -i /Users/taozhang/Projects/Pem/odoo-2025.pem ubuntu@54.178.13.108 "docker images | grep ghcr.io"
+ssh -i /Users/taozhang/Projects/Pem/odoo-2025.pem ubuntu@13.231.24.250 "docker images | grep ghcr.io"
 ```
 
 ### Verify Production EC2
@@ -141,7 +141,7 @@ Switch to `IMAGE_REF=ghcr.io/cameltravel666-crypto/seisei-odoo18@sha256:1db6436.
 
 ```bash
 # SSH into Staging EC2
-ssh -i /Users/taozhang/Projects/Pem/odoo-2025.pem ubuntu@54.178.13.108
+ssh -i /Users/taozhang/Projects/Pem/odoo-2025.pem ubuntu@13.231.24.250
 
 # Navigate to stack directory
 cd /srv/stacks/odoo18-staging
@@ -180,7 +180,7 @@ boto3: 1.x.x
 
 ```bash
 # Test health endpoint
-curl http://54.178.13.108:8069/web/health
+curl http://13.231.24.250:8069/web/health
 
 # Expected: HTTP 200 OK
 ```
@@ -192,7 +192,7 @@ curl http://54.178.13.108:8069/web/health
 ### Check Container Status
 
 ```bash
-ssh -i /Users/taozhang/Projects/Pem/odoo-2025.pem ubuntu@54.178.13.108 "docker ps --filter 'name=odoo18-staging'"
+ssh -i /Users/taozhang/Projects/Pem/odoo-2025.pem ubuntu@13.231.24.250 "docker ps --filter 'name=odoo18-staging'"
 ```
 
 **Expected**:
@@ -201,7 +201,7 @@ ssh -i /Users/taozhang/Projects/Pem/odoo-2025.pem ubuntu@54.178.13.108 "docker p
 
 ### Test Module Loading
 
-Access http://54.178.13.108:8069 and verify:
+Access http://13.231.24.250:8069 and verify:
 - ✅ Database selector appears
 - ✅ Can select and log into databases
 - ✅ No Python dependency errors in logs
@@ -215,7 +215,7 @@ If anything goes wrong:
 
 ```bash
 # SSH into affected server
-ssh -i /Users/taozhang/Projects/Pem/odoo-2025.pem ubuntu@54.178.13.108
+ssh -i /Users/taozhang/Projects/Pem/odoo-2025.pem ubuntu@13.231.24.250
 
 cd /srv/stacks/odoo18-staging
 

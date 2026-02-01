@@ -123,7 +123,7 @@ EIP: 54.65.127.141
 **完全对称的 Staging 环境**:
 
 ```
-Staging: 54.178.13.108
+Staging: 13.231.24.250
   └─ Staging EC2 (完全镜像)
      ├─ Traefik v2.10
      ├─ Odoo 18 + Redis (18 个数据库)

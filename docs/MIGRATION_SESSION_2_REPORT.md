@@ -78,7 +78,7 @@ odoo18-prod-redis  Up (healthy)  - Redis 7-alpine
 
 ### 3. Traefik 部署 (两台服务器) ⭐
 
-#### Staging EC2 (54.178.13.108)
+#### Staging EC2 (13.231.24.250)
 
 **配置**:
 - ✅ 从原服务器复制 Cloudflare API 凭证
@@ -139,7 +139,7 @@ DNS Resolvers: 1.1.1.1, 8.8.8.8
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                    Staging Environment                       │
-│  EC2: 54.178.13.108                                         │
+│  EC2: 13.231.24.250                                         │
 │  ┌──────────┐  ┌──────────────┐  ┌─────────────────────┐   │
 │  │ Traefik  │→ │ Odoo18 Web   │→ │ Staging RDS         │   │
 │  │ :80,:443 │  │ :8069 :8072  │  │ 18 databases        │   │
@@ -174,7 +174,7 @@ DNS Resolvers: 1.1.1.1, 8.8.8.8
   │ docker exec seisei-db pg_dump -U odoo -Fc dbname
   ├─→ SSH tunnel
   │
-Staging EC2 (54.178.13.108) [中转节点]
+Staging EC2 (13.231.24.250) [中转节点]
   │ 临时存储: /tmp/dbname.dump
   ├─→ pg_restore via RDS endpoint
   │
@@ -300,7 +300,7 @@ Production RDS (10.20.12.104)
 
 1. **DNS 配置** (15分钟)
    ```
-   Record: staging.odoo.seisei.tokyo → 54.178.13.108 (A记录)
+   Record: staging.odoo.seisei.tokyo → 13.231.24.250 (A记录)
    Record: *.erp.seisei.tokyo → 57.180.39.58 (A记录)
    TTL: 300秒
    ```

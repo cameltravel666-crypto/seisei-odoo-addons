@@ -65,7 +65,7 @@
 | **staging.www.seisei.tokyo** | seisei-www-staging | ✅ HTTP 200 | www.seisei.tokyo |
 | **staging.erp.seisei.tokyo** | odoo-staging | ✅ HTTP 303 | erp.seisei.tokyo |
 | **staging.biznexus.seisei.tokyo** | biznexus-staging | ✅ HTTP 307 | biznexus.seisei.tokyo |
-| **54.178.13.108** | odoo-staging | ✅ HTTP 301 | IP 直接访问 |
+| **13.231.24.250** | odoo-staging | ✅ HTTP 301 | IP 直接访问 |
 | **staging.demo.*** | - | ⚠️ 未配置（可选） | demo.nagashiro.top |
 
 #### 可选的 Staging 增强
@@ -186,7 +186,7 @@ $ curl -I https://odoo.seisei.tokyo
 **影响**: 无法在 Staging 测试企业官网
 
 **需要操作**:
-1. 添加 DNS A 记录: `staging.seisei.tokyo` → `54.178.13.108`
+1. 添加 DNS A 记录: `staging.seisei.tokyo` → `13.231.24.250`
 2. 更新 Traefik 路由配置，添加 seisei-www 路由
 
 ---
@@ -223,7 +223,7 @@ $ curl -I https://odoo.seisei.tokyo
 - [x] 企业官网别名 (staging.www.seisei.tokyo) - ✅ 已配置
 - [x] ERP 系统 (staging.erp.seisei.tokyo) - ✅ 正常
 - [x] BizNexus (staging.biznexus.seisei.tokyo) - ✅ 正常
-- [x] IP 访问 (54.178.13.108) - ✅ 正常
+- [x] IP 访问 (13.231.24.250) - ✅ 正常
 - [ ] Demo 站点 - 未配置（可选）
 - [ ] 多租户子域名 - 未配置（可选）
 
@@ -263,8 +263,8 @@ $ curl -I https://odoo.seisei.tokyo
 
 ```bash
 # 已添加 DNS A 记录
-staging.seisei.tokyo      → 54.178.13.108 ✅
-staging.www.seisei.tokyo  → 54.178.13.108 ✅
+staging.seisei.tokyo      → 13.231.24.250 ✅
+staging.www.seisei.tokyo  → 13.231.24.250 ✅
 ```
 
 ### ✅ Phase 2: Traefik 路由更新 - 已完成
@@ -290,14 +290,14 @@ odoo-staging-domain:
 
 ```bash
 # 如需要在 Staging 测试 QR 点餐，可添加:
-staging.demo.seisei.tokyo → 54.178.13.108
+staging.demo.seisei.tokyo → 13.231.24.250
 ```
 
 ### Phase 4: 可选 - 多租户子域名支持
 
 ```yaml
 # 如需要在 Staging 测试多租户，可添加:
-*.staging.erp.seisei.tokyo → 54.178.13.108
+*.staging.erp.seisei.tokyo → 13.231.24.250
 ```
 
 ### 待调查: odoo.seisei.tokyo 访问问题
@@ -316,7 +316,7 @@ Production 环境中 `odoo.seisei.tokyo` 无法访问 (HTTP 000)，需要调查�
    ↓
 2. 提交到 Git (GitHub)
    ↓
-3. 部署到 Staging (54.178.13.108)
+3. 部署到 Staging (13.231.24.250)
    ↓ 测试验证
 4. 部署到 Production (54.65.127.141)
 ```
@@ -327,7 +327,7 @@ Production 环境中 `odoo.seisei.tokyo` 无法访问 (HTTP 000)，需要调查�
 - 企业官网: https://staging.seisei.tokyo ✅
 - ERP: https://staging.erp.seisei.tokyo ✅
 - BizNexus: https://staging.biznexus.seisei.tokyo ✅
-- IP 直接访问: http://54.178.13.108 ✅
+- IP 直接访问: http://13.231.24.250 ✅
 
 **Production 生产环境**:
 - 企业官网: https://seisei.tokyo

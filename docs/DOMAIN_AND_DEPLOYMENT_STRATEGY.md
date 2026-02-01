@@ -30,7 +30,7 @@
 
 ### 方案 A: 完全独立域名 (推荐 ✅)
 
-**测试环境** (Staging EC2: 54.178.13.108):
+**测试环境** (Staging EC2: 13.231.24.250):
 ```
 staging.odoo.seisei.tokyo          → Odoo 18 Staging
 staging.biznexus.seisei.tokyo      → BizNexus Staging (或 staging.erp.seisei.tokyo)
@@ -138,7 +138,7 @@ testodoo.seisei.tokyo              → 公开测试租户
 - 所有服务仍在运行
 
 **新服务器**:
-- Staging EC2 (54.178.13.108): 已部署 Staging 环境，但无 DNS
+- Staging EC2 (13.231.24.250): 已部署 Staging 环境，但无 DNS
 - Production EC2(57.180.39.58): 已部署 Production 环境，但无 DNS
 
 ### 推荐的 DNS 切换计划
@@ -147,9 +147,9 @@ testodoo.seisei.tokyo              → 公开测试租户
 
 ```dns
 # Staging 环境域名 - 指向 Staging EC2
-staging.odoo.seisei.tokyo       A    54.178.13.108
-staging.biznexus.seisei.tokyo   A    54.178.13.108
-staging.erp.seisei.tokyo        A    54.178.13.108  (可选)
+staging.odoo.seisei.tokyo       A    13.231.24.250
+staging.biznexus.seisei.tokyo   A    13.231.24.250
+staging.erp.seisei.tokyo        A    13.231.24.250  (可选)
 ```
 
 **目的**: 让 Staging 环境可以通过域名访问，方便测试
@@ -225,8 +225,8 @@ testodoo.seisei.tokyo           A    57.180.39.58
 
 1. **配置 Staging 域名** ✅
    ```dns
-   staging.odoo.seisei.tokyo       →  54.178.13.108
-   staging.biznexus.seisei.tokyo   →  54.178.13.108
+   staging.odoo.seisei.tokyo       →  13.231.24.250
+   staging.biznexus.seisei.tokyo   →  13.231.24.250
    ```
 
 2. **迁移公司官网** (可选)

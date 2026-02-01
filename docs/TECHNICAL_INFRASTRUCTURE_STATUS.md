@@ -37,7 +37,7 @@
         ▼                ▼
 ┌──────────────┐  ┌──────────────┐
 │   Staging    │  │  Production  │
-│ 54.178.13.108│  │54.65.127.141 │
+│ 13.231.24.250│  │54.65.127.141 │
 └──────────────┘  └──────────────┘
         │                │
         │                │
@@ -137,7 +137,7 @@ biznexus.seisei.tokyo → BizNexus App
 ### Staging Environment
 
 **服务器**: AWS EC2 (ap-northeast-1a)
-- **IP**: 54.178.13.108 (Elastic IP)
+- **IP**: 13.231.24.250 (Elastic IP)
 - **Instance Type**: t3.medium (推测)
 - **OS**: Ubuntu 22.04 LTS
 
@@ -152,10 +152,10 @@ biznexus.seisei.tokyo → BizNexus App
 - **Bucket**: seisei-staging ✅ **新建**
 - **Region**: ap-northeast-1
 - **Access**: 与 Production 共享 IAM 凭证
-- **CORS**: 已配置 (54.178.13.108)
+- **CORS**: 已配置 (13.231.24.250)
 
 **访问方式**:
-- HTTP: http://54.178.13.108
+- HTTP: http://13.231.24.250
 - HTTPS: 未配置域名 (IP 直接访问)
 
 ---
@@ -246,7 +246,7 @@ git commit -m "docs: update deployment guide"
 
 ```bash
 # 1. SSH 连接到 Staging
-ssh -i ~/Projects/Pem/odoo-2025.pem ubuntu@54.178.13.108
+ssh -i ~/Projects/Pem/odoo-2025.pem ubuntu@13.231.24.250
 
 # 2. 切换到项目目录
 cd /opt/seisei-odoo-addons
@@ -479,7 +479,7 @@ healthcheck:
 ```
 
 **2. 配置 Staging 域名**
-- 在 Cloudflare 添加: staging.seisei.tokyo → 54.178.13.108
+- 在 Cloudflare 添加: staging.seisei.tokyo → 13.231.24.250
 - 更新 Traefik 路由配置
 - 配置 SSL 证书
 
@@ -516,12 +516,12 @@ jobs:
         env:
           SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
         run: |
-          ssh ubuntu@54.178.13.108 'cd /opt/seisei-odoo-addons && git pull && docker compose restart web'
+          ssh ubuntu@13.231.24.250 'cd /opt/seisei-odoo-addons && git pull && docker compose restart web'
 
       - name: Health Check
         run: |
           sleep 10
-          curl -f http://54.178.13.108:8069/web/health
+          curl -f http://13.231.24.250:8069/web/health
 ```
 
 **6. 配置 AWS Secrets Manager**

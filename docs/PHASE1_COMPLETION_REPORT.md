@@ -22,7 +22,7 @@ Successfully configured GitHub Container Registry (GHCR) authentication on both 
 - **Result**: Allows automated workflows to authenticate with GHCR
 
 ### 2. Docker Login Configuration ✅
-**Staging EC2 (54.178.13.108)**:
+**Staging EC2 (13.231.24.250)**:
 - ✅ Docker login configured: `docker login ghcr.io`
 - ✅ Test image pulled successfully
 - ✅ Image digest: `sha256:1db6436ca7e084705cffcf3e760b6659cce449bd636edf94917b28de2df3fbe5`
@@ -69,7 +69,7 @@ odoo18-staging-web   Up X minutes (healthy)    1db6436ca7e0
 - ✅ google-auth: installed
 
 **Web Access Verified**:
-- ✅ Health endpoint: `http://54.178.13.108:8069/web/health` → `{"status": "pass"}`
+- ✅ Health endpoint: `http://13.231.24.250:8069/web/health` → `{"status": "pass"}`
 - ✅ Database selector: Working, displays all databases
 - ✅ No Python dependency errors in logs
 - ✅ All custom modules loaded successfully
@@ -173,7 +173,7 @@ If issues arise, rollback is straightforward:
 
 ```bash
 # SSH into Staging EC2
-ssh -i /Users/taozhang/Projects/Pem/odoo-2025.pem ubuntu@54.178.13.108
+ssh -i /Users/taozhang/Projects/Pem/odoo-2025.pem ubuntu@13.231.24.250
 
 # Navigate to stack directory
 cd /opt/seisei-odoo-addons/infra/stacks/odoo18-staging

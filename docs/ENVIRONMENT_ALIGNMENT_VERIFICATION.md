@@ -44,7 +44,7 @@
 
 ## 🎯 对齐详细情况
 
-### Staging EC2 (54.178.13.108)
+### Staging EC2 (13.231.24.250)
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -278,10 +278,10 @@ Staging EC2 (9 容器):              Production EC2 (9 容器):
 
 **Staging 域名**:
 ```dns
-staging.odoo.seisei.tokyo       A    54.178.13.108
-staging.www.seisei.tokyo        A    54.178.13.108
-staging.biznexus.seisei.tokyo   A    54.178.13.108
-staging.erp.seisei.tokyo        A    54.178.13.108
+staging.odoo.seisei.tokyo       A    13.231.24.250
+staging.www.seisei.tokyo        A    13.231.24.250
+staging.biznexus.seisei.tokyo   A    13.231.24.250
+staging.erp.seisei.tokyo        A    13.231.24.250
 ```
 
 **Production 域名** (谨慎切换):

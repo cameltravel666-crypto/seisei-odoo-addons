@@ -13,7 +13,7 @@
 
 | 组件 | Staging | Production |
 |------|---------|------------|
-| **EC2 实例** | 54.178.13.108 (i-07431aa34ec66a65d) | 57.180.39.58 (i-0c1c8fdf3e17217d7) |
+| **EC2 实例** | 13.231.24.250 (i-07431aa34ec66a65d) | 57.180.39.58 (i-0c1c8fdf3e17217d7) |
 | **RDS 实例** | seisei-odoo18-staging-rds.c1emceusojse.ap-northeast-1.rds.amazonaws.com | seisei-odoo18-prod-rds.c1emceusojse.ap-northeast-1.rds.amazonaws.com |
 | **RDS 内网 IP** | 10.20.2.197 | 10.20.12.104 |
 | **用途** | 测试和验证 | 未来的生产环境（待迁移） |
@@ -100,7 +100,7 @@
 
 ## 🖥️ EC2 实例状态
 
-### Staging EC2 (54.178.13.108) - ✅ 运行中
+### Staging EC2 (13.231.24.250) - ✅ 运行中
 
 **部署状态**:
 - ✅ Docker 登录已配置（GHCR）
@@ -123,8 +123,8 @@ odoo18-staging-redis   redis:7-alpine   Up (healthy)
 - .env: `/opt/seisei-odoo-addons/infra/stacks/odoo18-staging/.env`
 
 **访问方式**:
-- HTTP: `http://54.178.13.108:8069`
-- Health Check: `http://54.178.13.108:8069/web/health` ✅
+- HTTP: `http://13.231.24.250:8069`
+- Health Check: `http://13.231.24.250:8069/web/health` ✅
 
 ---
 
@@ -224,7 +224,7 @@ odoo18-prod-redis   redis:7-alpine   Up (healthy)
 
 ### ✅ 已完成核心基础设施部署
 
-**Staging 环境** (54.178.13.108):
+**Staging 环境** (13.231.24.250):
 - ✅ RDS: 18 databases (~830 MB)
 - ✅ Odoo 18 + Redis 容器运行中
 - ✅ Traefik 配置 SSL 自动获取
@@ -238,7 +238,7 @@ odoo18-prod-redis   redis:7-alpine   Up (healthy)
 
 ### ✅ 已完成支持服务迁移 (会话 #3)
 
-**Staging 环境** (54.178.13.108):
+**Staging 环境** (13.231.24.250):
 - ✅ BizNexus 应用部署 (Next.js 16.1.1)
 - ✅ BizNexus 数据库迁移 (PostgreSQL 16, 17 tables, ~9.6 MB)
 - ✅ 连接 Staging Odoo (内部网络)
@@ -251,9 +251,9 @@ odoo18-prod-redis   redis:7-alpine   Up (healthy)
 ### 后续任务
 
 #### 1. DNS 配置 (必须，高优先级)
-- 配置 staging.odoo.seisei.tokyo → 54.178.13.108
-- 配置 biznexus.seisei.tokyo → 54.178.13.108
-- 配置 staging.erp.seisei.tokyo → 54.178.13.108
+- 配置 staging.odoo.seisei.tokyo → 13.231.24.250
+- 配置 biznexus.seisei.tokyo → 13.231.24.250
+- 配置 staging.erp.seisei.tokyo → 13.231.24.250
 - 配置 *.erp.seisei.tokyo → 57.180.39.58
 - 验证 SSL 证书自动获取
 

@@ -37,9 +37,9 @@ docker exec traefik cat traefik.yml # Traefik 配置
 
 ### 3. Staging 服务器检查
 ```bash
-ssh ubuntu@54.178.13.108
+ssh ubuntu@13.231.24.250
 docker ps                           # 容器状态
-curl http://54.178.13.108          # 服务验证
+curl http://13.231.24.250          # 服务验证
 ```
 
 ---
