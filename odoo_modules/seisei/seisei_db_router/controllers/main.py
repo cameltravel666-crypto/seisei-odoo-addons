@@ -1,13 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-Seisei Database Router
+Seisei Database Router - Enhanced with global database context
 Routes requests to the correct database based on:
 1. X-Odoo-dbfilter header (set by Traefik/nginx)
 2. Subdomain pattern (fallback)
 3. Query parameter db= (user override)
-
-FIXED: Removed /web and /web/login overrides that were breaking login functionality.
-The database is locked via odoo.conf (db_name = ten_testodoo).
 """
 import re
 import logging
@@ -55,6 +52,64 @@ def get_db_from_host(host):
     return None
 
 
+# Monkey-patch Odoo's get_db_router to use our custom logic
+_original_db_router = http.db_filter
+
+def custom_db_filter(dbs, host=None, httprequest=None):
+    """
+    Custom database filter that respects X-Odoo-dbfilter header and domain mapping.
+    """
+    # Handle both calling conventions: (dbs, host) and (dbs, httprequest=xxx, host=xxx)
+    if not httprequest:
+        httprequest = request.httprequest if hasattr(request, 'httprequest') else None
+
+    # If host is not provided, try to get it from httprequest
+    if not host and httprequest and hasattr(httprequest, 'host'):
+        host = httprequest.host
+
+    # Try to get database from our custom logic
+    db_name = None
+    try:
+        # Check X-Odoo-dbfilter header first
+        dbfilter_header = None
+        if httprequest and hasattr(httprequest, 'headers'):
+            dbfilter_header = httprequest.headers.get("X-Odoo-dbfilter")
+        if dbfilter_header:
+            db_name = dbfilter_header
+            _logger.debug(f"[custom_db_filter] Using X-Odoo-dbfilter header: {db_name}")
+
+        # Check domain mapping
+        if not db_name and host:
+            host_clean = host.split(":")[0].lower()
+            if host_clean in DOMAIN_DB_MAP:
+                db_name = DOMAIN_DB_MAP[host_clean]
+                _logger.debug(f"[custom_db_filter] Using domain mapping: {host_clean} -> {db_name}")
+
+        # Check subdomain pattern
+        if not db_name and host:
+            host_clean = host.split(":")[0].lower()
+            match = re.match(r"^([a-z0-9]+)\.erp\.seisei\.tokyo$", host_clean)
+            if match:
+                subdomain = match.group(1)
+                db_name = f"ten_{subdomain}"
+                _logger.debug(f"[custom_db_filter] Using subdomain pattern: {subdomain} -> {db_name}")
+
+        # If we found a database and it exists in the list, return it
+        if db_name and db_name in dbs:
+            _logger.debug(f"[custom_db_filter] Selected database: {db_name}")
+            return [db_name]
+
+    except Exception as e:
+        _logger.exception(f"[custom_db_filter] Error in custom database filter: {e}")
+
+    # Fall back to original Odoo logic
+    return _original_db_router(dbs, httprequest=httprequest, host=host)
+
+
+# Apply the monkey patch
+http.db_filter = custom_db_filter
+
+
 class DatabaseRouter(http.Controller):
 
     @http.route("/web/database/selector", type="http", auth="none", csrf=False)
@@ -78,9 +133,6 @@ class DatabaseRouter(http.Controller):
             "<html><body><h1>Select Database</h1></body></html>",
             content_type="text/html"
         )
-
-    # NOTE: /web and /web/login routes REMOVED - let Odoo handle them natively.
-    # The database is locked via odoo.conf (db_name = ten_testodoo).
 
     @http.route("/odoo", type="http", auth="none", csrf=False)
     def odoo_redirect(self, **kwargs):

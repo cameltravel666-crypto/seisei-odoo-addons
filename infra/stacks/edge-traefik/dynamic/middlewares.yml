@@ -1,15 +1,6 @@
-# =============================================================================
-# Traefik Dynamic Configuration - Middlewares
-# =============================================================================
-# File-based middlewares for use across services
-# Referenced as middleware@file in service labels
-# =============================================================================
-
 http:
   middlewares:
-    # -----------------------------------------------------------------
-    # Security Headers (Common)
-    # -----------------------------------------------------------------
+    # Security Headers
     secure-headers:
       headers:
         stsSeconds: 31536000
@@ -21,91 +12,23 @@ http:
         referrerPolicy: "strict-origin-when-cross-origin"
         customFrameOptionsValue: "SAMEORIGIN"
 
-    # -----------------------------------------------------------------
     # Compression
-    # -----------------------------------------------------------------
     compress:
       compress: {}
 
-    # -----------------------------------------------------------------
-    # Rate Limiting (General)
-    # -----------------------------------------------------------------
+    # Rate Limiting
     rate-limit:
       rateLimit:
         average: 100
         burst: 50
-        period: 1s
 
-    # -----------------------------------------------------------------
-    # Admin Backend Access Control (First Gate)
-    # Option 1: IP Allowlist - More secure, requires static IPs
-    # -----------------------------------------------------------------
-    erp-admin-allowlist:
-      ipAllowList:
-        sourceRange:
-          # Add your admin IPs here
-          # Format: "IP/CIDR"
-          - "127.0.0.1/32"           # Localhost
-          - "10.0.0.0/8"             # Private network
-          - "172.16.0.0/12"          # Docker networks
-          - "192.168.0.0/16"         # Private network
-          # Add specific admin IPs as needed:
-          # - "203.0.113.50/32"      # Office IP
-        # Reject requests from non-allowed IPs
-        ipStrategy:
-          depth: 0
-
-    # -----------------------------------------------------------------
-    # Admin Backend Access Control (First Gate)
-    # Option 2: Basic Auth - Fallback if IP allowlist not feasible
-    # Password: htpasswd -nb admin your-secret-password
-    # -----------------------------------------------------------------
-    erp-admin-basicauth:
-      basicAuth:
-        users:
-          # Format: "user:htpasswd-encoded-password"
-          # Generate: htpasswd -nb admin password123
-          - "admin:$apr1$xyz123$abc..."  # Replace with actual hash
-        realm: "Seisei Admin Backend"
-        removeHeader: true
-
-    # -----------------------------------------------------------------
-    # Odoo WebSocket Support
-    # -----------------------------------------------------------------
-    odoo-websocket:
-      headers:
-        customRequestHeaders:
-          Connection: "upgrade"
-          Upgrade: "websocket"
-
-    # -----------------------------------------------------------------
-    # Strip Prefix (for sub-paths)
-    # -----------------------------------------------------------------
-    strip-api:
-      stripPrefix:
-        prefixes:
-          - "/api"
-
-    # -----------------------------------------------------------------
-    # Redirect HTTP to HTTPS
-    # -----------------------------------------------------------------
+    # HTTPS Redirect
     https-redirect:
       redirectScheme:
         scheme: https
         permanent: true
 
-    # -----------------------------------------------------------------
-    # Database Filter Headers for Odoo
-    # Sets X-Odoo-dbfilter header based on domain
-    # -----------------------------------------------------------------
-    nagashiro-dbfilter:
-      headers:
-        customRequestHeaders:
-          X-Odoo-dbfilter: "ten_testodoo"
-
-    # -----------------------------------------------------------------
-    # CORS for API endpoints
-    # -----------------------------------------------------------------
+    # CORS for API
     cors-api:
       headers:
         accessControlAllowMethods:
@@ -121,6 +44,13 @@ http:
         accessControlAllowOriginList:
           - "https://biznexus.seisei.tokyo"
           - "https://erp.seisei.tokyo"
-          - "https://demo.nagashiro.top"
+          - "https://seisei.tokyo"
         accessControlMaxAge: 86400
         addVaryHeader: true
+
+    # Database Filter Headers for Odoo
+    # Sets X-Odoo-dbfilter header for demo.nagashiro.top
+    nagashiro-dbfilter:
+      headers:
+        customRequestHeaders:
+          X-Odoo-dbfilter: "ten_testodoo"

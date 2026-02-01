@@ -1,0 +1,58 @@
+http:
+  routers:
+    # Odoo Production - Main domains (Cloudflare DNS)
+    odoo-prod:
+      rule: "Host(`seisei.tokyo`) || Host(`www.seisei.tokyo`) || Host(`odoo.seisei.tokyo`) || Host(`erp.seisei.tokyo`)"
+      service: odoo-prod
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: cloudflare
+    
+    # Odoo Production - demo.nagashiro.top (HTTP Challenge)
+    odoo-demo-nagashiro:
+      rule: "Host(`demo.nagashiro.top`)"
+      service: odoo-prod
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: httpchallenge
+      middlewares:
+        - secure-headers@file
+        - rate-limit@file
+        - nagashiro-dbfilter@file
+    
+    # Odoo Production - Wildcard subdomains for multi-tenancy
+    odoo-prod-wildcard:
+      rule: "HostRegexp(`{subdomain:[a-z0-9-]+}.erp.seisei.tokyo`)"
+      service: odoo-prod
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: cloudflare
+        domains:
+          - main: "erp.seisei.tokyo"
+            sans:
+              - "*.erp.seisei.tokyo"
+    
+    # BizNexus Production
+    biznexus-prod:
+      rule: "Host(`biznexus.seisei.tokyo`)"
+      service: biznexus-prod
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: cloudflare
+
+  services:
+    # Odoo Production Service
+    odoo-prod:
+      loadBalancer:
+        servers:
+          - url: "http://odoo18-prod-web:8069"
+    
+    # BizNexus Production Service
+    biznexus-prod:
+      loadBalancer:
+        servers:
+          - url: "http://biznexus-app:9527"
