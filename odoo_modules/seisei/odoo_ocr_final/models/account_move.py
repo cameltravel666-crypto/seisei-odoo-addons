@@ -840,21 +840,32 @@ class AccountMove(models.Model):
         if not expense_account:
             raise UserError(f'No default {account_label} account found. Please configure chart of accounts.')
 
-        # Create main expense/income line (税抜金額)
+        # Determine if we can create separate tax lines
+        has_tax_accounts = bool(tax_account_8 or tax_account_10)
+
+        if has_tax_accounts:
+            # Create main expense/income line (税抜金額) - tax-exclusive
+            expense_amount = subtotal
+            _logger.info(f'[OCR] Tax accounts found, creating tax-exclusive entries')
+        else:
+            # No tax accounts - include tax in expense line (税込金額) - tax-inclusive
+            expense_amount = total
+            _logger.warning(f'[OCR] No tax accounts found, creating tax-inclusive entry with total={total}')
+
         line_vals = {
             'move_id': self.id,
             'name': f'{account_label} (OCR: {extracted.get("vendor_name", "不明")})',
             'account_id': expense_account.id,
             'quantity': 1,
-            'price_unit': subtotal,
+            'price_unit': expense_amount,
             'tax_ids': [(5, 0, 0)],  # Clear taxes (manual tax lines)
         }
 
         self.env['account.move.line'].with_context(check_move_validity=False).create(line_vals)
         created_count += 1
-        _logger.info(f'[OCR] Created {account_label} line: ¥{subtotal}')
+        _logger.info(f'[OCR] Created {account_label} line: ¥{expense_amount}')
 
-        # Create 8% tax line if amount > 0
+        # Create 8% tax line if amount > 0 AND tax account exists
         if tax_8_amount > 0 and tax_account_8:
             tax_line_vals = {
                 'move_id': self.id,
