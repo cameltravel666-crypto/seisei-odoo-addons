@@ -37,7 +37,7 @@ db_pool: Optional[asyncpg.Pool] = None
 
 # ============== PROMPTS ==============
 
-# FAST PROMPT - For quick extraction of totals only (~5-8s)
+# FAST PROMPT - For quick extraction of totals + optional line items (~5-8s)
 # CRITICAL: Always read summary lines at the bottom, NOT item-by-item totals
 PROMPT_FAST = '''日本のレシート/請求書から**レシート下部の合計欄**の数字を正確に抽出してJSON形式で返す:
 {
@@ -50,7 +50,16 @@ PROMPT_FAST = '''日本のレシート/請求書から**レシート下部の合
   "r8_gross": 8%対象額(数値/0),
   "r8_tax": 8%税額(数値/0),
   "r10_gross": 10%対象額(数値/0),
-  "r10_tax": 10%税額(数値/0)
+  "r10_tax": 10%税額(数値/0),
+  "line_items": [
+    {
+      "product_name": "商品名",
+      "quantity": 数量,
+      "unit_price": 単価,
+      "tax_rate": "8%" or "10%",
+      "amount": 金額
+    }
+  ]
 }
 
 【STEP 1: 必ず下記のキーワード行から数字を読み取る】商品明細を足し算してはいけない:
@@ -113,10 +122,23 @@ C) どちらでもない → net + tax = gross を検証して判定
 ✓ 外税形式の場合: r8_gross = 0 AND r10_gross = 0
 ✓ 全ての金額は正の整数
 
+【STEP 3: 明細行の抽出（可能な場合のみ）】:
+**重要**: 合計欄の抽取を優先。明細行は**ベストエフォート**で抽出する
+- 明細行が明確に記載されている場合のみ抽出
+- 各明細行から以下を抽出:
+  * product_name: 商品名/品名
+  * quantity: 数量（デフォルト1）
+  * unit_price: 単価（税抜）
+  * tax_rate: "8%" または "10%" （デフォルト"8%"）
+  * amount: 金額（その行の税抜金額、または税込なら推定）
+- 明細行がない/不明確な場合: line_items = []
+- 明細行の合計は net に近い値になるべき
+
 【出力】:
 - 数字のみ（カンマ・円記号なし）
-- 見つからない項目は 0
+- 見つからない項目は 0 または null
 - T番号なし→tax_id:null
+- 明細なし→line_items:[]
 - JSONのみ出力（説明文不要）'''
 
 # FULL PROMPT - For detailed line-by-line extraction (~25-35s)
@@ -425,18 +447,29 @@ def extract_json_from_text(text: str) -> dict:
     if json_match:
         try:
             return json.loads(json_match.group(1))
-        except json.JSONDecodeError:
-            pass
+        except json.JSONDecodeError as e:
+            logger.warning(f"Failed to parse JSON from code block: {e}")
 
-    # Try raw JSON
+    # Try raw JSON (Gemini JSON mode returns plain JSON)
     try:
-        start = text.find('{')
-        end = text.rfind('}') + 1
-        if start != -1 and end > start:
-            return json.loads(text[start:end])
-    except json.JSONDecodeError:
-        pass
+        # Gemini with responseMimeType='application/json' returns plain JSON
+        parsed = json.loads(text)
+        logger.info(f"[DEBUG] Successfully parsed JSON directly")
+        return parsed
+    except json.JSONDecodeError as e:
+        logger.warning(f"Failed to parse raw JSON: {e}")
+        # Fallback: try to extract JSON from text
+        try:
+            start = text.find('{')
+            end = text.rfind('}') + 1
+            if start != -1 and end > start:
+                extracted_json = text[start:end]
+                logger.info(f"[DEBUG] Extracted JSON substring from {start} to {end}")
+                return json.loads(extracted_json)
+        except json.JSONDecodeError as e2:
+            logger.error(f"Failed to parse extracted JSON: {e2}")
 
+    logger.error(f"All JSON extraction methods failed, returning raw_text")
     return {'raw_text': text}
 
 
@@ -457,7 +490,7 @@ async def call_gemini_api(
         prompt = PROMPT_FAST
         config = {
             'temperature': 0,
-            'maxOutputTokens': 512,
+            'maxOutputTokens': 2048,  # Increased for line_items
             'responseMimeType': 'application/json',  # JSON mode
         }
         timeout = 30
@@ -510,7 +543,10 @@ async def call_gemini_api(
                 return {'success': False, 'error_code': 'processing_failed'}
 
             raw_text = parts[0].get('text', '')
+            logger.info(f"[DEBUG] Gemini raw_text (first 500 chars): {raw_text[:500]}")
             extracted = extract_json_from_text(raw_text)
+            logger.info(f"[DEBUG] Extracted keys: {list(extracted.keys())}")
+            logger.info(f"[DEBUG] Extracted data: {extracted}")
 
             return {
                 'success': True,
