@@ -25,13 +25,13 @@ jobs:
       - name: Configure SSH key
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H 54.178.13.108 >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ secrets.STAGING_SSH_HOST }} >> ~/.ssh/known_hosts
 
       - name: Configure Docker login on Staging
         run: |
-          ssh -i ~/.ssh/id_rsa ubuntu@54.178.13.108 << 'EOF'
+          ssh -i ~/.ssh/id_rsa ${{ secrets.SSH_USER }}@${{ secrets.STAGING_SSH_HOST }} << 'EOF'
             echo "Configuring Docker login for GHCR..."
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u cameltravel666-crypto --password-stdin
 
@@ -56,13 +56,13 @@ jobs:
       - name: Configure SSH key
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H 57.180.39.58 >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ secrets.PRODUCTION_SSH_HOST }} >> ~/.ssh/known_hosts
 
       - name: Configure Docker login on Production
         run: |
-          ssh -i ~/.ssh/id_rsa ubuntu@57.180.39.58 << 'EOF'
+          ssh -i ~/.ssh/id_rsa ${{ secrets.SSH_USER }}@${{ secrets.PRODUCTION_SSH_HOST }} << 'EOF'
             echo "Configuring Docker login for GHCR..."
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u cameltravel666-crypto --password-stdin
 
