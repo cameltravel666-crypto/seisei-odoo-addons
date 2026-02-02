@@ -8,6 +8,12 @@ on:
       - '**.md'
       - 'docs/**'
       - 'scripts/**'
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'scripts/**'
   workflow_dispatch:
     inputs:
       force_build:
@@ -82,7 +88,7 @@ jobs:
           context: .
           file: infra/stacks/odoo18-prod/Dockerfile
           platforms: linux/amd64
-          push: true
+          push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.OWNER }}/seisei-odoo18:latest
@@ -90,7 +96,7 @@ jobs:
           build-args: |
             BUILD_DATE=${{ github.event.head_commit.timestamp }}
             VCS_REF=${{ github.sha }}
-          outputs: type=image,push=true
+          outputs: type=image,push=${{ github.event_name != 'pull_request' }}
 
       - name: Get image digest
         id: digest
@@ -150,7 +156,7 @@ jobs:
           context: services/ocr_service
           file: services/ocr_service/Dockerfile
           platforms: linux/amd64
-          push: true
+          push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.OWNER }}/seisei-ocr:latest
@@ -158,7 +164,7 @@ jobs:
           build-args: |
             BUILD_DATE=${{ github.event.head_commit.timestamp }}
             VCS_REF=${{ github.sha }}
-          outputs: type=image,push=true
+          outputs: type=image,push=${{ github.event_name != 'pull_request' }}
 
       - name: Get image digest
         id: digest
