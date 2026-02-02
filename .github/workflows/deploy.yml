@@ -182,7 +182,7 @@ jobs:
           ssh -i ~/.ssh/deploy_key \
             -o StrictHostKeyChecking=accept-new \
             ${{ env.SSH_USER }}@${{ env.SSH_HOST }} \
-            "echo '$GHCR_PAT' | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin && echo '✅ GHCR authentication configured'"
+            "echo \"$GHCR_PAT\" | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin && echo '✅ GHCR authentication configured'"
 
       - name: Deploy to server
         id: deploy
