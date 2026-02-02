@@ -162,14 +162,14 @@ def process_expense_document(file_data: bytes, mimetype: str, tenant_id: str = '
     return _process_with_template(file_data, mimetype, tenant_id, 'expense')
 
 
-def _process_with_template(file_data: bytes, mimetype: str, tenant_id: str, doc_type: str, prompt_version: str = 'fast') -> Dict[str, Any]:
+def _process_with_template(file_data: bytes, mimetype: str, tenant_id: str, doc_type: str, output_level: str = 'accounting') -> Dict[str, Any]:
     """Process document with specific document type
 
     All OCR processing is handled by the central OCR service.
     No direct API calls are made from this module.
 
     Args:
-        prompt_version: 'fast' (5-8s, totals only) or 'full' (25-35s, line-by-line)
+        output_level: 'summary' (quick preview, partial items) or 'accounting' (full line-by-line extraction)
     """
     # Check config at runtime
     config = _get_ocr_config()
@@ -178,7 +178,7 @@ def _process_with_template(file_data: bytes, mimetype: str, tenant_id: str, doc_
         return {'success': False, 'error': 'OCRサービスが利用できません。システム管理者にお問い合わせください。'}
 
     template_fields = EXPENSE_TEMPLATE_FIELDS if doc_type == 'expense' else INVOICE_TEMPLATE_FIELDS
-    result = _call_ocr_service(file_data, mimetype, tenant_id, template_fields, prompt_version)
+    result = _call_ocr_service(file_data, mimetype, tenant_id, template_fields, output_level)
 
     if result.get('success'):
         return result
@@ -225,11 +225,11 @@ def _parse_tax_rate(tax_rate_str) -> int:
 
 
 def _call_ocr_service(file_data: bytes, mimetype: str, tenant_id: str,
-                      template_fields: List[str], prompt_version: str = 'fast') -> Dict[str, Any]:
+                      template_fields: List[str], output_level: str = 'accounting') -> Dict[str, Any]:
     """Call central OCR service
 
     Args:
-        prompt_version: 'fast' (5-8s, totals only) or 'full' (25-35s, line-by-line)
+        output_level: 'summary' (quick preview) or 'accounting' (full line-by-line)
     """
     try:
         # Get config at runtime to avoid caching issues
@@ -237,7 +237,7 @@ def _call_ocr_service(file_data: bytes, mimetype: str, tenant_id: str,
         ocr_url = config['url']
         ocr_key = config['key']
 
-        _logger.info(f'[OCR] Calling service at {ocr_url}, prompt={prompt_version}, key present: {bool(ocr_key)}')
+        _logger.info(f'[OCR] Calling service at {ocr_url}, output_level={output_level}, key present: {bool(ocr_key)}')
 
         b64_data = base64.standard_b64encode(file_data).decode('utf-8')
 
@@ -250,7 +250,7 @@ def _call_ocr_service(file_data: bytes, mimetype: str, tenant_id: str,
             'mime_type': mimetype,
             'template_fields': template_fields,
             'tenant_id': tenant_id,
-            'prompt_version': prompt_version,  # 'fast' or 'full'
+            'output_level': output_level,  # 'summary' or 'accounting'
         }
 
         response = requests.post(
