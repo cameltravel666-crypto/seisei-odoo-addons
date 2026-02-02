@@ -173,6 +173,18 @@ jobs:
 
           echo "✅ Digest manifest uploaded to server: /tmp/image-digests.json"
 
+      - name: Setup GHCR authentication on server
+        run: |
+          echo "Setting up GHCR authentication on deployment server..."
+          ssh -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=accept-new \
+            ${{ env.SSH_USER }}@${{ env.SSH_HOST }} bash -s <<'ENDSSH'
+          set -e
+          # Login to GHCR using secret PAT
+          echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin
+          echo "✅ GHCR authentication configured"
+          ENDSSH
+
       - name: Deploy to server
         id: deploy
         run: |
