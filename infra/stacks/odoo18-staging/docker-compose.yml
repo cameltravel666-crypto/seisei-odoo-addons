@@ -1,22 +1,23 @@
 # =============================================================================
-# Seisei Odoo 18 Staging Stack
+# Seisei Odoo 18 Staging Stack - Immutable Image Mode
 # =============================================================================
 # STAGING ENVIRONMENT - Uses SAME images as production, different configuration
 # - Images are pre-built by GitHub Actions and pushed to GHCR
 # - Staging tests the EXACT same image that will be deployed to production
 # - Server ONLY pulls images, NEVER builds locally
 # - Uses独立database (staging-db) to avoid affecting production data
+# - Immutable Mode: Uses code from image, NOT from server filesystem
 #
 # Deployment workflow:
 #   1. GitHub Actions builds and pushes image on main branch
-#   2. On staging server: update .env with new image tag
-#   3. Run: docker compose pull && docker compose up -d
-#   4. Run smoke tests to verify the deployment
-#   5. If tests pass, deploy same image to production
+#   2. Deploy script creates release snapshot in /srv/releases/stacks/
+#   3. Deploy script updates IMAGE_REF in .env with digest
+#   4. Deploy script runs: docker compose pull && docker compose up -d
+#   5. Run smoke tests to verify the deployment
+#   6. If tests pass, deploy same image to production
 #
 # Required environment variables in .env:
-#   GITHUB_REPO_OWNER    - GitHub organization/user (e.g., cameltravel666-crypto)
-#   ODOO18_IMAGE_TAG     - Image tag (can use 'latest' for staging, or specific SHA)
+#   IMAGE_REF            - Full image reference with digest (image@sha256:...)
 #   DB_PASSWORD          - PostgreSQL password (for staging-db)
 #   REDIS_PASSWORD       - Redis password
 #   OCR_SERVICE_URL      - Central OCR service URL
@@ -27,6 +28,7 @@
 #   - edge network must exist for Traefik routing
 #
 # ⚠️  IMPORTANT: Staging and Production must use the SAME image
+# ⚠️  Staging uses immutable image mode (no volume mounts for code)
 # ⚠️  Test thoroughly on staging before deploying to production
 # =============================================================================
 
@@ -55,10 +57,12 @@ services:
       - OCR_SERVICE_URL=${OCR_SERVICE_URL:-http://172.17.0.1:8180/api/v1}
       - OCR_SERVICE_KEY=${OCR_SERVICE_KEY}
     volumes:
+      # Data volume - persistent Odoo filestore
       - odoo18-staging-data:/var/lib/odoo
+      # Config file - environment-specific settings
       - ./config/odoo.conf:/etc/odoo/odoo.conf:ro
-      - ../../../odoo_modules/seisei:/mnt/extra-addons/seisei:ro
-      - ../../../odoo_modules/community:/mnt/extra-addons/community:ro
+      # NOTE: Code comes from IMAGE, not volume mounts (immutable mode)
+      # This ensures Staging tests the exact image that goes to Production
     networks:
       - seisei-odoo-network
       - odoo18-staging-internal
