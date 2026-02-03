@@ -1,0 +1,160 @@
+name: Sync S3 (Production → Staging)
+
+on:
+  workflow_dispatch:
+    inputs:
+      sync_mode:
+        description: 'Sync mode'
+        required: true
+        type: choice
+        options:
+          - dry-run
+          - full-sync
+        default: dry-run
+      delete_extra:
+        description: 'Delete files in staging that do not exist in production'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  sync-s3:
+    name: Sync S3 buckets
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate inputs
+        run: |
+          echo "### S3 Sync Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Mode:** \`${{ inputs.sync_mode }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Delete extra files:** \`${{ inputs.delete_extra }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Actor:** \`${{ github.actor }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ inputs.sync_mode }}" = "dry-run" ]; then
+            echo "⚠️ **DRY RUN MODE** - No files will be copied" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ **FULL SYNC MODE** - Files will be copied" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+      - name: Configure AWS credentials for source (production)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.PRODUCTION_S3_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.PRODUCTION_S3_SECRET_KEY }}
+          aws-region: ${{ secrets.PRODUCTION_S3_REGION || 'ap-northeast-1' }}
+
+      - name: Verify production bucket access (read-only)
+        env:
+          PROD_BUCKET: ${{ secrets.PRODUCTION_S3_BUCKET }}
+        run: |
+          echo "Verifying read access to production S3 bucket..."
+
+          # Test read-only access
+          if aws s3 ls s3://$PROD_BUCKET/ --max-items 1 > /dev/null 2>&1; then
+            echo "✅ Successfully verified read access to s3://$PROD_BUCKET"
+
+            # Get bucket size and object count
+            echo ""
+            echo "Production bucket statistics:"
+            aws s3 ls s3://$PROD_BUCKET/ --recursive --summarize | tail -2
+          else
+            echo "❌ Failed to access production bucket s3://$PROD_BUCKET"
+            exit 1
+          fi
+
+      - name: Sync to staging bucket
+        env:
+          PROD_BUCKET: ${{ secrets.PRODUCTION_S3_BUCKET }}
+          STAGING_BUCKET: ${{ secrets.STAGING_S3_BUCKET }}
+          STAGING_ACCESS_KEY: ${{ secrets.STAGING_S3_ACCESS_KEY }}
+          STAGING_SECRET_KEY: ${{ secrets.STAGING_S3_SECRET_KEY }}
+          STAGING_REGION: ${{ secrets.STAGING_S3_REGION || 'ap-northeast-1' }}
+          SYNC_MODE: ${{ inputs.sync_mode }}
+          DELETE_EXTRA: ${{ inputs.delete_extra }}
+        run: |
+          echo "=========================================="
+          echo "S3 Bucket Sync"
+          echo "Source:      s3://$PROD_BUCKET (production, read-only)"
+          echo "Destination: s3://$STAGING_BUCKET (staging, write)"
+          echo "Mode:        $SYNC_MODE"
+          echo "Delete:      $DELETE_EXTRA"
+          echo "=========================================="
+          echo ""
+
+          # Build sync command
+          SYNC_CMD="aws s3 sync s3://$PROD_BUCKET s3://$STAGING_BUCKET"
+
+          # Add dry-run flag if in dry-run mode
+          if [ "$SYNC_MODE" = "dry-run" ]; then
+            SYNC_CMD="$SYNC_CMD --dryrun"
+            echo "⚠️  DRY RUN MODE - No files will be copied"
+          fi
+
+          # Add delete flag if requested
+          if [ "$DELETE_EXTRA" = "true" ]; then
+            SYNC_CMD="$SYNC_CMD --delete"
+            echo "⚠️  DELETE MODE - Extra files in staging will be removed"
+          fi
+
+          echo ""
+          echo "Executing: $SYNC_CMD"
+          echo ""
+
+          # Configure credentials for destination bucket
+          export AWS_ACCESS_KEY_ID=$STAGING_ACCESS_KEY
+          export AWS_SECRET_ACCESS_KEY=$STAGING_SECRET_KEY
+          export AWS_DEFAULT_REGION=$STAGING_REGION
+
+          # Execute sync
+          $SYNC_CMD 2>&1 | tee /tmp/sync-output.txt
+
+          echo ""
+          echo "✅ Sync command completed"
+
+      - name: Generate summary
+        if: always()
+        env:
+          PROD_BUCKET: ${{ secrets.PRODUCTION_S3_BUCKET }}
+          STAGING_BUCKET: ${{ secrets.STAGING_S3_BUCKET }}
+          SYNC_MODE: ${{ inputs.sync_mode }}
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Sync Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ -f /tmp/sync-output.txt ]; then
+            # Count operations from sync output
+            UPLOADED=$(grep -c "upload:" /tmp/sync-output.txt || echo "0")
+            DOWNLOADED=$(grep -c "download:" /tmp/sync-output.txt || echo "0")
+            DELETED=$(grep -c "delete:" /tmp/sync-output.txt || echo "0")
+
+            echo "**Files processed:**" >> $GITHUB_STEP_SUMMARY
+            echo "- Uploaded: $UPLOADED" >> $GITHUB_STEP_SUMMARY
+            echo "- Downloaded: $DOWNLOADED" >> $GITHUB_STEP_SUMMARY
+            echo "- Deleted: $DELETED" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+
+            if [ "$SYNC_MODE" = "dry-run" ]; then
+              echo "⚠️ This was a **dry run** - no actual changes were made" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "To perform the actual sync, run this workflow again with **full-sync** mode." >> $GITHUB_STEP_SUMMARY
+            else
+              echo "✅ Sync completed successfully" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "**Next step:** Refresh your Staging application to see the synced images." >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "⚠️ No sync output found" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Source:** \`s3://$PROD_BUCKET\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Destination:** \`s3://$STAGING_BUCKET\`" >> $GITHUB_STEP_SUMMARY
