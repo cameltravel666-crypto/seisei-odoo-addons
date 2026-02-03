@@ -355,6 +355,26 @@ else
 fi
 log_success "Updated .env: IMAGE_REF=$IMAGE_REF"
 
+# Inject S3 credentials from deployment environment (for staging)
+if [ -n "${DEPLOY_S3_ACCESS_KEY:-}" ] && [ -n "${DEPLOY_S3_SECRET_KEY:-}" ]; then
+    log_info "Injecting S3 credentials from deployment environment ..."
+
+    # Update or append S3 environment variables
+    for var in "SEISEI_S3_ACCESS_KEY:$DEPLOY_S3_ACCESS_KEY" "SEISEI_S3_SECRET_KEY:$DEPLOY_S3_SECRET_KEY" "SEISEI_S3_BUCKET:${DEPLOY_S3_BUCKET:-seisei-odoo-staging}" "SEISEI_S3_REGION:${DEPLOY_S3_REGION:-ap-northeast-1}"; do
+        KEY="${var%%:*}"
+        VALUE="${var#*:}"
+        if grep -q "^${KEY}=" "$ENV_FILE"; then
+            sed -i "s|^${KEY}=.*|${KEY}=${VALUE}|" "$ENV_FILE"
+        else
+            echo "${KEY}=${VALUE}" >> "$ENV_FILE"
+        fi
+    done
+
+    log_success "✅ S3 credentials injected into .env"
+else
+    log_info "No deployment S3 credentials provided (using .env defaults)"
+fi
+
 # Also update COMPOSE_PROJECT_NAME if not present (for isolation)
 EXPECTED_PROJECT_NAME=""
 case "$STACK" in
