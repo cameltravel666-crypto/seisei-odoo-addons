@@ -1,0 +1,98 @@
+name: Update Server Scripts
+
+on:
+  workflow_dispatch:
+    inputs:
+      server:
+        description: 'Target server (staging/production)'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+        default: staging
+
+permissions:
+  contents: read
+
+env:
+  SSH_HOST: ${{ secrets.DEPLOY_SSH_HOST || '54.65.127.141' }}
+  SSH_USER: ${{ secrets.DEPLOY_SSH_USER || 'ubuntu' }}
+  REPO_PATH: /opt/seisei-odoo-addons
+
+jobs:
+  update-scripts:
+    name: Update scripts on ${{ inputs.server }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.server }}
+
+    steps:
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ env.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Update server scripts
+        run: |
+          echo "::group::Updating scripts on ${{ inputs.server }} server"
+
+          ssh -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=accept-new \
+            -o ConnectTimeout=10 \
+            ${{ env.SSH_USER }}@${{ env.SSH_HOST }} bash -s <<'ENDSSH'
+          set -euo pipefail
+
+          echo "=========================================="
+          echo "Updating Deployment Scripts"
+          echo "Server: ${{ inputs.server }}"
+          echo "Repo: ${{ env.REPO_PATH }}"
+          echo "=========================================="
+          echo ""
+
+          # Navigate to repository
+          cd ${{ env.REPO_PATH }}
+
+          # Show current branch and commit
+          echo "Current state:"
+          git branch --show-current
+          git log -1 --oneline
+          echo ""
+
+          # Pull latest changes from main
+          echo "Pulling latest changes..."
+          git fetch origin main
+          git reset --hard origin/main
+          echo ""
+
+          # Show updated commit
+          echo "Updated to:"
+          git log -1 --oneline
+          echo ""
+
+          # Verify script permissions
+          echo "Verifying script permissions..."
+          ls -la scripts/deploy.sh
+          chmod +x scripts/*.sh
+          echo ""
+
+          echo "✅ Server scripts updated successfully"
+          ENDSSH
+
+          echo "::endgroup::"
+
+      - name: Verify update
+        run: |
+          echo "### Server Scripts Updated" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Server:** \`${{ inputs.server }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Path:** \`${{ env.REPO_PATH }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** ✅ Scripts updated to latest main" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Next step:** Deploy your application to apply the updated scripts." >> $GITHUB_STEP_SUMMARY
+
+      - name: Cleanup SSH key
+        if: always()
+        run: |
+          rm -f ~/.ssh/deploy_key
