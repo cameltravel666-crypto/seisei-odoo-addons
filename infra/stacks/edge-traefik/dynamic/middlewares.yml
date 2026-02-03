@@ -54,3 +54,10 @@ http:
       headers:
         customRequestHeaders:
           X-Odoo-dbfilter: "ten_testodoo"
+
+    # Odoo Proxy Headers - Explicit forwarding for Odoo proxy_mode
+    odoo-proxy-headers:
+      headers:
+        customRequestHeaders:
+          X-Forwarded-Proto: "https"
+          X-Forwarded-Port: "443"

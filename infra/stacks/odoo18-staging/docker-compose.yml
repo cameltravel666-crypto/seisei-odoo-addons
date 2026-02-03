@@ -1,23 +1,22 @@
 # =============================================================================
-# Seisei Odoo 18 Staging Stack - Immutable Image Mode
+# Seisei Odoo 18 Staging Stack
 # =============================================================================
 # STAGING ENVIRONMENT - Uses SAME images as production, different configuration
 # - Images are pre-built by GitHub Actions and pushed to GHCR
 # - Staging tests the EXACT same image that will be deployed to production
 # - Server ONLY pulls images, NEVER builds locally
 # - Uses独立database (staging-db) to avoid affecting production data
-# - Immutable Mode: Uses code from image, NOT from server filesystem
 #
 # Deployment workflow:
 #   1. GitHub Actions builds and pushes image on main branch
-#   2. Deploy script creates release snapshot in /srv/releases/stacks/
-#   3. Deploy script updates IMAGE_REF in .env with digest
-#   4. Deploy script runs: docker compose pull && docker compose up -d
-#   5. Run smoke tests to verify the deployment
-#   6. If tests pass, deploy same image to production
+#   2. On staging server: update .env with new image tag
+#   3. Run: docker compose pull && docker compose up -d
+#   4. Run smoke tests to verify the deployment
+#   5. If tests pass, deploy same image to production
 #
 # Required environment variables in .env:
-#   IMAGE_REF            - Full image reference with digest (image@sha256:...)
+#   GITHUB_REPO_OWNER    - GitHub organization/user (e.g., cameltravel666-crypto)
+#   ODOO18_IMAGE_TAG     - Image tag (can use 'latest' for staging, or specific SHA)
 #   DB_PASSWORD          - PostgreSQL password (for staging-db)
 #   REDIS_PASSWORD       - Redis password
 #   OCR_SERVICE_URL      - Central OCR service URL
@@ -28,7 +27,6 @@
 #   - edge network must exist for Traefik routing
 #
 # ⚠️  IMPORTANT: Staging and Production must use the SAME image
-# ⚠️  Staging uses immutable image mode (no volume mounts for code)
 # ⚠️  Test thoroughly on staging before deploying to production
 # =============================================================================
 
@@ -53,24 +51,25 @@ services:
       - SEISEI_S3_REGION=${SEISEI_S3_REGION:-ap-northeast-1}
       - SEISEI_S3_ACCESS_KEY=${SEISEI_S3_ACCESS_KEY}
       - SEISEI_S3_SECRET_KEY=${SEISEI_S3_SECRET_KEY}
+      - SEISEI_S3_PREFIX=${SEISEI_S3_PREFIX:-odoo-attachments}
       # OCR Service (shared with production)
       - OCR_SERVICE_URL=${OCR_SERVICE_URL:-http://172.17.0.1:8180/api/v1}
       - OCR_SERVICE_KEY=${OCR_SERVICE_KEY}
     volumes:
-      # Data volume - persistent Odoo filestore
       - odoo18-staging-data:/var/lib/odoo
-      # Config file - environment-specific settings
       - ./config/odoo.conf:/etc/odoo/odoo.conf:ro
-      # NOTE: Code comes from IMAGE, not volume mounts (immutable mode)
-      # This ensures Staging tests the exact image that goes to Production
+      # Addon volume mounts for development/iteration (acceptable for staging)
+      - ../../../odoo_modules/seisei:/mnt/extra-addons/seisei:ro
+      - ../../../odoo_modules/community:/mnt/extra-addons/community:ro
     networks:
       - seisei-odoo-network
       - odoo18-staging-internal
       - edge
-    ports:
-      # Expose on different port for local access
-      - "8069:8069"
-      - "8072:8072"
+    # PARITY FIX: Removed port exposure - all traffic must go through Traefik
+    # This matches production security posture and tests the correct architecture
+    # ports:
+    #   - "8069:8069"  # REMOVED for parity
+    #   - "8072:8072"  # REMOVED for parity
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8069/web/health"]
       interval: 30s
@@ -85,18 +84,17 @@ services:
     labels:
       - "traefik.enable=true"
       # =================================================================
-      # Router: staging.odoo.seisei.tokyo
+      # Router: staging.erp.seisei.tokyo
       # =================================================================
-      - "traefik.http.routers.odoo18-staging.rule=Host(`staging.odoo.seisei.tokyo`)"
+      - "traefik.http.routers.odoo18-staging.rule=Host(`staging.erp.seisei.tokyo`)"
       - "traefik.http.routers.odoo18-staging.entrypoints=websecure"
       - "traefik.http.routers.odoo18-staging.tls.certresolver=cloudflare"
-      - "traefik.http.routers.odoo18-staging.middlewares=secure-headers@file"
+      # PARITY FIX: Added rate-limit middleware to match production
+      - "traefik.http.routers.odoo18-staging.middlewares=secure-headers@file,rate-limit@file"
       - "traefik.http.routers.odoo18-staging.service=odoo18-staging"
       - "traefik.http.services.odoo18-staging.loadbalancer.server.port=8069"
-      - "traefik.http.services.odoo18-staging.loadbalancer.sticky.cookie=true"
-      - "traefik.http.services.odoo18-staging.loadbalancer.sticky.cookie.name=odoo_staging_session"
       # Longpolling / WebSocket
-      - "traefik.http.routers.odoo18-staging-lp.rule=Host(`staging.odoo.seisei.tokyo`) && (PathPrefix(`/longpolling`) || PathPrefix(`/websocket`))"
+      - "traefik.http.routers.odoo18-staging-lp.rule=Host(`staging.erp.seisei.tokyo`) && (PathPrefix(`/longpolling`) || PathPrefix(`/websocket`))"
       - "traefik.http.routers.odoo18-staging-lp.entrypoints=websecure"
       - "traefik.http.routers.odoo18-staging-lp.tls.certresolver=cloudflare"
       - "traefik.http.routers.odoo18-staging-lp.middlewares=odoo-websocket@file"

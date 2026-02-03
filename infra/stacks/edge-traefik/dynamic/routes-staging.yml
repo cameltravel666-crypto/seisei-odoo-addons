@@ -33,6 +33,7 @@ http:
       tls:
         certResolver: cloudflare
       middlewares:
+        - odoo-proxy-headers@file
         - secure-headers@file
         - rate-limit@file
 
@@ -45,6 +46,7 @@ http:
       tls:
         certResolver: httpchallenge
       middlewares:
+        - odoo-proxy-headers@file
         - secure-headers@file
         - rate-limit@file
 
