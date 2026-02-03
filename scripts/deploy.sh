@@ -356,6 +356,7 @@ fi
 log_success "Updated .env: IMAGE_REF=$IMAGE_REF"
 
 # Inject S3 credentials from deployment environment (for staging)
+log_info "[DEBUG] Checking S3 env vars: DEPLOY_S3_ACCESS_KEY=${DEPLOY_S3_ACCESS_KEY:-NOTSET} DEPLOY_S3_SECRET_KEY=${DEPLOY_S3_SECRET_KEY:-NOTSET} DEPLOY_S3_BUCKET=${DEPLOY_S3_BUCKET:-NOTSET}"
 if [ -n "${DEPLOY_S3_ACCESS_KEY:-}" ] && [ -n "${DEPLOY_S3_SECRET_KEY:-}" ]; then
     log_info "Injecting S3 credentials from deployment environment ..."
 
