@@ -1,0 +1,26 @@
+```yaml
+name: Deploy to Staging
+on:
+  workflow_dispatch:
+    inputs:
+      image_digest:
+        description: 'Image digest to deploy'
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to staging
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: 13.231.24.250
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /opt/seisei-odoo-addons/infra/stacks/odoo18-staging
+            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            sed -i "s|^IMAGE_REF=.*|IMAGE_REF=ghcr.io/cameltravel666-crypto/seisei-odoo18@${{ inputs.image_digest }}|" .env
+            docker compose pull web
+            docker compose up -d --no-deps --force-recreate web
+```
