@@ -40,9 +40,9 @@ services:
       redis:
         condition: service_started
     environment:
-      # Database connection - use external seisei-db
-      - HOST=seisei-db
-      - USER=${DB_USER:-odoo}
+      # Database connection - configured in odoo.conf (RDS endpoint)
+      # HOST is not set here to allow odoo.conf db_host to take effect
+      - USER=${DB_USER:-odoo18}
       - PASSWORD=${DB_PASSWORD}
       # S3 Storage for attachments (images, files)
       - SEISEI_S3_BUCKET=${SEISEI_S3_BUCKET}
