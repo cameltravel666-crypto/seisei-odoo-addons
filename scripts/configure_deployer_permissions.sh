@@ -154,12 +154,12 @@ deployer ALL=(root) NOPASSWD: /usr/bin/docker ps *
 # Explicitly DENIED commands (security hardening)
 # =============================================================================
 # Note: These are denied even if deployer somehow gets other sudo access
-deployer ALL=(root) !NOPASSWD: /usr/bin/docker exec *
-deployer ALL=(root) !NOPASSWD: /usr/bin/docker run *
-deployer ALL=(root) !NOPASSWD: /usr/bin/docker rm *
-deployer ALL=(root) !NOPASSWD: /bin/bash
-deployer ALL=(root) !NOPASSWD: /bin/sh
-deployer ALL=(root) !NOPASSWD: /usr/bin/sudo su
+deployer ALL=(root) NOPASSWD: !/usr/bin/docker exec *
+deployer ALL=(root) NOPASSWD: !/usr/bin/docker run *
+deployer ALL=(root) NOPASSWD: !/usr/bin/docker rm *
+deployer ALL=(root) NOPASSWD: !/bin/bash
+deployer ALL=(root) NOPASSWD: !/bin/sh
+deployer ALL=(root) NOPASSWD: !/usr/bin/sudo
 EOF
 
 log_info "Generated new sudoers configuration:"
