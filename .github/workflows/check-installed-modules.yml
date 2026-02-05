@@ -1,0 +1,54 @@
+name: Check Installed OCR Modules
+
+on:
+  workflow_dispatch:
+
+env:
+  SSH_HOST: 54.65.127.141
+  SSH_USER: ubuntu
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ env.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Check installed OCR modules
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new ${{ env.SSH_USER }}@${{ env.SSH_HOST }} "
+            echo '=== Staging Environment ==='
+            echo '1. Installed OCR modules:'
+            docker exec odoo18-staging-web psql -U odoo -d odoo18_staging -c \"
+              SELECT name, state, latest_version
+              FROM ir_module_module
+              WHERE name LIKE '%ocr%' OR name LIKE '%custom_ocr%'
+              ORDER BY name;
+            \" 2>/dev/null || echo 'Database query failed'
+
+            echo ''
+            echo '2. Available OCR modules in addons path:'
+            docker exec odoo18-staging-web ls -la /mnt/extra-addons/seisei/ | grep -E 'ocr|OCR' || echo 'No OCR folders found'
+
+            echo ''
+            echo '=== Production Environment ==='
+            echo '1. Installed OCR modules:'
+            docker exec odoo18-prod-web psql -U odoo -d odoo18_prod -c \"
+              SELECT name, state, latest_version
+              FROM ir_module_module
+              WHERE name LIKE '%ocr%' OR name LIKE '%custom_ocr%'
+              ORDER BY name;
+            \" 2>/dev/null || echo 'Database query failed'
+
+            echo ''
+            echo '2. Available OCR modules in addons path:'
+            docker exec odoo18-prod-web ls -la /mnt/extra-addons/seisei/ | grep -E 'ocr|OCR' || echo 'No OCR folders found'
+          "
+
+      - name: Cleanup
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
