@@ -1,0 +1,98 @@
+name: Mark Version as Verified
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., sha-724f892)'
+        required: true
+        type: string
+      reason:
+        description: 'Verification reason (e.g., Staging tested successfully)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  SSH_HOST: ${{ secrets.DEPLOY_SSH_HOST || '54.65.127.141' }}
+  SSH_USER: ${{ secrets.DEPLOY_SSH_USER || 'ubuntu' }}
+
+jobs:
+  mark-verified:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ env.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Mark version as verified
+        env:
+          VERSION: ${{ github.event.inputs.version }}
+          REASON: ${{ github.event.inputs.reason }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          echo "::group::Marking $VERSION as production-ready"
+          echo "Reason: $REASON"
+          echo "Actor: $ACTOR"
+          echo ""
+
+          ssh -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=accept-new \
+            -o ConnectTimeout=10 \
+            ${{ env.SSH_USER }}@${{ env.SSH_HOST }} bash -s <<ENDSSH
+          set -euo pipefail
+
+          VERSION="$VERSION"
+          REASON="$REASON"
+          ACTOR="$ACTOR"
+
+          echo "=== Marking \$VERSION as Verified ==="
+          echo ""
+
+          # Create verified directory
+          sudo mkdir -p /srv/releases/verified
+
+          # Create verified marker
+          sudo touch /srv/releases/verified/\$VERSION
+
+          # Record in log
+          echo "\$(date -Iseconds) | \$VERSION | VERIFIED | Actor: \$ACTOR | Reason: \$REASON" | \
+            sudo tee -a /srv/releases/verified.log
+
+          echo ""
+          echo "✅ Version \$VERSION marked as verified"
+          echo ""
+          echo "Currently verified versions:"
+          ls -lh /srv/releases/verified/ 2>/dev/null | tail -10 || echo "None"
+          
+          echo ""
+          echo "Recent verification log:"
+          tail -5 /srv/releases/verified.log 2>/dev/null || echo "No log yet"
+          ENDSSH
+
+          echo "::endgroup::"
+          
+          echo ""
+          echo "✅ $VERSION is now ready for production deployment"
+
+      - name: Summary
+        if: success()
+        run: |
+          echo "### ✅ Version Verified" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version:** \`${{ github.event.inputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Reason:** ${{ github.event.inputs.reason }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Verified by:** @${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Next step:** Deploy to production using standard flow (no break-glass needed)" >> $GITHUB_STEP_SUMMARY
+
+      - name: Cleanup SSH key
+        if: always()
+        run: |
+          rm -f ~/.ssh/deploy_key
