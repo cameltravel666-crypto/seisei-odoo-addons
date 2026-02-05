@@ -179,10 +179,11 @@ jobs:
         run: |
           echo "Setting up GHCR authentication on deployment server..."
           # Pass GHCR_PAT through SSH to remote server
+          # deployer user must use sudo to run docker login
           ssh -i ~/.ssh/deploy_key \
             -o StrictHostKeyChecking=accept-new \
             ${{ env.SSH_USER }}@${{ env.SSH_HOST }} \
-            "echo \"$GHCR_PAT\" | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin && echo '✅ GHCR authentication configured'"
+            "echo \"$GHCR_PAT\" | sudo docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin && echo '✅ GHCR authentication configured'"
 
       - name: Deploy to server
         id: deploy
