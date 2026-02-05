@@ -42,10 +42,10 @@ jobs:
           echo "Actor: $ACTOR"
           echo ""
 
-          ssh -i ~/.ssh/deploy_key \
+          cat <<'ENDSSH' | ssh -i ~/.ssh/deploy_key \
             -o StrictHostKeyChecking=accept-new \
             -o ConnectTimeout=10 \
-            ${{ env.SSH_USER }}@${{ env.SSH_HOST }} bash -s "$VERSION" "$REASON" "$ACTOR" <<'ENDSSH'
+            ${{ env.SSH_USER }}@${{ env.SSH_HOST }} "bash -s" "$VERSION" "$REASON" "$ACTOR"
           set -euo pipefail
 
           VERSION="$1"
