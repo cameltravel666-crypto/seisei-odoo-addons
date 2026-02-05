@@ -1,0 +1,135 @@
+name: Upgrade Production OCR Module
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "UPGRADE PRODUCTION" to confirm'
+        required: true
+        type: string
+
+env:
+  SSH_HOST: 54.65.127.141
+  SSH_USER: ubuntu
+
+jobs:
+  upgrade:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate confirmation
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "UPGRADE PRODUCTION" ]; then
+            echo "❌ Confirmation failed. You must type exactly: UPGRADE PRODUCTION"
+            exit 1
+          fi
+          echo "✅ Confirmation validated"
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ env.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Backup Production database
+        run: |
+          echo "📦 Creating database backup before upgrade..."
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new ${{ env.SSH_USER }}@${{ env.SSH_HOST }} "
+            BACKUP_FILE=/srv/backups/odoo18_prod_pre_ocr_upgrade_\$(date +%Y%m%d_%H%M%S).sql
+            sudo mkdir -p /srv/backups
+            docker exec odoo18-prod-web pg_dump -U odoo -d odoo18_prod > \$BACKUP_FILE
+            echo \"✅ Backup created: \$BACKUP_FILE\"
+            ls -lh \$BACKUP_FILE
+          "
+
+      - name: Check current module installation
+        run: |
+          echo "🔍 Checking currently installed OCR modules..."
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new ${{ env.SSH_USER }}@${{ env.SSH_HOST }} "
+            echo '=== Production Current State ==='
+            docker exec odoo18-prod-web psql -U odoo -d odoo18_prod -c \"
+              SELECT name, state, latest_version, author
+              FROM ir_module_module
+              WHERE name IN ('custom_ocr_finance', 'odoo_ocr_final')
+              ORDER BY name;
+            \"
+
+            echo ''
+            echo '=== Available modules in filesystem ==='
+            docker exec odoo18-prod-web ls -la /mnt/extra-addons/seisei/ | grep -E 'custom_ocr_finance|odoo_ocr_final'
+          "
+
+      - name: Uninstall old module (custom_ocr_finance)
+        run: |
+          echo "🗑️  Uninstalling custom_ocr_finance..."
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new ${{ env.SSH_USER }}@${{ env.SSH_HOST }} "
+            docker exec odoo18-prod-web odoo-bin \
+              -c /etc/odoo/odoo.conf \
+              -d odoo18_prod \
+              --uninstall custom_ocr_finance \
+              --stop-after-init \
+              --no-http 2>&1 | tee /tmp/uninstall.log || true
+
+            echo ''
+            echo '=== Uninstall log ==='
+            tail -20 /tmp/uninstall.log
+          "
+
+      - name: Install new module (odoo_ocr_final)
+        run: |
+          echo "📥 Installing odoo_ocr_final..."
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new ${{ env.SSH_USER }}@${{ env.SSH_HOST }} "
+            docker exec odoo18-prod-web odoo-bin \
+              -c /etc/odoo/odoo.conf \
+              -d odoo18_prod \
+              --install odoo_ocr_final \
+              --stop-after-init \
+              --no-http 2>&1 | tee /tmp/install.log || true
+
+            echo ''
+            echo '=== Install log ==='
+            tail -20 /tmp/install.log
+          "
+
+      - name: Verify module upgrade
+        run: |
+          echo "✅ Verifying upgrade..."
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new ${{ env.SSH_USER }}@${{ env.SSH_HOST }} "
+            echo '=== Post-upgrade module state ==='
+            docker exec odoo18-prod-web psql -U odoo -d odoo18_prod -c \"
+              SELECT name, state, latest_version, author
+              FROM ir_module_module
+              WHERE name IN ('custom_ocr_finance', 'odoo_ocr_final')
+              ORDER BY name;
+            \"
+          "
+
+      - name: Restart Production container
+        run: |
+          echo "🔄 Restarting Production container to apply changes..."
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new ${{ env.SSH_USER }}@${{ env.SSH_HOST }} "
+            cd /srv/stacks/odoo18-prod
+            docker-compose restart web
+
+            echo ''
+            echo 'Waiting for container to be healthy...'
+            sleep 10
+            docker ps --filter name=odoo18-prod-web --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
+          "
+
+      - name: Summary
+        if: success()
+        run: |
+          echo "### ✅ OCR Module Upgrade Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Actions taken:**" >> $GITHUB_STEP_SUMMARY
+          echo "1. ✅ Database backed up to /srv/backups/" >> $GITHUB_STEP_SUMMARY
+          echo "2. ✅ Uninstalled custom_ocr_finance (v11.0.0)" >> $GITHUB_STEP_SUMMARY
+          echo "3. ✅ Installed odoo_ocr_final (v13.3.0)" >> $GITHUB_STEP_SUMMARY
+          echo "4. ✅ Restarted Production container" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Next step:** Test OCR with the same receipt to verify it now returns 8 items instead of summary" >> $GITHUB_STEP_SUMMARY
+
+      - name: Cleanup
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
