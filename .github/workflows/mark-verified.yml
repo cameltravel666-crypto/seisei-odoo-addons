@@ -42,15 +42,11 @@ jobs:
           echo "Actor: $ACTOR"
           echo ""
 
-          cat <<'ENDSSH' | ssh -i ~/.ssh/deploy_key \
+          ssh -i ~/.ssh/deploy_key \
             -o StrictHostKeyChecking=accept-new \
             -o ConnectTimeout=10 \
-            ${{ env.SSH_USER }}@${{ env.SSH_HOST }} "bash -s" "$VERSION" "$REASON" "$ACTOR"
+            ${{ env.SSH_USER }}@${{ env.SSH_HOST }} bash -s <<ENDSSH
           set -euo pipefail
-
-          VERSION="$1"
-          REASON="$2"
-          ACTOR="$3"
 
           echo "=== Marking $VERSION as Verified ==="
           echo ""
@@ -62,7 +58,7 @@ jobs:
           sudo touch /srv/releases/verified/$VERSION
 
           # Record in log
-          echo "$(date -Iseconds) | $VERSION | VERIFIED | Actor: $ACTOR | Reason: $REASON" | \
+          echo "\$(date -Iseconds) | $VERSION | VERIFIED | Actor: $ACTOR | Reason: $REASON" | \
             sudo tee -a /srv/releases/verified.log
 
           echo ""
