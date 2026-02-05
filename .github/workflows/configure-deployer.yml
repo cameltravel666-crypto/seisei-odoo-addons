@@ -1,0 +1,291 @@
+name: Configure Deployer Permissions
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment (production only - staging uses deployer for manual testing)'
+        required: true
+        type: choice
+        options:
+          - production
+        default: production
+      dry_run:
+        description: 'Dry run mode (preview changes without applying)'
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+env:
+  SSH_HOST: ${{ secrets.DEPLOY_SSH_HOST || '54.65.127.141' }}
+  # IMPORTANT: This workflow requires ubuntu user with full sudo access
+  # deployer user cannot configure its own permissions
+  SSH_USER: ubuntu
+  REPO_PATH: /opt/seisei-odoo-addons
+
+jobs:
+  configure:
+    name: Configure deployer permissions on ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    # Use environment for protection rules
+    environment: ${{ inputs.environment }}
+
+    steps:
+      - name: Validate inputs
+        run: |
+          ENV="${{ inputs.environment }}"
+          DRY_RUN="${{ inputs.dry_run }}"
+
+          echo "### Permission Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment:** \`$ENV\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Mode:** \`$([ "$DRY_RUN" = "true" ] && echo "DRY RUN (no changes)" || echo "APPLY (will modify sudoers)")\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Actor:** \`${{ github.actor }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Run ID:** \`${{ github.run_id }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "$DRY_RUN" = "false" ]; then
+            echo "⚠️ **WARNING**: This will modify production sudoers configuration" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Verify script exists
+        run: |
+          if [ ! -f scripts/configure_deployer_permissions.sh ]; then
+            echo "::error::Script not found: scripts/configure_deployer_permissions.sh"
+            exit 1
+          fi
+
+          echo "✅ Configuration script found"
+          echo "Script size: $(wc -l < scripts/configure_deployer_permissions.sh) lines"
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          # Use UBUNTU_SSH_KEY for this operation (requires full sudo access)
+          echo "${{ secrets.UBUNTU_SSH_KEY }}" > ~/.ssh/ubuntu_key
+          chmod 600 ~/.ssh/ubuntu_key
+
+          # Add known_hosts
+          ssh-keyscan -H ${{ env.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Upload configuration script to server
+        run: |
+          # Upload script to /tmp on server
+          scp -i ~/.ssh/ubuntu_key \
+            -o StrictHostKeyChecking=accept-new \
+            scripts/configure_deployer_permissions.sh \
+            ${{ env.SSH_USER }}@${{ env.SSH_HOST }}:/tmp/configure_deployer_permissions.sh
+
+          echo "✅ Script uploaded to server: /tmp/configure_deployer_permissions.sh"
+
+      - name: Apply configuration
+        id: configure
+        run: |
+          DRY_RUN="${{ inputs.dry_run }}"
+          DRY_RUN_FLAG=""
+          if [ "$DRY_RUN" = "true" ]; then
+            DRY_RUN_FLAG="--dry-run"
+          fi
+
+          echo "::group::Configuring deployer permissions"
+
+          # Execute configuration script via SSH
+          ssh -i ~/.ssh/ubuntu_key \
+            -o StrictHostKeyChecking=accept-new \
+            -o ConnectTimeout=10 \
+            ${{ env.SSH_USER }}@${{ env.SSH_HOST }} bash -s <<ENDSSH
+          set -euo pipefail
+
+          echo "=========================================="
+          echo "Configure Deployer Permissions"
+          echo "Mode:        $([ -n "$DRY_RUN_FLAG" ] && echo "DRY RUN" || echo "APPLY")"
+          echo "Actor:       ${{ github.actor }}"
+          echo "Run ID:      ${{ github.run_id }}"
+          echo "Timestamp:   \$(date -Iseconds)"
+          echo "=========================================="
+          echo ""
+
+          # Make script executable
+          chmod +x /tmp/configure_deployer_permissions.sh
+
+          # Execute with sudo (ubuntu user has full sudo access)
+          sudo /tmp/configure_deployer_permissions.sh $DRY_RUN_FLAG 2>&1 | tee /tmp/configure_deployer.log
+
+          # Check exit status
+          EXIT_CODE=\${PIPESTATUS[0]}
+          if [ \$EXIT_CODE -eq 0 ]; then
+            echo ""
+            echo "✅ Configuration $([ -n "$DRY_RUN_FLAG" ] && echo "preview" || echo "applied") successfully"
+            exit 0
+          else
+            echo ""
+            echo "❌ Configuration failed (exit code: \$EXIT_CODE)"
+            exit \$EXIT_CODE
+          fi
+          ENDSSH
+
+          echo "::endgroup::"
+
+          # Set output based on result
+          if [ $? -eq 0 ]; then
+            echo "status=success" >> $GITHUB_OUTPUT
+          else
+            echo "status=failed" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+      - name: Verify deployer permissions
+        if: inputs.dry_run == false
+        run: |
+          echo "::group::Verifying deployer permissions"
+
+          # Verify deployer can run required commands
+          ssh -i ~/.ssh/ubuntu_key \
+            -o StrictHostKeyChecking=accept-new \
+            ${{ env.SSH_USER }}@${{ env.SSH_HOST }} bash -s <<'ENDSSH'
+          set -euo pipefail
+
+          echo "Testing deployer sudo permissions..."
+          echo ""
+
+          # Switch to deployer and test sudo -l
+          sudo -u deployer sudo -l > /tmp/deployer_sudo_test.txt 2>&1 || true
+
+          echo "Deployer sudo capabilities:"
+          cat /tmp/deployer_sudo_test.txt
+          echo ""
+
+          # Test specific commands (non-destructive checks only)
+          echo "Testing specific permissions:"
+
+          # Test 1: Can run prod_status.sh
+          if sudo -u deployer sudo -l 2>/dev/null | grep -q "prod_status.sh"; then
+            echo "  ✅ prod_status.sh"
+          else
+            echo "  ❌ prod_status.sh"
+          fi
+
+          # Test 2: Can run deploy.sh
+          if sudo -u deployer sudo -l 2>/dev/null | grep -q "deploy.sh"; then
+            echo "  ✅ deploy.sh"
+          else
+            echo "  ❌ deploy.sh"
+          fi
+
+          # Test 3: Can run docker login
+          if sudo -u deployer sudo -l 2>/dev/null | grep -q "docker login ghcr.io"; then
+            echo "  ✅ docker login ghcr.io"
+          else
+            echo "  ❌ docker login ghcr.io"
+          fi
+
+          # Test 4: Can run docker compose
+          if sudo -u deployer sudo -l 2>/dev/null | grep -q "docker compose"; then
+            echo "  ✅ docker compose"
+          else
+            echo "  ❌ docker compose"
+          fi
+
+          # Test 5: Verify denied commands are actually denied
+          echo ""
+          echo "Verifying explicitly denied commands:"
+          if sudo -u deployer sudo -l 2>/dev/null | grep -q "!NOPASSWD.*docker exec"; then
+            echo "  ✅ docker exec is denied (as expected)"
+          else
+            echo "  ⚠️  docker exec denial not visible in sudo -l"
+          fi
+
+          rm -f /tmp/deployer_sudo_test.txt
+          ENDSSH
+
+          echo "::endgroup::"
+
+      - name: Capture configuration results
+        if: always()
+        run: |
+          DRY_RUN="${{ inputs.dry_run }}"
+
+          echo "### Configuration Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** \`${{ steps.configure.outputs.status || 'failed' }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Mode:** \`$([ "$DRY_RUN" = "true" ] && echo "DRY RUN" || echo "APPLIED")\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Get configuration log from server
+          ssh -i ~/.ssh/ubuntu_key \
+            -o StrictHostKeyChecking=accept-new \
+            ${{ env.SSH_USER }}@${{ env.SSH_HOST }} bash -s <<'ENDSSH' >> $GITHUB_STEP_SUMMARY
+
+          echo "**Configuration Log:**"
+          echo '```'
+          tail -50 /tmp/configure_deployer.log 2>/dev/null || echo "Log not found"
+          echo '```'
+          echo ""
+
+          if [ -f /etc/sudoers.d/deployer ]; then
+            echo "**Current sudoers configuration:**"
+            echo '```'
+            sudo cat /etc/sudoers.d/deployer
+            echo '```'
+            echo ""
+
+            echo "**File permissions:**"
+            echo '```'
+            ls -la /etc/sudoers.d/deployer
+            echo '```'
+            echo ""
+          fi
+
+          echo "**Available backups:**"
+          echo '```'
+          ls -lah /var/backups/sudoers/ 2>/dev/null | tail -5 || echo "No backups found"
+          echo '```'
+          ENDSSH
+
+      - name: Cleanup SSH key
+        if: always()
+        run: |
+          rm -f ~/.ssh/ubuntu_key
+
+      - name: Next steps
+        if: inputs.dry_run == true
+        run: |
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "This was a **DRY RUN** - no changes were made to the server." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "To apply the configuration:" >> $GITHUB_STEP_SUMMARY
+          echo "1. Review the output above carefully" >> $GITHUB_STEP_SUMMARY
+          echo "2. Re-run this workflow with **dry_run** set to **false**" >> $GITHUB_STEP_SUMMARY
+          echo "3. After applying, test the deployment workflow" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Rollback available:** Backups are stored in \`/var/backups/sudoers/\`" >> $GITHUB_STEP_SUMMARY
+
+      - name: Applied successfully
+        if: inputs.dry_run == false && steps.configure.outputs.status == 'success'
+        run: |
+          echo "### ✅ Configuration Applied Successfully" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Deployer permissions have been updated." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Next steps:**" >> $GITHUB_STEP_SUMMARY
+          echo "1. Test deployer permissions manually:" >> $GITHUB_STEP_SUMMARY
+          echo "   \`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "   ssh deployer@${{ env.SSH_HOST }} 'sudo -l'" >> $GITHUB_STEP_SUMMARY
+          echo "   \`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "2. Test the full deployment workflow:" >> $GITHUB_STEP_SUMMARY
+          echo "   - Trigger the \"Deploy to Environment\" workflow" >> $GITHUB_STEP_SUMMARY
+          echo "   - Monitor for GHCR authentication and docker compose access" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Rollback command (if needed):**" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "sudo cp /var/backups/sudoers/deployer.sudoers.backup.<timestamp> /etc/sudoers.d/deployer" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
