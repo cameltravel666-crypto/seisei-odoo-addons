@@ -42,36 +42,19 @@ jobs:
           echo "Actor: $ACTOR"
           echo ""
 
+          # Use single command approach
           ssh -i ~/.ssh/deploy_key \
             -o StrictHostKeyChecking=accept-new \
             -o ConnectTimeout=10 \
-            -tt \
-            ${{ env.SSH_USER }}@${{ env.SSH_HOST }} bash -s <<ENDSSH
-          set -euo pipefail
-
-          echo "=== Marking $VERSION as Verified ==="
-          echo ""
-
-          # Create verified directory
-          sudo mkdir -p /srv/releases/verified
-
-          # Create verified marker
-          sudo touch /srv/releases/verified/$VERSION
-
-          # Record in log
-          echo "\$(date -Iseconds) | $VERSION | VERIFIED | Actor: $ACTOR | Reason: $REASON" | \
-            sudo tee -a /srv/releases/verified.log
-
-          echo ""
-          echo "✅ Version $VERSION marked as verified"
-          echo ""
-          echo "Currently verified versions:"
-          ls -lh /srv/releases/verified/ 2>/dev/null | tail -10 || echo "None"
-
-          echo ""
-          echo "Recent verification log:"
-          tail -5 /srv/releases/verified.log 2>/dev/null || echo "No log yet"
-          ENDSSH
+            ${{ env.SSH_USER }}@${{ env.SSH_HOST }} \
+            "sudo mkdir -p /srv/releases/verified && \
+             sudo touch /srv/releases/verified/$VERSION && \
+             echo \"\$(date -Iseconds) | $VERSION | VERIFIED | Actor: $ACTOR | Reason: $REASON\" | sudo tee -a /srv/releases/verified.log && \
+             echo '' && \
+             echo '✅ Version $VERSION marked as verified' && \
+             echo '' && \
+             echo 'Currently verified versions:' && \
+             ls -lh /srv/releases/verified/ 2>/dev/null | tail -10 || echo 'None'"
 
           echo "::endgroup::"
 
