@@ -169,9 +169,9 @@ jobs:
           scp -i ~/.ssh/deploy_key \
             -o StrictHostKeyChecking=accept-new \
             dist/image-digests.json \
-            ${{ env.SSH_USER }}@${{ env.SSH_HOST }}:/tmp/image-digests.json
+            ${{ env.SSH_USER }}@${{ env.SSH_HOST }}:/var/tmp/image-digests.json
 
-          echo "✅ Digest manifest uploaded to server: /tmp/image-digests.json"
+          echo "✅ Digest manifest uploaded to server: /var/tmp/image-digests.json"
 
       - name: Setup GHCR authentication on server
         env:
@@ -213,7 +213,7 @@ jobs:
 
           # Build deploy command (pass env vars through sudo to avoid them being dropped)
           DEPLOY_CMD="sudo $SUDO_ENV_VARS ${{ env.REPO_PATH }}/scripts/deploy.sh \"$STACK\" \"$ENV\" \"$IMAGE_TAG\" \
-            --digest-file /tmp/image-digests.json \
+            --digest-file /var/tmp/image-digests.json \
             --actor \"$ACTOR\" \
             --run-id \"$RUN_ID\""
 
@@ -242,7 +242,7 @@ jobs:
 
           # Verify digest file exists on server
           if [ ! -f /tmp/image-digests.json ]; then
-            echo "::error::Digest manifest not found on server: /tmp/image-digests.json"
+            echo "::error::Digest manifest not found on server: /var/tmp/image-digests.json"
             exit 1
           fi
 
