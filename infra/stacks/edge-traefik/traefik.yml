@@ -18,10 +18,6 @@ entryPoints:
         certResolver: cloudflare
 
 providers:
-  docker:
-    endpoint: "unix:///var/run/docker.sock"
-    exposedByDefault: false
-    network: edge
   file:
     directory: /etc/traefik/dynamic
     watch: true
@@ -37,6 +33,12 @@ certificatesResolvers:
         resolvers:
           - "1.1.1.1:53"
           - "8.8.8.8:53"
+  httpchallenge:
+    acme:
+      email: admin@seisei.tokyo
+      storage: /etc/traefik/acme/acme-http.json
+      httpChallenge:
+        entryPoint: web
 
 log:
   level: INFO

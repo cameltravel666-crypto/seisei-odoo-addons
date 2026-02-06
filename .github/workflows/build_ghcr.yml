@@ -4,16 +4,20 @@ on:
   push:
     branches:
       - main
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - 'scripts/**'
+    paths:
+      - 'infra/stacks/odoo18-prod/**'
+      - 'infra/stacks/odoo18-staging/**'
+      - 'odoo_modules/**'
+      - 'services/ocr_service/**'
+      - '.github/workflows/build_ghcr.yml'
   pull_request:
     branches: [main]
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - 'scripts/**'
+    paths:
+      - 'infra/stacks/odoo18-prod/**'
+      - 'infra/stacks/odoo18-staging/**'
+      - 'odoo_modules/**'
+      - 'services/ocr_service/**'
+      - '.github/workflows/build_ghcr.yml'
   workflow_dispatch:
     inputs:
       force_build:
