@@ -27,6 +27,9 @@ jobs:
     environment: ${{ inputs.server }}
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
@@ -34,64 +37,58 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ env.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
 
-      - name: Update server scripts
+      - name: Sync repo to server
         run: |
-          echo "::group::Updating scripts on ${{ inputs.server }} server"
+          echo "::group::Syncing repository to ${{ inputs.server }} server"
 
-          ssh -i ~/.ssh/deploy_key \
-            -o StrictHostKeyChecking=accept-new \
-            -o ConnectTimeout=10 \
-            ${{ env.SSH_USER }}@${{ env.SSH_HOST }} bash -s <<'ENDSSH'
-          set -euo pipefail
+          SSH_OPTS="ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10"
 
-          echo "=========================================="
-          echo "Updating Deployment Scripts"
-          echo "Server: ${{ inputs.server }}"
-          echo "Repo: ${{ env.REPO_PATH }}"
-          echo "=========================================="
-          echo ""
+          # Make scripts executable locally before syncing
+          chmod +x scripts/*.sh
 
-          # Navigate to repository
-          cd ${{ env.REPO_PATH }}
-          sudo git config --global --add safe.directory ${{ env.REPO_PATH }}
-
-          # Show current branch and commit
-          echo "Current state:"
-          sudo git branch --show-current
-          sudo git log -1 --oneline
-          echo ""
-
-          # Pull latest changes from main
-          echo "Pulling latest changes..."
-          sudo git fetch origin main
-          sudo git reset --hard origin/main
-          echo ""
-
-          # Show updated commit
-          echo "Updated to:"
-          sudo git log -1 --oneline
-          echo ""
-
-          # Verify script permissions
-          echo "Verifying script permissions..."
-          ls -la scripts/deploy.sh
-          sudo chmod +x scripts/*.sh
-          echo ""
-
-          echo "✅ Server scripts updated successfully"
-          ENDSSH
+          # Sync entire repo (excluding .git and CI-only files) to server
+          rsync -avz --delete \
+            --exclude='.git/' \
+            --exclude='.github/' \
+            --exclude='node_modules/' \
+            --exclude='.next/' \
+            --exclude='src/' \
+            --exclude='prisma/' \
+            --exclude='package.json' \
+            --exclude='package-lock.json' \
+            --exclude='tsconfig.json' \
+            --exclude='next.config.*' \
+            -e "$SSH_OPTS" \
+            ./ \
+            ${{ env.SSH_USER }}@${{ env.SSH_HOST }}:${{ env.REPO_PATH }}/
 
           echo "::endgroup::"
 
       - name: Verify update
         run: |
-          echo "### Server Scripts Updated" >> $GITHUB_STEP_SUMMARY
+          echo "::group::Verifying update on ${{ inputs.server }} server"
+
+          ssh -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=accept-new \
+            -o ConnectTimeout=10 \
+            ${{ env.SSH_USER }}@${{ env.SSH_HOST }} bash -s <<'ENDSSH'
+          echo "Scripts:"
+          ls -la ${{ env.REPO_PATH }}/scripts/*.sh
+          echo ""
+          echo "Odoo custom modules:"
+          ls ${{ env.REPO_PATH }}/odoo_modules/seisei/
+          ENDSSH
+
+          echo "::endgroup::"
+
+          echo "### Server Repository Updated" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Server:** \`${{ inputs.server }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Path:** \`${{ env.REPO_PATH }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Status:** ✅ Scripts updated to latest main" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** Repository synced to latest main" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Next step:** Deploy your application to apply the updated scripts." >> $GITHUB_STEP_SUMMARY
+          echo "**Next step:** Restart Odoo container to load updated modules." >> $GITHUB_STEP_SUMMARY
 
       - name: Cleanup SSH key
         if: always()
