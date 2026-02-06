@@ -409,18 +409,16 @@ class AccountMove(models.Model):
                     account = product.property_account_expense_id or \
                               product.categ_id.property_account_expense_categ_id
                     if not account:
-                        account = self.env['ir.property']._get(
-                            'property_account_expense_categ_id', 'product.category'
-                        )
+                        default_categ = self.env.ref('product.product_category_all', raise_if_not_found=False)
+                        account = default_categ and default_categ.property_account_expense_categ_id
                     price = price_unit or product.standard_price
                 else:
                     # Income account for customer invoices
                     account = product.property_account_income_id or \
                               product.categ_id.property_account_income_categ_id
                     if not account:
-                        account = self.env['ir.property']._get(
-                            'property_account_income_categ_id', 'product.category'
-                        )
+                        default_categ = self.env.ref('product.product_category_all', raise_if_not_found=False)
+                        account = default_categ and default_categ.property_account_income_categ_id
                     price = price_unit or product.list_price
 
                 line_vals = {
@@ -1075,14 +1073,9 @@ class AccountMove(models.Model):
 
     def _get_default_expense_account(self):
         """Get default expense account (仕入高/経費) for purchases."""
-        # Try to get from company property
-        account = None
-        try:
-            account = self.env['ir.property']._get(
-                'property_account_expense_categ_id', 'product.category'
-            )
-        except (KeyError, AttributeError):
-            pass
+        # Try to get from default product category (Odoo 18: ir.property removed)
+        default_categ = self.env.ref('product.product_category_all', raise_if_not_found=False)
+        account = default_categ and default_categ.property_account_expense_categ_id
         if account:
             return account
 
@@ -1103,10 +1096,9 @@ class AccountMove(models.Model):
 
     def _get_default_income_account(self):
         """Get default income account (売上高) for sales."""
-        # Try to get from company property
-        account = self.env['ir.property']._get(
-            'property_account_income_categ_id', 'product.category'
-        )
+        # Try to get from default product category (Odoo 18: ir.property removed)
+        default_categ = self.env.ref('product.product_category_all', raise_if_not_found=False)
+        account = default_categ and default_categ.property_account_income_categ_id
         if account:
             return account
 
