@@ -633,10 +633,8 @@ class AccountMove(models.Model):
             if account:
                 return account
 
-        # Fallback to company default accounts
-        if is_purchase:
-            return self.env['ir.property']._get('property_account_expense_categ_id', 'product.category')
-        return self.env['ir.property']._get('property_account_income_categ_id', 'product.category')
+        # Fallback to company default accounts (Odoo 18: ir.property removed)
+        return self._get_default_expense_account() if is_purchase else self._get_default_income_account()
 
     def _find_or_create_product(self, name, price=0, is_sale=False):
         """Find product by name, create if not found.
