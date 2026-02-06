@@ -136,8 +136,8 @@ Recent deployments from `/srv/deploy-history.log`:
 
 | Resource | Type | Endpoint/IP | Purpose | Status |
 |----------|------|-------------|---------|--------|
-| **Staging EC2** | t3.medium | 54.178.13.108 (i-07431aa34ec66a65d) | Staging environment | ✅ Deployed |
-| **Production EC2** | t3.medium | 57.180.39.58 (i-0c1c8fdf3e17217d7) | Production environment | ⏸️ Ready |
+| **Staging EC2** | t3.medium | 13.231.24.250 (i-07431aa34ec66a65d) | Staging environment | ✅ Deployed |
+| **Production EC2** | t3.medium | 54.65.127.141 (i-0c1c8fdf3e17217d7) | Production environment | ⏸️ Ready |
 | **Staging RDS** | PostgreSQL 15 | seisei-odoo18-staging-rds.c1emceusojse.ap-northeast-1.rds.amazonaws.com:5432 | Staging database | ✅ Configured |
 | **Production RDS** | PostgreSQL 15 | TBD | Production database | ⏸️ Ready |
 
@@ -146,7 +146,7 @@ Recent deployments from `/srv/deploy-history.log`:
 
 ### 2.2 Current Deployment Status
 
-**Staging EC2 (54.178.13.108)**:
+**Staging EC2 (13.231.24.250)**:
 - ✅ Odoo 18 Staging deployed and operational
 - ✅ Connected to RDS
 - ✅ Custom addons mounted via volumes
@@ -155,7 +155,7 @@ Recent deployments from `/srv/deploy-history.log`:
 - ⚠️ No GHCR authentication (cannot pull custom images)
 - ⚠️ No Traefik routing (direct IP access only)
 
-**Production EC2 (57.180.39.58)**:
+**Production EC2 (54.65.127.141)**:
 - ⏸️ Not yet configured
 - ⏸️ Awaiting deployment automation
 
@@ -231,8 +231,8 @@ These services will **remain on original server** (54.65.127.141):
 
 - [ ] Create GitHub Personal Access Token with `read:packages` + `write:packages` scopes
 - [ ] Add `GHCR_PAT` to GitHub Secrets
-- [ ] Configure Docker login on Staging EC2 (54.178.13.108)
-- [ ] Configure Docker login on Production EC2 (57.180.39.58)
+- [ ] Configure Docker login on Staging EC2 (13.231.24.250)
+- [ ] Configure Docker login on Production EC2 (54.65.127.141)
 - [ ] Test GHCR image pull on both servers
 - [ ] Generate strong passwords for `admin_passwd` and `db_password`
 - [ ] Rotate RDS passwords
@@ -258,10 +258,10 @@ These services will **remain on original server** (54.65.127.141):
 ### Phase 3: Edge Infrastructure
 **Target**: Deploy Traefik to both EC2 instances
 
-- [ ] Deploy Traefik to Staging EC2 (54.178.13.108)
+- [ ] Deploy Traefik to Staging EC2 (13.231.24.250)
 - [ ] Configure dynamic routing for staging services
 - [ ] Set up SSL certificates (Let's Encrypt + Cloudflare)
-- [ ] Deploy Traefik to Production EC2 (57.180.39.58)
+- [ ] Deploy Traefik to Production EC2 (54.65.127.141)
 - [ ] Configure dynamic routing for production services
 - [ ] Test SSL certificate acquisition
 - [ ] Configure health checks
@@ -285,7 +285,7 @@ These services will **remain on original server** (54.65.127.141):
 
 - [ ] Finalize Odoo Staging configuration (resolve temporary dependencies)
 - [ ] Mark Staging deployment as verified
-- [ ] Deploy Odoo Production to Production EC2 (57.180.39.58)
+- [ ] Deploy Odoo Production to Production EC2 (54.65.127.141)
 - [ ] Configure multi-tenant routing (admin.erp.seisei.tokyo, *.erp.seisei.tokyo)
 - [ ] Test database connectivity to Production RDS
 - [ ] Verify all custom modules load correctly
@@ -323,7 +323,7 @@ These services will **remain on original server** (54.65.127.141):
 
 - [ ] Create DNS cutover plan with rollback procedures
 - [ ] Set low TTL values on DNS records (1 minute)
-- [ ] Update DNS records to point to new Production EC2 (57.180.39.58)
+- [ ] Update DNS records to point to new Production EC2 (54.65.127.141)
 - [ ] Monitor service health for 24 hours
 - [ ] Verify all domains resolving correctly
 - [ ] Run full smoke test suite

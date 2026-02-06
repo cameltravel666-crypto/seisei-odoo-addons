@@ -37,7 +37,7 @@ staging.biznexus.seisei.tokyo      → BizNexus Staging (或 staging.erp.seisei.
 staging.www.seisei.tokyo           → 官网 Staging (可选)
 ```
 
-**生产环境** (Production EC2: 57.180.39.58):
+**生产环境** (Production EC2: 54.65.127.141):
 ```
 seisei.tokyo / www.seisei.tokyo    → 公司官网
 erp.seisei.tokyo                   → BizNexus 生产
@@ -139,7 +139,7 @@ testodoo.seisei.tokyo              → 公开测试租户
 
 **新服务器**:
 - Staging EC2 (13.231.24.250): 已部署 Staging 环境，但无 DNS
-- Production EC2(57.180.39.58): 已部署 Production 环境，但无 DNS
+- Production EC2(54.65.127.141): 已部署 Production 环境，但无 DNS
 
 ### 推荐的 DNS 切换计划
 
@@ -169,20 +169,20 @@ staging.erp.seisei.tokyo        A    13.231.24.250  (可选)
 
 ```dns
 # 先切换官网 (静态网站，低风险)
-seisei.tokyo                    A    57.180.39.58
-www.seisei.tokyo                A    57.180.39.58
+seisei.tokyo                    A    54.65.127.141
+www.seisei.tokyo                A    54.65.127.141
 ```
 
 等待 24 小时观察，如果没问题，继续：
 
 ```dns
 # 切换 BizNexus
-erp.seisei.tokyo                A    57.180.39.58
-biznexus.seisei.tokyo           A    57.180.39.58
+erp.seisei.tokyo                A    54.65.127.141
+biznexus.seisei.tokyo           A    54.65.127.141
 
 # 切换 Odoo 多租户
-*.erp.seisei.tokyo              A    57.180.39.58
-testodoo.seisei.tokyo           A    57.180.39.58
+*.erp.seisei.tokyo              A    54.65.127.141
+testodoo.seisei.tokyo           A    54.65.127.141
 ```
 
 **选项 B: 一次性全部切换**
@@ -242,8 +242,8 @@ testodoo.seisei.tokyo           A    57.180.39.58
 
 4. **灰度切换官网域名**
    ```dns
-   seisei.tokyo      →  57.180.39.58
-   www.seisei.tokyo  →  57.180.39.58
+   seisei.tokyo      →  54.65.127.141
+   www.seisei.tokyo  →  54.65.127.141
    ```
 
 5. **监控 24 小时**
@@ -255,9 +255,9 @@ testodoo.seisei.tokyo           A    57.180.39.58
 
 6. **切换业务域名**
    ```dns
-   erp.seisei.tokyo          →  57.180.39.58
-   biznexus.seisei.tokyo     →  57.180.39.58
-   *.erp.seisei.tokyo        →  57.180.39.58
+   erp.seisei.tokyo          →  54.65.127.141
+   biznexus.seisei.tokyo     →  54.65.127.141
+   *.erp.seisei.tokyo        →  54.65.127.141
    ```
 
 7. **下线原服务器**

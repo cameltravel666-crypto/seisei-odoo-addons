@@ -24,7 +24,7 @@
 
 ### 1. OCR 服务迁移 ⭐
 
-**部署位置**: Production EC2 (57.180.39.58)
+**部署位置**: Production EC2 (54.65.127.141)
 
 **迁移内容**:
 - ✅ OCR Service 容器 (ghcr.io/cameltravel666-crypto/ocr-service:sha-b73ee89)
@@ -57,7 +57,7 @@
 
 ### 2. Langbot 服务迁移 ⭐
 
-**部署位置**: Production EC2 (57.180.39.58)
+**部署位置**: Production EC2 (54.65.127.141)
 
 **迁移内容**:
 - ✅ Langbot 容器 (rockchin/langbot@sha256:dde184e...)
@@ -120,7 +120,7 @@
 关键配置:
   - DEFAULT_ODOO_URL: http://odoo18-staging-web:8069
   - PUBLIC_ODOO_URL: http://odoo18-staging-web:8069
-  - OCR_SERVICE_URL: http://57.180.39.58:8180
+  - OCR_SERVICE_URL: http://54.65.127.141:8180
   - NEXT_PUBLIC_APP_URL: https://biznexus.seisei.tokyo
 
 网络连接:
@@ -196,12 +196,12 @@ ocr_rate_limits, ocr_results, payments
   - staging.erp.seisei.tokyo → BizNexus App (备用域名)
 ```
 
-### Production 环境 (57.180.39.58)
+### Production 环境 (54.65.127.141)
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                   Production Environment                         │
-│  EC2: 57.180.39.58                                              │
+│  EC2: 54.65.127.141                                              │
 │  ┌──────────┐                                                    │
 │  │ Traefik  │                                                    │
 │  │ :80,:443 │                                                    │
@@ -253,7 +253,7 @@ BizNexus App
   ├─→ Staging Odoo (通过 Docker 内部网络)
   │   └─→ http://odoo18-staging-web:8069
   └─→ OCR Service (通过 Production EC2 公网 IP)
-      └─→ http://57.180.39.58:8180
+      └─→ http://54.65.127.141:8180
 ```
 
 **Docker 网络拓扑**:
@@ -357,7 +357,7 @@ BizNexus App 容器:
 
 **RDS**: seisei-odoo18-staging-rds (18 databases, ~830 MB)
 
-### Production EC2 (57.180.39.58)
+### Production EC2 (54.65.127.141)
 
 | 服务 | 容器名 | 端口 | 状态 | 用途 |
 |------|--------|------|------|------|
@@ -398,7 +398,7 @@ Record 3: staging.erp.seisei.tokyo
 ```
 Record 1: *.erp.seisei.tokyo
   Type: A
-  Value: 57.180.39.58
+  Value: 54.65.127.141
   TTL: 300
 ```
 
