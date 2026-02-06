@@ -426,13 +426,10 @@ class AccountMove(models.Model):
             ('amount_type', '=', 'percent'),
         ]
 
-        # Try company-specific tax first
+        # Search for tax matching the current company
         if self.company_id:
-            tax = Tax.search(domain + [('company_id', '=', self.company_id.id)], limit=1)
-            if tax:
-                return tax
+            domain.append(('company_id', '=', self.company_id.id))
 
-        # Fall back to any matching tax
         tax = Tax.search(domain, limit=1)
         return tax if tax else False
 

@@ -476,19 +476,23 @@ class AccountMove(models.Model):
         elif price_include is False:
             domain.append(('price_include', '=', False))
 
-        # Try company-specific tax first
+        # Search for tax matching the current company
         if self.company_id:
-            tax = Tax.search(domain + [('company_id', '=', self.company_id.id)], limit=1)
-            if tax:
-                return tax
+            domain.append(('company_id', '=', self.company_id.id))
 
-        # Fall back to any matching tax (ignore price_include constraint)
-        fallback_domain = [
-            ('type_tax_use', '=', tax_type),
-            ('amount', '=', float(rate)),
-            ('amount_type', '=', 'percent'),
-        ]
-        tax = Tax.search(fallback_domain, limit=1)
+        tax = Tax.search(domain, limit=1)
+        if tax:
+            return tax
+
+        # Fall back: relax price_include constraint but keep company filter
+        if price_include is not None and self.company_id:
+            fallback_domain = [
+                ('type_tax_use', '=', tax_type),
+                ('amount', '=', float(rate)),
+                ('amount_type', '=', 'percent'),
+                ('company_id', '=', self.company_id.id),
+            ]
+            tax = Tax.search(fallback_domain, limit=1)
         return tax if tax else False
 
     def _validate_and_reconcile_tax(self, extracted):
