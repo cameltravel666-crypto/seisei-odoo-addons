@@ -37,17 +37,20 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ env.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
 
-      - name: Sync repo to server
+      - name: Upload repo to server temp
         run: |
-          echo "::group::Syncing repository to ${{ inputs.server }} server"
+          echo "::group::Uploading to ${{ inputs.server }} temp directory"
 
-          SSH_OPTS="ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10"
+          SSH_CMD="ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10"
+          REMOTE="${{ env.SSH_USER }}@${{ env.SSH_HOST }}"
 
-          # Make scripts executable locally before syncing
           chmod +x scripts/*.sh
 
-          # Sync entire repo (excluding .git and CI-only files) to server
-          rsync -avz --delete \
+          # Create temp staging directory (writable by deploy user)
+          $SSH_CMD $REMOTE "rm -rf /tmp/seisei-sync && mkdir -p /tmp/seisei-sync"
+
+          # Rsync to temp directory
+          rsync -az \
             --exclude='.git/' \
             --exclude='.github/' \
             --exclude='node_modules/' \
@@ -58,28 +61,30 @@ jobs:
             --exclude='package-lock.json' \
             --exclude='tsconfig.json' \
             --exclude='next.config.*' \
-            -e "$SSH_OPTS" \
-            ./ \
-            ${{ env.SSH_USER }}@${{ env.SSH_HOST }}:${{ env.REPO_PATH }}/
+            -e "$SSH_CMD" \
+            ./ $REMOTE:/tmp/seisei-sync/
+
+          echo "::endgroup::"
+
+      - name: Install files to repo path
+        run: |
+          echo "::group::Installing to ${{ env.REPO_PATH }}"
+
+          ssh -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=accept-new \
+            -o ConnectTimeout=10 \
+            ${{ env.SSH_USER }}@${{ env.SSH_HOST }} \
+            "sudo rsync -a --delete --exclude='.git/' /tmp/seisei-sync/ ${{ env.REPO_PATH }}/ && sudo chmod +x ${{ env.REPO_PATH }}/scripts/*.sh && rm -rf /tmp/seisei-sync"
 
           echo "::endgroup::"
 
       - name: Verify update
         run: |
-          echo "::group::Verifying update on ${{ inputs.server }} server"
-
           ssh -i ~/.ssh/deploy_key \
             -o StrictHostKeyChecking=accept-new \
             -o ConnectTimeout=10 \
-            ${{ env.SSH_USER }}@${{ env.SSH_HOST }} bash -s <<'ENDSSH'
-          echo "Scripts:"
-          ls -la ${{ env.REPO_PATH }}/scripts/*.sh
-          echo ""
-          echo "Odoo custom modules:"
-          ls ${{ env.REPO_PATH }}/odoo_modules/seisei/
-          ENDSSH
-
-          echo "::endgroup::"
+            ${{ env.SSH_USER }}@${{ env.SSH_HOST }} \
+            "echo 'Scripts:' && ls -la ${{ env.REPO_PATH }}/scripts/*.sh && echo '' && echo 'Odoo modules:' && ls ${{ env.REPO_PATH }}/odoo_modules/seisei/"
 
           echo "### Server Repository Updated" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
