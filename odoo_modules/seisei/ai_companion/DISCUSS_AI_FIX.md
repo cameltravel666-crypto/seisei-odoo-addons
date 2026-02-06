@@ -59,10 +59,10 @@ docker exec -it odoo-web odoo -u ai_companion -d your_database --stop-after-init
 1. 进入 **Settings > General Settings > AI Companion**
 2. 启用 **Enable AI Companion**
 3. 配置 **Dify API Key**:
-   - 访问 http://13.114.99.38:3000/apps
+   - 访问 http://54.65.127.141:3000/apps
    - 选择应用 → **API 访问** → 复制 API Key
    - 粘贴到 Odoo 设置中
-4. 配置 **Dify Base URL**: `http://13.114.99.38:5001/v1`
+4. 配置 **Dify Base URL**: `http://54.65.127.141:5001/v1`
 5. 保存设置
 
 ### 步骤 3: 在 Discuss 中使用
@@ -104,7 +104,7 @@ docker exec -it odoo-web odoo -u ai_companion -d your_database --stop-after-init
    - Settings > General Settings > AI Companion > Dify API Key
 
 3. ✅ Dify Base URL 是否正确？
-   - 应该是：`http://13.114.99.38:5001/v1`
+   - 应该是：`http://54.65.127.141:5001/v1`
 
 4. ✅ AI Assistant Partner 是否在频道中？
    - 在频道中点击 "🔍 检查 AI 配置"
@@ -134,11 +134,11 @@ docker exec -it odoo-web odoo -u ai_companion -d your_database --stop-after-init
 
 1. 检查 Dify 服务是否运行：
    ```bash
-   curl http://13.114.99.38:5001/health
+   curl http://54.65.127.141:5001/health
    ```
 
 2. 检查网络连接：
-   - 确保 Odoo 服务器可以访问 13.114.99.38:5001
+   - 确保 Odoo 服务器可以访问 54.65.127.141:5001
 
 3. 检查防火墙设置
 
@@ -151,7 +151,7 @@ docker exec -it odoo-web odoo -u ai_companion -d your_database --stop-after-init
 **解决方案：**
 
 1. 检查 Dify 应用配置：
-   - 访问 http://13.114.99.38:3000/apps
+   - 访问 http://54.65.127.141:3000/apps
    - 确认应用正常工作
 
 2. 检查模型服务状态

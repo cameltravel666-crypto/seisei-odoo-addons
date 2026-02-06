@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   configure-staging:
-    name: Configure Staging EC2 (54.178.13.108)
+    name: Configure Staging EC2 (13.231.24.250)
     runs-on: ubuntu-latest
     if: ${{ inputs.target == 'staging' || inputs.target == 'both' }}
 
@@ -44,11 +44,11 @@ jobs:
 
       - name: Summary
         run: |
-          echo "✅ Staging EC2 (54.178.13.108) Docker login configured"
+          echo "✅ Staging EC2 (13.231.24.250) Docker login configured"
           echo "✅ Successfully pulled test image from GHCR"
 
   configure-production:
-    name: Configure Production EC2 (57.180.39.58)
+    name: Configure Production EC2 (54.65.127.141)
     runs-on: ubuntu-latest
     if: ${{ inputs.target == 'production' || inputs.target == 'both' }}
 
@@ -75,5 +75,5 @@ jobs:
 
       - name: Summary
         run: |
-          echo "✅ Production EC2 (57.180.39.58) Docker login configured"
+          echo "✅ Production EC2 (54.65.127.141) Docker login configured"
           echo "✅ Successfully pulled test image from GHCR"

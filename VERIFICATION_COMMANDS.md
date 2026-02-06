@@ -29,7 +29,7 @@ scripts/deploy.sh           - 已替换为新版本（旧版本备份为deploy-o
 
 ```bash
 # SSH到服务器
-ssh root@47.245.12.205
+ssh root@13.231.79.114
 
 # 拉取最新代码
 cd /opt/seisei-odoo-addons

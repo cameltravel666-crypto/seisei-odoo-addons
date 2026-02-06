@@ -18,6 +18,14 @@ on:
         description: 'Image tag (must be sha-xxxxxxx format, e.g., sha-abc123)'
         required: true
         type: string
+      approve:
+        description: 'Type YES to approve this deployment'
+        required: true
+        type: string
+      approve_reason:
+        description: 'Approval reason (required for production)'
+        required: false
+        type: string
       break_glass:
         description: '[PRODUCTION ONLY] Emergency bypass of verified gate'
         required: false
@@ -49,6 +57,8 @@ jobs:
           STACK="${{ inputs.stack }}"
           ENV="${{ inputs.environment }}"
           IMAGE_TAG="${{ inputs.image_tag }}"
+          APPROVE="${{ inputs.approve }}"
+          APPROVE_REASON="${{ inputs.approve_reason }}"
           BREAK_GLASS="${{ inputs.break_glass }}"
           BREAK_GLASS_REASON="${{ inputs.break_glass_reason }}"
 
@@ -79,6 +89,16 @@ jobs:
               echo "::error::break_glass requires break_glass_reason"
               exit 1
             fi
+          fi
+
+          # Manual approval gate
+          if [ "$APPROVE" != "YES" ]; then
+            echo "::error::Approval not granted. Type YES in the approve field."
+            exit 1
+          fi
+          if [ "$ENV" = "production" ] && [ -z "$APPROVE_REASON" ]; then
+            echo "::error::approve_reason is required for production deployments."
+            exit 1
           fi
 
           echo "### Deployment Configuration" >> $GITHUB_STEP_SUMMARY
@@ -180,10 +200,11 @@ jobs:
         run: |
           echo "Setting up GHCR authentication on deployment server..."
           # Pass GHCR_PAT through SSH to remote server
+          # deployer user must use sudo to run docker login
           ssh -i ~/.ssh/deploy_key \
             -o StrictHostKeyChecking=accept-new \
             ${{ env.SSH_USER }}@${{ env.SSH_HOST }} \
-            "echo \"$GHCR_PAT\" | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin && echo '✅ GHCR authentication configured'"
+            "echo \"$GHCR_PAT\" | sudo docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin && echo '✅ GHCR authentication configured'"
 
       - name: Deploy to server
         id: deploy

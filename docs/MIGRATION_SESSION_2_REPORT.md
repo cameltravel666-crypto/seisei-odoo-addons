@@ -96,7 +96,7 @@ Services:
   - odoo18-staging-lp:8072 (WebSocket)
 ```
 
-#### Production EC2 (57.180.39.58)
+#### Production EC2 (54.65.127.141)
 
 **配置**:
 - ✅ 相同的 Cloudflare 凭证
@@ -151,7 +151,7 @@ DNS Resolvers: 1.1.1.1, 8.8.8.8
 
 ┌─────────────────────────────────────────────────────────────┐
 │                   Production Environment                     │
-│  EC2: 57.180.39.58                                          │
+│  EC2: 54.65.127.141                                          │
 │  ┌──────────┐  ┌──────────────┐  ┌─────────────────────┐   │
 │  │ Traefik  │→ │ Odoo18 Web   │→ │ Production RDS      │   │
 │  │ :80,:443 │  │ :8069 :8072  │  │ 19 databases        │   │
@@ -301,7 +301,7 @@ Production RDS (10.20.12.104)
 1. **DNS 配置** (15分钟)
    ```
    Record: staging.odoo.seisei.tokyo → 13.231.24.250 (A记录)
-   Record: *.erp.seisei.tokyo → 57.180.39.58 (A记录)
+   Record: *.erp.seisei.tokyo → 54.65.127.141 (A记录)
    TTL: 300秒
    ```
 

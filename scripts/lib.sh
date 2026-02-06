@@ -32,6 +32,7 @@ declare -gA STACK_MAP=(
     ["odoo18-prod"]="/srv/stacks/odoo18-prod"
     ["odoo18-staging"]="/srv/stacks/odoo18-staging"
     ["web-seisei"]="/srv/stacks/web-seisei"
+    ["erp-seisei"]="/srv/stacks/erp-seisei"
 )
 
 # Domain mapping for smoke tests
@@ -42,6 +43,7 @@ declare -gA DOMAIN_MAP=(
     ["odoo18-prod"]="https://demo.nagashiro.top"
     ["odoo18-staging"]="https://staging.odoo.seisei.tokyo"
     ["web-seisei"]="https://biznexus.seisei.tokyo"
+    ["erp-seisei"]="https://erp.seisei.tokyo"
 )
 
 # =============================================================================

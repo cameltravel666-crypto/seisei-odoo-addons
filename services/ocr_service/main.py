@@ -2,7 +2,7 @@
 """
 Central OCR Service - Managed by Odoo 19
 Handles all OCR API calls, tracks usage per tenant, hides API details from tenants.
-Version 1.2.0 - Dual prompt support (fast/full)
+Version 1.3.0 - Backward compatible parameter support (output_level + prompt_version)
 """
 
 import os
@@ -387,8 +387,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Central OCR Service",
-    description="Centralized OCR service with fast/full prompt modes",
-    version="1.2.0",
+    description="Centralized OCR service with backward compatible parameter support (output_level + prompt_version)",
+    version="1.3.0",
     lifespan=lifespan
 )
 
@@ -406,9 +406,22 @@ app.add_middleware(
 class OCRRequest(BaseModel):
     image_data: str  # Base64 encoded
     mime_type: str = 'image/jpeg'
-    prompt_version: Literal['fast', 'full'] = 'fast'  # Default to fast
+    prompt_version: Optional[Literal['fast', 'full']] = None  # Legacy parameter
+    output_level: Optional[Literal['summary', 'accounting']] = None  # New parameter (preferred)
     template_fields: List[str] = []
     tenant_id: str = 'default'
+
+    def get_prompt_mode(self) -> str:
+        """Get normalized prompt mode with priority: output_level > prompt_version > default"""
+        if self.output_level:
+            # Map new parameter values to internal prompt modes
+            return 'full' if self.output_level == 'accounting' else 'fast'
+        elif self.prompt_version:
+            # Use legacy parameter directly
+            return self.prompt_version
+        else:
+            # Default to fast mode (summary)
+            return 'fast'
 
 
 class OCRResponse(BaseModel):
@@ -630,8 +643,16 @@ async def update_usage(
 async def health_check():
     return {
         "status": "healthy",
-        "version": "1.2.0",
+        "version": "1.3.0",
         "prompts": ["fast", "full"],
+        "parameters": {
+            "legacy": ["prompt_version"],
+            "current": ["output_level"],
+            "mapping": {
+                "output_level=summary": "prompt_version=fast",
+                "output_level=accounting": "prompt_version=full"
+            }
+        },
         "timestamp": datetime.now().isoformat()
     }
 
@@ -641,27 +662,30 @@ async def process_ocr(
     request: OCRRequest,
     _: bool = Depends(verify_service_key)
 ):
-    """Process OCR request with fast or full prompt"""
+    """Process OCR request with fast or full prompt (supports both legacy and new parameters)"""
     start_time = time.time()
     file_size = len(request.image_data) * 3 // 4
 
-    logger.info(f"OCR request from {request.tenant_id}, prompt={request.prompt_version}")
+    # Get normalized prompt mode (handles both output_level and prompt_version)
+    prompt_mode = request.get_prompt_mode()
+
+    logger.info(f"OCR request from {request.tenant_id}, output_level={request.output_level}, prompt_version={request.prompt_version}, resolved_mode={prompt_mode}")
 
     result = await call_gemini_api(
         request.image_data,
         request.mime_type,
-        request.prompt_version
+        prompt_mode
     )
 
     processing_time_ms = int((time.time() - start_time) * 1000)
-    logger.info(f"OCR completed in {processing_time_ms}ms, prompt={request.prompt_version}, success={result.get('success')}")
+    logger.info(f"OCR completed in {processing_time_ms}ms, mode={prompt_mode}, success={result.get('success')}")
 
     usage = await update_usage(
         request.tenant_id,
         result.get('success', False),
         processing_time_ms,
         file_size,
-        request.prompt_version
+        prompt_mode
     )
 
     if result.get('success'):
@@ -670,14 +694,14 @@ async def process_ocr(
             extracted=result.get('extracted'),
             raw_response=result.get('raw_response'),
             usage=usage,
-            prompt_version=request.prompt_version,
+            prompt_version=prompt_mode,  # Return resolved mode
             processing_time_ms=processing_time_ms
         )
     else:
         return OCRResponse(
             success=False,
             error_code=result.get('error_code', 'processing_failed'),
-            prompt_version=request.prompt_version,
+            prompt_version=prompt_mode,  # Return resolved mode
             processing_time_ms=processing_time_ms
         )
 
