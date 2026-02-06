@@ -95,7 +95,7 @@ Status: Downloaded newer image for ghcr.io/cameltravel666-crypto/seisei-odoo18@s
 
 ```bash
 # SSH into Production EC2
-ssh -i /Users/taozhang/Projects/Pem/odoo-2025.pem ubuntu@57.180.39.58
+ssh -i /Users/taozhang/Projects/Pem/odoo-2025.pem ubuntu@54.65.127.141
 
 # Configure Docker login (replace YOUR_TOKEN with actual token)
 echo "YOUR_TOKEN" | docker login ghcr.io -u cameltravel666-crypto --password-stdin
@@ -120,7 +120,7 @@ ssh -i /Users/taozhang/Projects/Pem/odoo-2025.pem ubuntu@13.231.24.250 "docker i
 ### Verify Production EC2
 
 ```bash
-ssh -i /Users/taozhang/Projects/Pem/odoo-2025.pem ubuntu@57.180.39.58 "docker images | grep ghcr.io"
+ssh -i /Users/taozhang/Projects/Pem/odoo-2025.pem ubuntu@54.65.127.141 "docker images | grep ghcr.io"
 ```
 
 **Success Criteria**: Both servers should show the GHCR image downloaded successfully.

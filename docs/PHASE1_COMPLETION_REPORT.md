@@ -27,7 +27,7 @@ Successfully configured GitHub Container Registry (GHCR) authentication on both 
 - ✅ Test image pulled successfully
 - ✅ Image digest: `sha256:1db6436ca7e084705cffcf3e760b6659cce449bd636edf94917b28de2df3fbe5`
 
-**Production EC2 (57.180.39.58)**:
+**Production EC2 (54.65.127.141)**:
 - ✅ Docker login configured: `docker login ghcr.io`
 - ✅ Test image pulled successfully
 - ✅ Ready for production deployments

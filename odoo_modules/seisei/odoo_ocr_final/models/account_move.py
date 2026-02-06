@@ -274,6 +274,8 @@ class AccountMove(models.Model):
         """
         created_count = 0
         extracted = extracted or {}
+        enable_discount_lines = self._get_ocr_param_bool('odoo_ocr_final.enable_discount_lines', True)
+        default_tax_inclusive = self._get_ocr_param_bool('odoo_ocr_final.default_tax_inclusive', True)
 
         _logger.info(f'[OCR] _create_invoice_lines_from_ocr called for invoice {self.name}, move_type={self.move_type}')
         _logger.info(f'[OCR] extracted keys: {list(extracted.keys())}')
@@ -287,6 +289,9 @@ class AccountMove(models.Model):
         if not is_purchase and not is_sale:
             _logger.warning(f'[OCR] Skipping line creation for move_type: {self.move_type}')
             return 0
+
+        # Normalize tax-inclusive flag (priority: extracted -> param default)
+        is_tax_inclusive = self._infer_tax_inclusive(extracted, default_tax_inclusive, is_tax_inclusive)
 
         # Check if this is FAST prompt format (summary only, no detailed items)
         prompt_version = extracted.get('_prompt_version', '')
@@ -306,6 +311,8 @@ class AccountMove(models.Model):
                 quantity = float(item.get('quantity') or item.get('qty') or 1)
             except (ValueError, TypeError):
                 quantity = 1
+            if quantity <= 0:
+                quantity = 1
 
             # Parse price (could be tax-inclusive)
             try:
@@ -314,14 +321,10 @@ class AccountMove(models.Model):
                 unit_price = 0
 
             # If no unit price but amount exists, calculate it
-            # Support both 'amount' and 'gross_amount'
-            if unit_price == 0:
-                try:
-                    amount = float(item.get('amount') or item.get('gross_amount') or 0)
-                    if amount > 0 and quantity > 0:
-                        unit_price = amount / quantity
-                except (ValueError, TypeError):
-                    pass
+            # Support both 'amount' and 'gross_amount' (allow negative for discounts)
+            amount_value = self._parse_amount(item.get('amount') or item.get('gross_amount') or item.get('net_amount') or 0)
+            if unit_price == 0 and quantity > 0 and amount_value != 0:
+                unit_price = amount_value / quantity
 
             # Get tax rate for this item (default to 8% - food items in Japan)
             # Handle multiple formats: decimal (0.08), integer (8), string ("8%")
@@ -342,12 +345,46 @@ class AccountMove(models.Model):
             except (ValueError, TypeError):
                 tax_rate = 8
 
-            # If tax-inclusive, convert to tax-exclusive price
+            # Resolve tax record (prefer matching price_include)
+            tax = self._find_tax_by_rate(tax_rate, is_purchase, price_include=is_tax_inclusive)
+
+            # If tax-inclusive, convert to tax-exclusive price when tax is not price-included
             # Formula: price_excl = price_incl / (1 + tax_rate/100)
             price_excl = unit_price
             if is_tax_inclusive and unit_price > 0:
                 price_excl = round(unit_price / (1 + tax_rate / 100), 2)
                 _logger.info(f'[OCR] Tax-inclusive conversion: {unit_price} -> {price_excl} (excl. {tax_rate}% tax)')
+
+            # Determine if this is a discount line
+            is_discount = self._is_discount_line(product_name, amount_value)
+            if is_discount and not enable_discount_lines:
+                _logger.info(f'[OCR] Discount line skipped by config: {product_name}')
+                continue
+
+            # Decide price unit based on tax configuration
+            price_unit = unit_price
+            if is_tax_inclusive and (not tax or not tax.price_include):
+                price_unit = price_excl
+            if tax and tax.price_include:
+                price_unit = unit_price
+
+            # Discount lines: create a direct line without product
+            if is_discount:
+                account = self._get_default_ocr_account(is_purchase, extracted)
+                line_vals = {
+                    'move_id': self.id,
+                    'name': product_name,
+                    'quantity': 1,
+                    'price_unit': price_unit,
+                }
+                if account:
+                    line_vals['account_id'] = account.id
+                if tax:
+                    line_vals['tax_ids'] = [(6, 0, [tax.id])]
+                self.env['account.move.line'].create(line_vals)
+                _logger.info(f'[OCR] Created discount line: {product_name} (price: {price_unit}, tax: {tax_rate}%)')
+                created_count += 1
+                continue
 
             # Find or create product
             product = self._find_or_create_product(product_name, price_excl, is_sale=is_sale)
@@ -372,7 +409,7 @@ class AccountMove(models.Model):
                         account = self.env['ir.property']._get(
                             'property_account_expense_categ_id', 'product.category'
                         )
-                    price = price_excl or product.standard_price
+                    price = price_unit or product.standard_price
                 else:
                     # Income account for customer invoices
                     account = product.property_account_income_id or \
@@ -381,7 +418,7 @@ class AccountMove(models.Model):
                         account = self.env['ir.property']._get(
                             'property_account_income_categ_id', 'product.category'
                         )
-                    price = price_excl or product.list_price
+                    price = price_unit or product.list_price
 
                 line_vals = {
                     'move_id': self.id,
@@ -396,7 +433,6 @@ class AccountMove(models.Model):
                     line_vals['account_id'] = account.id
 
                 # Find and set appropriate tax based on tax_rate
-                tax = self._find_tax_by_rate(tax_rate, is_purchase)
                 if tax:
                     line_vals['tax_ids'] = [(6, 0, [tax.id])]
 
@@ -411,7 +447,7 @@ class AccountMove(models.Model):
 
         return created_count
 
-    def _find_tax_by_rate(self, rate, is_purchase=True):
+    def _find_tax_by_rate(self, rate, is_purchase=True, price_include=None):
         """Find tax record by rate percentage.
 
         Args:
@@ -433,6 +469,8 @@ class AccountMove(models.Model):
             ('amount', '=', float(rate)),
             ('amount_type', '=', 'percent'),
         ]
+        if price_include is not None:
+            domain.append(('price_include', '=', bool(price_include)))
 
         # Try company-specific tax first
         if self.company_id:
@@ -440,14 +478,19 @@ class AccountMove(models.Model):
             if tax:
                 return tax
 
-        # Fall back to any matching tax
-        tax = Tax.search(domain, limit=1)
+        # Fall back to any matching tax (ignore price_include constraint)
+        fallback_domain = [
+            ('type_tax_use', '=', tax_type),
+            ('amount', '=', float(rate)),
+            ('amount_type', '=', 'percent'),
+        ]
+        tax = Tax.search(fallback_domain, limit=1)
         return tax if tax else False
 
     def _validate_and_reconcile_tax(self, extracted):
         try:
-            ocr_tax = self._parse_amount(extracted.get('tax', 0))
-            ocr_total = self._parse_amount(extracted.get('total', 0))
+            ocr_tax = self._parse_amount(self._pick_extracted_amount(extracted, ['tax', 'tax_amount', 'r8_tax', 'r10_tax']))
+            ocr_total = self._parse_amount(self._pick_extracted_amount(extracted, ['total', 'gross_amount']))
             if ocr_tax <= 0 or ocr_total <= 0:
                 _logger.info('[OCR] No OCR tax/total for validation')
                 return
@@ -493,6 +536,64 @@ class AccountMove(models.Model):
             return float(str(value).replace(',', '').replace('¥', '').replace('円', '').strip())
         except:
             return 0
+
+    def _pick_extracted_amount(self, extracted, keys):
+        for key in keys:
+            value = extracted.get(key)
+            if value is None:
+                continue
+            return value
+        return 0
+
+    def _get_ocr_param_bool(self, key, default=False):
+        ICP = self.env['ir.config_parameter'].sudo()
+        raw = ICP.get_param(key, 'True' if default else 'False')
+        return str(raw).strip().lower() in ('1', 'true', 'yes', 'y', 'on')
+
+    def _infer_tax_inclusive(self, extracted, default_tax_inclusive, explicit_flag):
+        # Explicit boolean from caller or extracted
+        if isinstance(explicit_flag, bool):
+            if explicit_flag:
+                return True
+        extracted_flag = extracted.get('is_tax_inclusive')
+        if isinstance(extracted_flag, bool):
+            return extracted_flag
+
+        tax_type = extracted.get('tax_included_type')
+        if isinstance(tax_type, str):
+            normalized = tax_type.strip().lower()
+            if any(k in normalized for k in ['inclusive', 'included', '内税', '税込']):
+                return True
+            if any(k in normalized for k in ['exclusive', 'excluded', '外税', '税抜']):
+                return False
+
+        # Heuristic: presence of r8_gross/r10_gross implies tax-inclusive receipt
+        if extracted.get('r8_gross') or extracted.get('r10_gross'):
+            return True
+
+        return bool(default_tax_inclusive)
+
+    def _is_discount_line(self, name, amount):
+        if amount is not None and amount < 0:
+            return True
+        if not name:
+            return False
+        keywords = ['割引', '値引', '値引き', 'まとめ値引', '自動割引', '割戻', 'discount', 'off']
+        return any(k in name for k in keywords)
+
+    def _get_default_ocr_account(self, is_purchase, extracted):
+        """Resolve default account for OCR lines (supports suggested_account)."""
+        suggested = extracted.get('suggested_account') if extracted else None
+        Account = self.env['account.account']
+        if suggested:
+            account = Account.search([('name', '=', suggested)], limit=1)
+            if account:
+                return account
+
+        # Fallback to company default accounts
+        if is_purchase:
+            return self.env['ir.property']._get('property_account_expense_categ_id', 'product.category')
+        return self.env['ir.property']._get('property_account_income_categ_id', 'product.category')
 
     def _find_or_create_product(self, name, price=0, is_sale=False):
         """Find product by name, create if not found.

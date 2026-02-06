@@ -68,8 +68,8 @@ def diagnose_ai_companion():
     checks.append(('Dify Base URL 已配置', bool(base_url)))
     if base_url:
         print(f"   ✅ Base URL: {base_url}")
-        if '13.114.99.38:5001' not in base_url:
-            issues.append(f'⚠️  Base URL 可能不正确。建议使用: http://13.114.99.38:5001/v1')
+        if '54.65.127.141:5001' not in base_url:
+            issues.append(f'⚠️  Base URL 可能不正确。建议使用: http://54.65.127.141:5001/v1')
             print("   ⚠️  可能不正确")
     else:
         issues.append('❌ Dify Base URL 未配置。')
