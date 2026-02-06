@@ -290,7 +290,7 @@ class AccountMove(models.Model):
             _logger.warning(f'[OCR] Skipping line creation for move_type: {self.move_type}')
             return 0
 
-        # Normalize tax-inclusive flag (priority: extracted -> param default)
+        # Normalize tax-inclusive flag
         is_tax_inclusive = self._infer_tax_inclusive(extracted, default_tax_inclusive, is_tax_inclusive)
 
         # Check if this is FAST prompt format (summary only, no detailed items)
@@ -360,6 +360,9 @@ class AccountMove(models.Model):
             if is_discount and not enable_discount_lines:
                 _logger.info(f'[OCR] Discount line skipped by config: {product_name}')
                 continue
+
+            # Resolve tax record (prefer matching price_include)
+            tax = self._find_tax_by_rate(tax_rate, is_purchase, price_include=is_tax_inclusive)
 
             # Decide price unit based on tax configuration
             price_unit = unit_price
@@ -433,6 +436,7 @@ class AccountMove(models.Model):
                     line_vals['account_id'] = account.id
 
                 # Find and set appropriate tax based on tax_rate
+                tax = self._find_tax_by_rate(tax_rate, is_purchase, price_include=is_tax_inclusive)
                 if tax:
                     line_vals['tax_ids'] = [(6, 0, [tax.id])]
 
@@ -469,8 +473,10 @@ class AccountMove(models.Model):
             ('amount', '=', float(rate)),
             ('amount_type', '=', 'percent'),
         ]
-        if price_include is not None:
-            domain.append(('price_include', '=', bool(price_include)))
+        if price_include is True:
+            domain.append(('price_include', '=', True))
+        elif price_include is False:
+            domain.append(('price_include', '=', False))
 
         # Try company-specific tax first
         if self.company_id:
@@ -526,6 +532,41 @@ class AccountMove(models.Model):
                 _logger.info(f'[OCR] Adjusted {adjust_line.name}: -> {round(new_price, 2)}')
         except Exception as e:
             _logger.warning(f'[OCR] Line adjustment error: {e}')
+
+    def _get_ocr_param_bool(self, key, default=False):
+        ICP = self.env['ir.config_parameter'].sudo()
+        raw = ICP.get_param(key, 'True' if default else 'False')
+        return str(raw).strip().lower() in ('1', 'true', 'yes', 'y', 'on')
+
+    def _infer_tax_inclusive(self, extracted, default_tax_inclusive, explicit_flag):
+        if isinstance(explicit_flag, bool) and explicit_flag:
+            return True
+        extracted_flag = extracted.get('is_tax_inclusive')
+        if isinstance(extracted_flag, bool):
+            return extracted_flag
+        tax_type = (extracted.get('tax_included_type') or '').strip().lower()
+        if tax_type in ('inclusive', 'tax_inclusive', '内税', '税込', 'tax_included'):
+            return True
+        return bool(default_tax_inclusive)
+
+    def _is_discount_line(self, name, amount):
+        if amount is not None and self._parse_amount(amount) < 0:
+            return True
+        name_l = (name or '').lower()
+        keywords = ['割引', '値引', '値引き', '割り引', 'discount', 'off', 'rebate']
+        return any(k in name_l for k in keywords)
+
+    def _get_default_ocr_account(self, is_purchase, extracted):
+        Account = self.env['account.account']
+        suggested = extracted.get('suggested_account') if extracted else None
+        if suggested:
+            account = Account.search([
+                ('name', 'ilike', suggested),
+                ('company_id', '=', self.company_id.id),
+            ], limit=1)
+            if account:
+                return account
+        return self._get_default_expense_account() if is_purchase else self._get_default_income_account()
 
     def _parse_amount(self, value):
         if value is None:
@@ -888,6 +929,36 @@ class AccountMove(models.Model):
         self.write({'ocr_matched_count': matched_count})
 
         _logger.info(f'[OCR] Invoice {self.id}: {pages} pages, {len(line_items)} items, {matched_count} matched')
+
+    @api.model
+    def cron_process_ocr_queue(self):
+        """Cron job to process queued OCR records."""
+        _logger.info('[OCR Cron] Processing queued OCR records')
+
+        to_process = self.search([
+            ('ocr_status', '=', 'processing'),
+            ('message_main_attachment_id', '!=', False),
+            ('move_type', 'in', ('in_invoice', 'in_refund', 'out_invoice', 'out_refund')),
+        ], limit=10, order='write_date asc')
+
+        if not to_process:
+            _logger.info('[OCR Cron] No queued records to process')
+            return
+
+        for idx, record in enumerate(to_process):
+            try:
+                _logger.info(f'[OCR Cron] Processing {idx + 1}/{len(to_process)}: Invoice {record.id}')
+                record._process_single_ocr()
+                self.env.cr.commit()
+                if idx < len(to_process) - 1:
+                    time.sleep(BATCH_OCR_DELAY)
+            except Exception as e:
+                _logger.error(f'[OCR Cron] Failed invoice {record.id}: {e}')
+                record.write({
+                    'ocr_status': 'failed',
+                    'ocr_error_message': str(e)[:500],
+                })
+                self.env.cr.commit()
 
     def _create_japanese_accounting_entries(self, extracted, is_purchase=True):
         """Create accounting entries according to Japanese GAAP for FAST prompt receipts.
