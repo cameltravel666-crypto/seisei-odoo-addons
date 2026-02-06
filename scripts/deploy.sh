@@ -476,7 +476,7 @@ if [ -n "${DEPLOY_S3_ACCESS_KEY:-}" ] && [ -n "${DEPLOY_S3_SECRET_KEY:-}" ]; the
     log_info "Injecting S3 credentials from deployment environment ..."
 
     # Update or append S3 environment variables
-    for var in "SEISEI_S3_ACCESS_KEY:$DEPLOY_S3_ACCESS_KEY" "SEISEI_S3_SECRET_KEY:$DEPLOY_S3_SECRET_KEY" "SEISEI_S3_BUCKET:${DEPLOY_S3_BUCKET:-seisei-odoo-staging}" "SEISEI_S3_REGION:${DEPLOY_S3_REGION:-ap-northeast-1}"; do
+    for var in "SEISEI_S3_ACCESS_KEY:$DEPLOY_S3_ACCESS_KEY" "SEISEI_S3_SECRET_KEY:$DEPLOY_S3_SECRET_KEY" "SEISEI_S3_BUCKET:${DEPLOY_S3_BUCKET:-seisei-staging}" "SEISEI_S3_REGION:${DEPLOY_S3_REGION:-ap-northeast-1}"; do
         KEY="${var%%:*}"
         VALUE="${var#*:}"
         if grep -q "^${KEY}=" "$ENV_FILE"; then
