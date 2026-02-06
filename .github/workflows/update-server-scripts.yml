@@ -53,29 +53,29 @@ jobs:
 
           # Navigate to repository
           cd ${{ env.REPO_PATH }}
-          git config --global --add safe.directory ${{ env.REPO_PATH }}
+          sudo git config --global --add safe.directory ${{ env.REPO_PATH }}
 
           # Show current branch and commit
           echo "Current state:"
-          git branch --show-current
-          git log -1 --oneline
+          sudo git branch --show-current
+          sudo git log -1 --oneline
           echo ""
 
           # Pull latest changes from main
           echo "Pulling latest changes..."
-          git fetch origin main
-          git reset --hard origin/main
+          sudo git fetch origin main
+          sudo git reset --hard origin/main
           echo ""
 
           # Show updated commit
           echo "Updated to:"
-          git log -1 --oneline
+          sudo git log -1 --oneline
           echo ""
 
           # Verify script permissions
           echo "Verifying script permissions..."
           ls -la scripts/deploy.sh
-          chmod +x scripts/*.sh
+          sudo chmod +x scripts/*.sh
           echo ""
 
           echo "✅ Server scripts updated successfully"
