@@ -65,7 +65,7 @@ git push origin main
 
 ```bash
 # SSH到服务器
-ssh root@47.245.12.205
+ssh root@13.231.79.114
 
 # 同步stack配置到/srv（如果需要）
 sudo /opt/seisei-odoo-addons/scripts/sync_to_srv.sh odoo18-staging
@@ -475,7 +475,7 @@ sudo /opt/seisei-odoo-addons/scripts/deploy.sh odoo18-prod prod sha-xxxxx --forc
 ### 前提条件
 
 1. **配置 GitHub Secrets**（Settings → Secrets and variables → Actions）：
-   - `DEPLOY_SSH_HOST` - 服务器IP（默认：47.245.12.205）
+   - `DEPLOY_SSH_HOST` - 服务器IP（默认：13.231.79.114）
    - `DEPLOY_SSH_USER` - SSH用户（deployer 或 root）
    - `DEPLOY_SSH_KEY` - SSH 私钥完整内容
 
@@ -596,7 +596,7 @@ git push origin main
 **方式 A：服务器直接部署**
 ```bash
 # SSH 到服务器
-ssh root@47.245.12.205
+ssh root@13.231.79.114
 
 # 同步配置
 sudo /opt/seisei-odoo-addons/scripts/sync_to_srv.sh edge-nginx-router

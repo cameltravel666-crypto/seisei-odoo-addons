@@ -1,0 +1,54 @@
+name: Check Container Versions
+
+on:
+  workflow_dispatch:
+
+env:
+  SSH_HOST: 54.65.127.141
+  SSH_USER: ubuntu
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ env.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Check container images
+        run: |
+          echo "=== Staging 环境 ==="
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new ${{ env.SSH_USER }}@${{ env.SSH_HOST }} "
+            echo '1. Staging 容器镜像 digest:'
+            docker inspect odoo18-staging-web --format '{{.Image}}' 2>/dev/null || echo '容器不存在'
+
+            echo ''
+            echo '2. Staging 容器运行状态:'
+            docker ps --filter name=odoo18-staging-web --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}'
+
+            echo ''
+            echo '3. Staging IMAGE_REF:'
+            cat /srv/stacks/odoo18-staging/.env | grep IMAGE_REF
+          "
+
+          echo ""
+          echo "=== Production 环境 ==="
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new ${{ env.SSH_USER }}@${{ env.SSH_HOST }} "
+            echo '1. Production 容器镜像 digest:'
+            docker inspect odoo18-prod-web --format '{{.Image}}' 2>/dev/null || echo '容器不存在'
+
+            echo ''
+            echo '2. Production 容器运行状态:'
+            docker ps --filter name=odoo18-prod-web --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}'
+
+            echo ''
+            echo '3. Production IMAGE_REF:'
+            cat /srv/stacks/odoo18-prod/.env | grep IMAGE_REF
+          "
+
+      - name: Cleanup
+        if: always()
+        run: rm -f ~/.ssh/deploy_key

@@ -18,6 +18,14 @@ on:
         description: 'Image tag (must be sha-xxxxxxx format, e.g., sha-abc123)'
         required: true
         type: string
+      approve:
+        description: 'Type YES to approve this deployment'
+        required: true
+        type: string
+      approve_reason:
+        description: 'Approval reason (required for production)'
+        required: false
+        type: string
       break_glass:
         description: '[PRODUCTION ONLY] Emergency bypass of verified gate'
         required: false
@@ -49,6 +57,8 @@ jobs:
           STACK="${{ inputs.stack }}"
           ENV="${{ inputs.environment }}"
           IMAGE_TAG="${{ inputs.image_tag }}"
+          APPROVE="${{ inputs.approve }}"
+          APPROVE_REASON="${{ inputs.approve_reason }}"
           BREAK_GLASS="${{ inputs.break_glass }}"
           BREAK_GLASS_REASON="${{ inputs.break_glass_reason }}"
 
@@ -79,6 +89,16 @@ jobs:
               echo "::error::break_glass requires break_glass_reason"
               exit 1
             fi
+          fi
+
+          # Manual approval gate
+          if [ "$APPROVE" != "YES" ]; then
+            echo "::error::Approval not granted. Type YES in the approve field."
+            exit 1
+          fi
+          if [ "$ENV" = "production" ] && [ -z "$APPROVE_REASON" ]; then
+            echo "::error::approve_reason is required for production deployments."
+            exit 1
           fi
 
           echo "### Deployment Configuration" >> $GITHUB_STEP_SUMMARY
@@ -169,12 +189,30 @@ jobs:
           scp -i ~/.ssh/deploy_key \
             -o StrictHostKeyChecking=accept-new \
             dist/image-digests.json \
-            ${{ env.SSH_USER }}@${{ env.SSH_HOST }}:/tmp/image-digests.json
+            ${{ env.SSH_USER }}@${{ env.SSH_HOST }}:/var/tmp/image-digests.json
 
-          echo "✅ Digest manifest uploaded to server: /tmp/image-digests.json"
+          echo "✅ Digest manifest uploaded to server: /var/tmp/image-digests.json"
+
+      - name: Setup GHCR authentication on server
+        env:
+          GHCR_PAT: ${{ secrets.GHCR_PAT }}
+        run: |
+          echo "Setting up GHCR authentication on deployment server..."
+          # Pass GHCR_PAT through SSH to remote server
+          # deployer user must use sudo to run docker login
+          ssh -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=accept-new \
+            ${{ env.SSH_USER }}@${{ env.SSH_HOST }} \
+            "echo \"$GHCR_PAT\" | sudo docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin && echo '✅ GHCR authentication configured'"
 
       - name: Deploy to server
         id: deploy
+        env:
+          # S3 credentials for staging environment
+          STAGING_S3_ACCESS_KEY: ${{ secrets.STAGING_S3_ACCESS_KEY }}
+          STAGING_S3_SECRET_KEY: ${{ secrets.STAGING_S3_SECRET_KEY }}
+          STAGING_S3_BUCKET: ${{ secrets.STAGING_S3_BUCKET }}
+          STAGING_S3_REGION: ${{ secrets.STAGING_S3_REGION }}
         run: |
           STACK="${{ inputs.stack }}"
           ENV="${{ inputs.environment }}"
@@ -186,11 +224,21 @@ jobs:
 
           echo "::group::Deploying $STACK ($ENV) with $IMAGE_TAG"
 
-          # Build deploy command
-          DEPLOY_CMD="sudo ${{ env.REPO_PATH }}/scripts/deploy.sh \"$STACK\" \"$ENV\" \"$IMAGE_TAG\" \
-            --digest-file /tmp/image-digests.json \
+          # Prepare S3 environment variables for sudo (staging only)
+          # These will be passed directly through sudo to preserve them
+          SUDO_ENV_VARS=""
+          if [ "$ENV" = "staging" ]; then
+            SUDO_ENV_VARS="DEPLOY_S3_ACCESS_KEY='$STAGING_S3_ACCESS_KEY' DEPLOY_S3_SECRET_KEY='$STAGING_S3_SECRET_KEY' DEPLOY_S3_BUCKET='$STAGING_S3_BUCKET' DEPLOY_S3_REGION='$STAGING_S3_REGION'"
+            echo "[DEBUG] S3 env vars for sudo: $SUDO_ENV_VARS"
+          fi
+
+          # Build deploy command (pass env vars through sudo to avoid them being dropped)
+          DEPLOY_CMD="sudo $SUDO_ENV_VARS ${{ env.REPO_PATH }}/scripts/deploy.sh \"$STACK\" \"$ENV\" \"$IMAGE_TAG\" \
+            --digest-file /var/tmp/image-digests.json \
             --actor \"$ACTOR\" \
             --run-id \"$RUN_ID\""
+
+          echo "[DEBUG] Full deploy command: $DEPLOY_CMD"
 
           if [ "$BREAK_GLASS" = "true" ]; then
             DEPLOY_CMD="$DEPLOY_CMD --break-glass --reason \"$BREAK_GLASS_REASON\""
@@ -214,13 +262,13 @@ jobs:
           echo ""
 
           # Verify digest file exists on server
-          if [ ! -f /tmp/image-digests.json ]; then
-            echo "::error::Digest manifest not found on server: /tmp/image-digests.json"
+          if [ ! -f /var/tmp/image-digests.json ]; then
+            echo "::error::Digest manifest not found on server: /var/tmp/image-digests.json"
             exit 1
           fi
 
           echo "Digest manifest on server:"
-          cat /tmp/image-digests.json
+          cat /var/tmp/image-digests.json
           echo ""
 
           # Execute deploy script

@@ -64,3 +64,5 @@ EXPOSE 8069 8072
 
 # Default command (inherited from base image, but explicit for clarity)
 CMD ["odoo"]
+
+# ci: trigger checks

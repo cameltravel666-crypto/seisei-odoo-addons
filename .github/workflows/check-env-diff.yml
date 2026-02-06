@@ -1,0 +1,53 @@
+name: Check Environment Config Diff
+
+on:
+  workflow_dispatch:
+
+env:
+  SSH_HOST: 54.65.127.141
+  SSH_USER: ubuntu
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ env.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Check Odoo config
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new ${{ env.SSH_USER }}@${{ env.SSH_HOST }} "
+            echo '=== Staging Odoo配置 ==='
+            echo '1. 环境变量:'
+            docker exec odoo18-staging-web env | grep -E 'OCR|OUTPUT|PROMPT' || echo '未找到相关环境变量'
+
+            echo ''
+            echo '2. Odoo配置文件:'
+            docker exec odoo18-staging-web cat /etc/odoo/odoo.conf | grep -E 'ocr|output|prompt' || echo '未找到相关配置'
+
+            echo ''
+            echo '=== Production Odoo配置 ==='
+            echo '1. 环境变量:'
+            docker exec odoo18-prod-web env | grep -E 'OCR|OUTPUT|PROMPT' || echo '未找到相关环境变量'
+
+            echo ''
+            echo '2. Odoo配置文件:'
+            docker exec odoo18-prod-web cat /etc/odoo/odoo.conf | grep -E 'ocr|output|prompt' || echo '未找到相关配置'
+
+            echo ''
+            echo '=== 对比 .env 文件 ==='
+            echo 'Staging .env OCR相关配置:'
+            cat /srv/stacks/odoo18-staging/.env | grep -i ocr || echo '未找到'
+
+            echo ''
+            echo 'Production .env OCR相关配置:'
+            cat /srv/stacks/odoo18-prod/.env | grep -i ocr || echo '未找到'
+          "
+
+      - name: Cleanup
+        if: always()
+        run: rm -f ~/.ssh/deploy_key

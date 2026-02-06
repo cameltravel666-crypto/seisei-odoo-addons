@@ -69,7 +69,7 @@
   odoo18-staging-web → Staging RDS (18 databases)
 ```
 
-### Production EC2 (57.180.39.58)
+### Production EC2 (54.65.127.141)
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -286,11 +286,11 @@ staging.erp.seisei.tokyo        A    13.231.24.250
 
 **Production 域名** (谨慎切换):
 ```dns
-seisei.tokyo                    A    57.180.39.58
-www.seisei.tokyo                A    57.180.39.58
-erp.seisei.tokyo                A    57.180.39.58
-biznexus.seisei.tokyo           A    57.180.39.58
-*.erp.seisei.tokyo              A    57.180.39.58
+seisei.tokyo                    A    54.65.127.141
+www.seisei.tokyo                A    54.65.127.141
+erp.seisei.tokyo                A    54.65.127.141
+biznexus.seisei.tokyo           A    54.65.127.141
+*.erp.seisei.tokyo              A    54.65.127.141
 ```
 
 ### 2. 完整功能测试

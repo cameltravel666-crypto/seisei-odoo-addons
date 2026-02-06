@@ -23,15 +23,15 @@ class ResConfigSettings(models.TransientModel):
     dify_api_key = fields.Text(
         string='Dify API Key',
         config_parameter='ai_companion.dify_api_key',
-        help='Your Dify API Key. 获取方式：1) 访问 http://13.114.99.38:3000/apps 2) 选择应用 → API 访问 → 复制 API Key',
+        help='Your Dify API Key. 获取方式：1) 访问 http://54.65.127.141:3000/apps 2) 选择应用 → API 访问 → 复制 API Key',
     )
 
     # Dify Base URL (使用 Text 字段支持多行)
     dify_base_url = fields.Text(
         string='Dify Base URL',
-        default='http://13.114.99.38:5001/v1',
+        default='http://54.65.127.141:5001/v1',
         config_parameter='ai_companion.dify_base_url',
-        help='Dify API base URL (default: http://13.114.99.38:5001/v1). 注意：端口 5001 是 API 后端，端口 3000 是 Web 前端。',
+        help='Dify API base URL (default: http://54.65.127.141:5001/v1). 注意：端口 5001 是 API 后端，端口 3000 是 Web 前端。',
     )
 
     # API 超时设置

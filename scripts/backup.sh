@@ -30,6 +30,14 @@ log_step "Backup: $STACK ($ENV)"
 STACK_DIR=$(resolve_stack_dir "$STACK")
 log_info "Stack directory: $STACK_DIR"
 
+# Check if stack directory exists (first deployment)
+if [ ! -e "$STACK_DIR" ]; then
+    log_warn "Stack directory does not exist yet (first deployment)"
+    log_info "Skipping backup - no existing state to backup"
+    echo ""  # Output empty backup path for compatibility
+    exit 0
+fi
+
 # Create backup directory
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 BACKUP_DIR="$BACKUP_ROOT/$STACK/$TIMESTAMP"

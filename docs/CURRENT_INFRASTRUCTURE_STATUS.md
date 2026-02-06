@@ -13,7 +13,7 @@
 
 | 组件 | Staging | Production |
 |------|---------|------------|
-| **EC2 实例** | 13.231.24.250 (i-07431aa34ec66a65d) | 57.180.39.58 (i-0c1c8fdf3e17217d7) |
+| **EC2 实例** | 13.231.24.250 (i-07431aa34ec66a65d) | 54.65.127.141 (i-0c1c8fdf3e17217d7) |
 | **RDS 实例** | seisei-odoo18-staging-rds.c1emceusojse.ap-northeast-1.rds.amazonaws.com | seisei-odoo18-prod-rds.c1emceusojse.ap-northeast-1.rds.amazonaws.com |
 | **RDS 内网 IP** | 10.20.2.197 | 10.20.12.104 |
 | **用途** | 测试和验证 | 未来的生产环境（待迁移） |
@@ -128,7 +128,7 @@ odoo18-staging-redis   redis:7-alpine   Up (healthy)
 
 ---
 
-### Production EC2 (57.180.39.58) - ✅ 已部署
+### Production EC2 (54.65.127.141) - ✅ 已部署
 
 **部署状态**:
 - ✅ Docker 登录已配置（GHCR）
@@ -230,7 +230,7 @@ odoo18-prod-redis   redis:7-alpine   Up (healthy)
 - ✅ Traefik 配置 SSL 自动获取
 - ✅ 可通过 HTTP 访问测试
 
-**Production 环境** (57.180.39.58):
+**Production 环境** (54.65.127.141):
 - ✅ RDS: 19 databases (~700 MB)
 - ✅ Odoo 18 + Redis 容器运行中
 - ✅ Traefik 配置 SSL 自动获取
@@ -244,7 +244,7 @@ odoo18-prod-redis   redis:7-alpine   Up (healthy)
 - ✅ 连接 Staging Odoo (内部网络)
 - ✅ 连接 OCR Service (跨服务器)
 
-**Production 环境** (57.180.39.58):
+**Production 环境** (54.65.127.141):
 - ✅ OCR Service 部署 (含 PostgreSQL 15 数据库)
 - ✅ Langbot 部署 (含数据/配置/插件)
 
@@ -254,7 +254,7 @@ odoo18-prod-redis   redis:7-alpine   Up (healthy)
 - 配置 staging.odoo.seisei.tokyo → 13.231.24.250
 - 配置 biznexus.seisei.tokyo → 13.231.24.250
 - 配置 staging.erp.seisei.tokyo → 13.231.24.250
-- 配置 *.erp.seisei.tokyo → 57.180.39.58
+- 配置 *.erp.seisei.tokyo → 54.65.127.141
 - 验证 SSL 证书自动获取
 
 #### 2. 功能验证

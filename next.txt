@@ -60,7 +60,7 @@ E) 文档更新：补一份 docs/GITHUB_CICD.md（或同等）给出从 0 到 1 
   - sha（string，例如 sha-19b9b98；允许只输入短 commit，让 workflow 自动转成 sha-xxxx 格式）
   - promote_to_prod（bool，仅当 stack=odoo18-staging 才可选；若 true 则 staging 成功并 verified 后自动触发 prod deploy）
 - 行为：
-  - 通过 SSH 连接服务器（47.245.12.205 或者从 secrets 提供 HOST）
+  - 通过 SSH 连接服务器（13.231.79.114 或者从 secrets 提供 HOST）
   - 在服务器上：
     - cd /opt/seisei-odoo-addons && git fetch && git checkout main && git pull（或固定到某个 ref，需说明）
     - chmod +x scripts/*.sh
