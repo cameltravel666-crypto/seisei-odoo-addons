@@ -40,9 +40,8 @@ services:
       redis:
         condition: service_started
     environment:
-      # Database connection - from .env (AWS Secrets Manager)
-      - HOST=${DB_HOST:-seisei-odoo18-prod-rds.c1emceusojse.ap-northeast-1.rds.amazonaws.com}
-      - PORT=${DB_PORT:-5432}
+      # Database connection - configured in odoo.conf (RDS endpoint)
+      # HOST is not set here to allow odoo.conf db_host to take effect
       - USER=${DB_USER:-odoo18}
       - PASSWORD=${DB_PASSWORD}
       - PGSSLMODE=require

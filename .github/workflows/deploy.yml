@@ -186,6 +186,7 @@ jobs:
       - name: Upload digest manifest to server
         run: |
           # Upload digest manifest to server temp directory
+          # Use /var/tmp instead of /tmp for restricted users like deployer
           scp -i ~/.ssh/deploy_key \
             -o StrictHostKeyChecking=accept-new \
             dist/image-digests.json \
