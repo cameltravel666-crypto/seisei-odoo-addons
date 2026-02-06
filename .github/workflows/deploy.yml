@@ -262,13 +262,13 @@ jobs:
           echo ""
 
           # Verify digest file exists on server
-          if [ ! -f /tmp/image-digests.json ]; then
+          if [ ! -f /var/tmp/image-digests.json ]; then
             echo "::error::Digest manifest not found on server: /var/tmp/image-digests.json"
             exit 1
           fi
 
           echo "Digest manifest on server:"
-          cat /tmp/image-digests.json
+          cat /var/tmp/image-digests.json
           echo ""
 
           # Execute deploy script
