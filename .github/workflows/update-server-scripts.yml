@@ -53,6 +53,7 @@ jobs:
 
           # Navigate to repository
           cd ${{ env.REPO_PATH }}
+          git config --global --add safe.directory ${{ env.REPO_PATH }}
 
           # Show current branch and commit
           echo "Current state:"
