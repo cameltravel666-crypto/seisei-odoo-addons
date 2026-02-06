@@ -34,8 +34,8 @@ log_warn() {
 # Configuration
 readonly SSH_KEY="/Users/taozhang/Projects/Pem/odoo-2025.pem"
 readonly SSH_USER="ubuntu"
-readonly STAGING_HOST="54.178.13.108"
-readonly PRODUCTION_HOST="57.180.39.58"
+readonly STAGING_HOST="13.231.24.250"
+readonly PRODUCTION_HOST="54.65.127.141"
 readonly GHCR_USERNAME="cameltravel666-crypto"
 readonly TEST_IMAGE="ghcr.io/cameltravel666-crypto/seisei-odoo18@sha256:1db6436ca7e084705cffcf3e760b6659cce449bd636edf94917b28de2df3fbe5"
 
@@ -102,7 +102,7 @@ EOF
 
 # Configure Staging
 echo "═══════════════════════════════════════"
-echo "  STAGING EC2 (54.178.13.108)"
+echo "  STAGING EC2 (13.231.24.250)"
 echo "═══════════════════════════════════════"
 if configure_server "$STAGING_HOST" "Staging EC2"; then
     STAGING_OK=1
@@ -113,7 +113,7 @@ echo ""
 
 # Configure Production
 echo "═══════════════════════════════════════"
-echo "  PRODUCTION EC2 (57.180.39.58)"
+echo "  PRODUCTION EC2 (54.65.127.141)"
 echo "═══════════════════════════════════════"
 if configure_server "$PRODUCTION_HOST" "Production EC2"; then
     PRODUCTION_OK=1

@@ -63,6 +63,8 @@ seisei-erp-*.tar.gz
 *.dump
 *.sql
 *.sql.gz
+# Allow Prisma migration SQL files
+!prisma/migrations/**/*.sql
 backups/
 filestore/
 

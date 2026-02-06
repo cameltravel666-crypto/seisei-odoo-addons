@@ -36,21 +36,9 @@ http:
         - secure-headers@file
         - rate-limit@file
 
-    # Odoo Staging - IP access
-    odoo-staging-ip:
-      rule: "Host(`54.178.13.108`)"
-      service: odoo-staging
-      entryPoints:
-        - websecure
-      tls:
-        certResolver: httpchallenge
-      middlewares:
-        - secure-headers@file
-        - rate-limit@file
-
     # HTTP redirect for all
     staging-http-redirect:
-      rule: "Host(`staging.seisei.tokyo`) || Host(`staging.www.seisei.tokyo`) || Host(`staging.biznexus.seisei.tokyo`) || Host(`staging.erp.seisei.tokyo`) || Host(`staging.odoo.seisei.tokyo`) || Host(`54.178.13.108`)"
+      rule: "Host(`staging.seisei.tokyo`) || Host(`staging.www.seisei.tokyo`) || Host(`staging.biznexus.seisei.tokyo`) || Host(`staging.erp.seisei.tokyo`) || Host(`staging.odoo.seisei.tokyo`)"
       service: odoo-staging
       entryPoints:
         - web

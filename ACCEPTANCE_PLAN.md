@@ -128,7 +128,7 @@ cat ~/.ssh/github_deploy_key.pub
 
 在GitHub仓库：Settings → Secrets and variables → Actions → New repository secret
 
-- `DEPLOY_SSH_HOST` = `47.245.12.205`
+- `DEPLOY_SSH_HOST` = `13.231.79.114`
 - `DEPLOY_SSH_USER` = `deployer`
 - `DEPLOY_SSH_KEY` = （粘贴私钥完整内容）
 
@@ -136,7 +136,7 @@ cat ~/.ssh/github_deploy_key.pub
 
 ```bash
 # SSH到服务器
-ssh root@47.245.12.205
+ssh root@13.231.79.114
 
 # 拉取最新代码
 cd /opt/seisei-odoo-addons
@@ -265,8 +265,8 @@ cat /srv/releases/verified/odoo18-staging.txt
 # 应该是新SHA
 
 # 检查两个环境运行相同版本
-ssh deployer@47.245.12.205 "docker inspect odoo18-staging-web | jq -r '.[0].Config.Image'"
-ssh deployer@47.245.12.205 "docker inspect odoo18-prod-web | jq -r '.[0].Config.Image'"
+ssh deployer@13.231.79.114 "docker inspect odoo18-staging-web | jq -r '.[0].Config.Image'"
+ssh deployer@13.231.79.114 "docker inspect odoo18-prod-web | jq -r '.[0].Config.Image'"
 # 应该相同
 ```
 
@@ -300,7 +300,7 @@ grep "odoo18-staging.*rollback" /srv/deploy-history.log | tail -1
 **步骤A: 同步edge-nginx-router stack**
 ```bash
 # 在服务器
-ssh deployer@47.245.12.205
+ssh deployer@13.231.79.114
 
 sudo /opt/seisei-odoo-addons/scripts/sync_to_srv.sh edge-nginx-router
 
@@ -344,7 +344,7 @@ sha: sha-abc1234
 **验证**：
 ```bash
 # 检查配置已更新
-ssh deployer@47.245.12.205 "grep 'TEST CHANGE' /srv/stacks/edge-nginx-router/default.conf"
+ssh deployer@13.231.79.114 "grep 'TEST CHANGE' /srv/stacks/edge-nginx-router/default.conf"
 
 # 测试域名
 curl -I https://demo.nagashiro.top/nginx-health
@@ -360,7 +360,7 @@ steps_back: 1
 **验证**：
 ```bash
 # 检查TEST CHANGE已移除
-ssh deployer@47.245.12.205 "grep 'TEST CHANGE' /srv/stacks/edge-nginx-router/default.conf"
+ssh deployer@13.231.79.114 "grep 'TEST CHANGE' /srv/stacks/edge-nginx-router/default.conf"
 # 应该无输出（已回滚）
 ```
 

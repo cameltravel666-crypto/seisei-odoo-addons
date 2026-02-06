@@ -210,7 +210,7 @@ grep "FORCED" /srv/deploy-history.log
 
 ```bash
 # 1. SSH到服务器
-ssh root@47.245.12.205
+ssh root@13.231.79.114
 
 # 2. 拉取代码
 cd /opt/seisei-odoo-addons

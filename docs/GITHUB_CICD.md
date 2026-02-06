@@ -15,7 +15,7 @@
 
 | Secret Name | 描述 | 示例值 | 必需 |
 |-------------|------|--------|------|
-| `DEPLOY_SSH_HOST` | 服务器 IP 地址 | `47.245.12.205` | 是 |
+| `DEPLOY_SSH_HOST` | 服务器 IP 地址 | `13.231.79.114` | 是 |
 | `DEPLOY_SSH_USER` | SSH 用户名 | `deployer` 或 `root` | 是 |
 | `DEPLOY_SSH_KEY` | SSH 私钥（完整内容） | `-----BEGIN OPENSSH PRIVATE KEY-----\n...` | 是 |
 
@@ -30,7 +30,7 @@
 ssh-keygen -t ed25519 -C "github-actions-deploy" -f ~/.ssh/github_deploy_key
 
 # 公钥添加到服务器
-ssh-copy-id -i ~/.ssh/github_deploy_key.pub deployer@47.245.12.205
+ssh-copy-id -i ~/.ssh/github_deploy_key.pub deployer@13.231.79.114
 
 # 或者使用 server_bootstrap_deployer.sh
 sudo /opt/seisei-odoo-addons/scripts/server_bootstrap_deployer.sh \
@@ -264,11 +264,11 @@ cat ~/.ssh/github_deploy_key
 
 **症状**：
 ```
-ssh: connect to host 47.245.12.205 port 22: Connection refused
+ssh: connect to host 13.231.79.114 port 22: Connection refused
 ```
 
 **排查**：
-1. 检查服务器是否在线：`ping 47.245.12.205`
+1. 检查服务器是否在线：`ping 13.231.79.114`
 2. 检查 SSH 服务：`systemctl status sshd`
 3. 检查 GitHub Secrets 中的 `DEPLOY_SSH_HOST` 是否正确
 4. 检查防火墙规则

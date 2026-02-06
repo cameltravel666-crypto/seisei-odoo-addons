@@ -152,7 +152,7 @@ services:
 | 用途 | Production Bucket | Staging Bucket | 状态 |
 |------|------------------|----------------|------|
 | **文件存储** | biznexus-prod-files | seisei-staging | ✅ 隔离 |
-| **AWS 凭证** | AKIA2PBTWKNVPMTDL74H | AKIA2PBTWKNVPMTDL74H | ⚠️ 相同 |
+| **AWS 凭证** | ***REDACTED*** | ***REDACTED*** | ⚠️ 相同 |
 
 **注意**: Production 和 Staging 使用相同的 AWS 凭证（建议分离）
 

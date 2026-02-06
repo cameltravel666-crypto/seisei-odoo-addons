@@ -83,5 +83,4 @@ EXPOSE 9527
 ENV PORT=9527
 ENV HOSTNAME="0.0.0.0"
 
-# Start the server (skip prisma push if it fails - schema might already be up to date)
-CMD ["sh", "-c", "node node_modules/prisma/build/index.js db push --accept-data-loss --url=\"$DATABASE_URL\" 2>/dev/null || true; node server.js"]
+CMD ["node", "server.js"]

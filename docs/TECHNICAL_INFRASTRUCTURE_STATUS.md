@@ -109,7 +109,7 @@ Traefik v2.10.7 (Reverse Proxy + SSL)
 **文件存储**:
 - **Bucket**: biznexus-prod-files
 - **Region**: ap-northeast-1
-- **Access**: IAM User (AKIA2PBTWKNVPMTDL74H)
+- **Access**: IAM User (***REDACTED***)
 - **CORS**: 已配置 (biznexus.seisei.tokyo)
 
 **SSL 证书**:

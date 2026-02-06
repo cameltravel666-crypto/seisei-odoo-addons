@@ -1,0 +1,41 @@
+name: Setup GHCR Auth on Server
+
+on:
+  workflow_dispatch:
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup SSH and configure GHCR
+        env:
+          GHCR_PAT: ${{ secrets.GHCR_PAT }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_SSH_HOST: ${{ secrets.DEPLOY_SSH_HOST }}
+          DEPLOY_SSH_USER: ${{ secrets.DEPLOY_SSH_USER }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H $DEPLOY_SSH_HOST >> ~/.ssh/known_hosts 2>/dev/null
+
+          echo "Configuring GHCR authentication on deployment server..."
+          ssh -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=accept-new \
+            $DEPLOY_SSH_USER@$DEPLOY_SSH_HOST bash <<ENDSSH
+          set -e
+
+          # Configure for ubuntu user
+          echo "$GHCR_PAT" | docker login ghcr.io -u cameltravel666-crypto --password-stdin
+          echo "✅ GHCR configured for ubuntu user"
+
+          # Configure for root user (for sudo docker commands)
+          echo "$GHCR_PAT" | sudo docker login ghcr.io -u cameltravel666-crypto --password-stdin
+          echo "✅ GHCR configured for root user"
+
+          # Test pull
+          echo "Testing image pull..."
+          sudo docker pull ghcr.io/cameltravel666-crypto/seisei-odoo18@sha256:d2b8076c2693fa10eac3b037a4c63e1c33eb39182cc26e2b5e5b7d74b33588f8 2>&1 | head -5
+          ENDSSH
+
+          echo "✅ GHCR authentication configured successfully"

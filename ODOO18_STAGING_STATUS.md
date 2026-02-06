@@ -1,7 +1,7 @@
 # Odoo 18 Staging Deployment Status
 
 **Last Updated**: 2026-02-01 02:59 UTC
-**Environment**: Staging (54.178.13.108)
+**Environment**: Staging (13.231.24.250)
 **Status**: ✅ OPERATIONAL (with temporary workarounds)
 
 ## 🎯 Current Deployment
@@ -9,7 +9,7 @@
 ### Infrastructure Overview
 
 ```
-EC2: 54.178.13.108 (i-07431aa34ec66a65d)
+EC2: 13.231.24.250 (i-07431aa34ec66a65d)
 Region: ap-northeast-1
 OS: Ubuntu
 
@@ -205,9 +205,9 @@ AuthorizationHeaderMalformed - non-empty Access Key (AKID) must be provided
 
 ### Web Access
 
-- **Main**: http://54.178.13.108:8069
-- **Database Selector**: http://54.178.13.108:8069/web/database/selector
-- **Health Check**: http://54.178.13.108:8069/web/health
+- **Main**: http://13.231.24.250:8069
+- **Database Selector**: http://13.231.24.250:8069/web/database/selector
+- **Health Check**: http://13.231.24.250:8069/web/health
 
 ### Available Databases (RDS)
 
@@ -225,7 +225,7 @@ AuthorizationHeaderMalformed - non-empty Access Key (AKID) must be provided
 ### Health Check Results
 
 ```bash
-$ curl http://54.178.13.108:8069/web/health
+$ curl http://13.231.24.250:8069/web/health
 ✅ 200 OK
 
 $ docker ps --filter 'name=odoo18-staging'
@@ -283,13 +283,13 @@ odoo18-staging-redis   Up 10 minutes (healthy)
 
 ```bash
 # Check logs
-ssh ubuntu@54.178.13.108 "docker logs odoo18-staging-web --tail 100"
+ssh ubuntu@13.231.24.250 "docker logs odoo18-staging-web --tail 100"
 
 # Check dependencies
-ssh ubuntu@54.178.13.108 "docker exec odoo18-staging-web pip3 list | grep PyMuPDF"
+ssh ubuntu@13.231.24.250 "docker exec odoo18-staging-web pip3 list | grep PyMuPDF"
 
 # Restart container
-ssh ubuntu@54.178.13.108 "cd /opt/seisei-odoo-addons/infra/stacks/odoo18-staging && docker compose restart web"
+ssh ubuntu@13.231.24.250 "cd /opt/seisei-odoo-addons/infra/stacks/odoo18-staging && docker compose restart web"
 ```
 
 ### Module Loading Errors
