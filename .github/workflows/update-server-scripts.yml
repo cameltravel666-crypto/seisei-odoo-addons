@@ -47,7 +47,7 @@ jobs:
           chmod +x scripts/*.sh
 
           # Sync repo directly (deploy user has group write via ubuntu group)
-          rsync -az --no-perms --no-owner --no-group \
+          rsync -rlz --no-perms --no-owner --no-group --no-times \
             --exclude='.git/' \
             --exclude='.github/' \
             --exclude='node_modules/' \
