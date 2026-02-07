@@ -37,20 +37,17 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ env.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
 
-      - name: Upload repo to server temp
+      - name: Sync repo to server
         run: |
-          echo "::group::Uploading to ${{ inputs.server }} temp directory"
+          echo "::group::Syncing to ${{ inputs.server }} server"
 
           SSH_CMD="ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10"
           REMOTE="${{ env.SSH_USER }}@${{ env.SSH_HOST }}"
 
           chmod +x scripts/*.sh
 
-          # Create temp staging directory (writable by deploy user)
-          $SSH_CMD $REMOTE "rm -rf /tmp/seisei-sync && mkdir -p /tmp/seisei-sync"
-
-          # Rsync to temp directory
-          rsync -az \
+          # Sync repo directly (deploy user has group write via ubuntu group)
+          rsync -az --no-perms --no-owner --no-group \
             --exclude='.git/' \
             --exclude='.github/' \
             --exclude='node_modules/' \
@@ -62,19 +59,7 @@ jobs:
             --exclude='tsconfig.json' \
             --exclude='next.config.*' \
             -e "$SSH_CMD" \
-            ./ $REMOTE:/tmp/seisei-sync/
-
-          echo "::endgroup::"
-
-      - name: Install files to repo path
-        run: |
-          echo "::group::Installing to ${{ env.REPO_PATH }}"
-
-          ssh -i ~/.ssh/deploy_key \
-            -o StrictHostKeyChecking=accept-new \
-            -o ConnectTimeout=10 \
-            ${{ env.SSH_USER }}@${{ env.SSH_HOST }} \
-            "sudo rsync -a --delete --exclude='.git/' /tmp/seisei-sync/ ${{ env.REPO_PATH }}/ && sudo chmod +x ${{ env.REPO_PATH }}/scripts/*.sh && rm -rf /tmp/seisei-sync"
+            ./ $REMOTE:${{ env.REPO_PATH }}/
 
           echo "::endgroup::"
 
