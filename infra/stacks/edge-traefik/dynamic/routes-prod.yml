@@ -1,5 +1,19 @@
 http:
   routers:
+    # CRM API: www.seisei.tokyo/crm-api/* -> Odoo 19
+    crm-api-prod:
+      rule: "(Host(`seisei.tokyo`) || Host(`www.seisei.tokyo`)) && PathPrefix(`/crm-api`)"
+      service: odoo19-crm
+      priority: 200
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: cloudflare
+      middlewares:
+        - crm-strip-prefix
+        - crm-odoo19-dbfilter
+        - secure-headers@file
+
     # Seisei Corporate Website
     seisei-www:
       rule: "Host(`seisei.tokyo`) || Host(`www.seisei.tokyo`)"
@@ -56,7 +70,24 @@ http:
       tls:
         certResolver: cloudflare
 
+  middlewares:
+    crm-strip-prefix:
+      stripPrefix:
+        prefixes:
+          - "/crm-api"
+
+    crm-odoo19-dbfilter:
+      headers:
+        customRequestHeaders:
+          X-Odoo-Database: "odoo19"
+
   services:
+    # Odoo 19 CRM API Service (external server)
+    odoo19-crm:
+      loadBalancer:
+        servers:
+          - url: "http://13.159.193.191:8069"
+
     # Seisei Corporate Website Service
     seisei-www:
       loadBalancer:
