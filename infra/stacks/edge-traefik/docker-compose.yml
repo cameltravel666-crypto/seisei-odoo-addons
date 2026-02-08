@@ -22,6 +22,7 @@ services:
     labels:
       - "traefik.enable=true"
       # Dashboard - ops.seisei.tokyo/traefik
+      # yamllint disable-line rule:line-length
       - "traefik.http.routers.dashboard.rule=Host(`ops.seisei.tokyo`) && PathPrefix(`/traefik`)"
       - "traefik.http.routers.dashboard.entrypoints=websecure"
       - "traefik.http.routers.dashboard.tls.certresolver=cloudflare"
