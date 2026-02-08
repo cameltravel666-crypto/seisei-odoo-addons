@@ -1,0 +1,32 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches:
+      - staging
+      - develop
+
+jobs:
+  deploy-staging:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Deploy Staging
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            echo "--- PULLING STAGING CODE ---"
+            cd /opt/seisei-odoo-addons/infra/stacks/odoo18-staging || exit 1
+            git fetch origin staging
+            git reset --hard origin/staging
+
+            echo "--- UPDATING SERVICES ---"
+            docker compose pull
+            docker compose up -d
+
+            echo "--- MIGRATING DATABASE (IF NEEDED) ---"
+            docker compose exec -T odoo odoo -u all --stop-after-init

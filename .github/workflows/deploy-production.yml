@@ -1,0 +1,36 @@
+name: Deploy to Production
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  deploy-prod:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Deploy Production
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            echo "--- PULLING PRODUCTION CODE ---"
+            cd /srv/stacks/odoo18-prod || exit 1
+            git fetch origin main
+            git reset --hard origin/main
+
+            echo "--- BACKING UP DATABASE ---"
+            docker compose exec -T db pg_dump -U odoo_prod -Fc odoo18_prod > /tmp/odoo18_prod_$(date +%Y%m%d%H%M%S).dump
+
+            echo "--- UPDATING SERVICES ---"
+            docker compose pull
+            docker compose up -d
+
+            echo "--- MIGRATING DATABASE (IF NEEDED) ---"
+            docker compose exec -T odoo odoo -u all --stop-after-init
