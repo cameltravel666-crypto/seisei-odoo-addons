@@ -1,31 +1,20 @@
-## Summary
-- [ ] What changed?
+## Summary / 摘要
+- 
 
-## Scope
-- [ ] Impacted areas/directories:
+## Risk / 风险
+- P0/P1/P2 + rationale / 风险等级与理由
 
-## Risk
-- [ ] P0 (critical) - reason:
-- [ ] P1 (high) - reason:
-- [ ] P2 (low) - reason:
+## Scope / 影响范围
+- Systems/modules/directories / 系统、模块或目录
 
-## DB changes
-- [ ] No
-- [ ] Yes (describe migrations/rollback):
+## Do-Not-Touch / 禁止触碰
+- Secrets, prod configs, deploy logic / 密钥、生产配置、部署逻辑
 
-## Config/Secrets
-- [ ] No secrets touched
-- [ ] Requires GitHub Secrets updates (describe):
+## Verification / 验证方式
+- CI, staging steps, manual checks / CI、预发布步骤、手工验证
 
-## Verification
-- [ ] CI
-- [ ] Staging validation steps:
+## Rollback / 回滚方案
+- Revert PR, restore snapshot, disable flag / 回滚PR、恢复快照、关闭开关
 
-## Rollback
-- [ ] Revert PR
-- [ ] Rollback workflow
-- [ ] Tag/Release rollback
-
-## Screenshots or Logs
-- [ ] N/A
-- [ ] Attached
+## Evidence / 证据
+- Screenshots, logs, links (no secrets) / 截图、日志、链接（不含密钥）
