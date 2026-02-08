@@ -20,3 +20,10 @@
 - P0: stop release / P0：停止发布
 - P1: require mitigation / P1：要求缓解
 - P2: proceed with monitoring / P2：监控下推进
+
+## Label-Driven Rules / 标签驱动规则
+- Always set `type/*`, `priority/*`, and `env/*` labels.
+- If `env/production` or `priority/P0`/`priority/P1`, add `status/needs-owner-approval`.
+- Use `status/blocked` to stop progress until required info is provided.
+- Apply `status/ready-for-merge` only after checks and approvals are complete.
+- Use `area/*` and `compliance/*` labels to route review and verify constraints.
