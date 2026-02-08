@@ -1,0 +1,45 @@
+name: Deploy (Framework)
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      version_tag:
+        description: 'Version/tag to deploy (optional)'
+        required: false
+        type: string
+
+jobs:
+  deploy:
+    name: Deploy (Framework)
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Framework notice
+        run: |
+          echo "This workflow is a framework only."
+          echo "No production server details or secrets are defined here."
+          echo "Legacy workflow (if any) remains unchanged."
+
+      - name: Run deploy script (if present)
+        run: |
+          if [ -x ./scripts/deploy.sh ]; then
+            echo "Invoking scripts/deploy.sh"
+            ./scripts/deploy.sh "${{ inputs.environment }}" "${{ inputs.version_tag }}"
+          elif [ -x ./infra/scripts/deploy.sh ]; then
+            echo "Invoking infra/scripts/deploy.sh"
+            ./infra/scripts/deploy.sh "${{ inputs.environment }}" "${{ inputs.version_tag }}"
+          else
+            echo "No deploy script found. Placeholder only."
+          fi

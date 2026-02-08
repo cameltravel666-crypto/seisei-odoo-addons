@@ -1,0 +1,78 @@
+name: "Finance Task"
+description: "Non-technical finance request"
+title: "[Finance] "
+labels: ["finance"]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: "What do you want to achieve?"
+      placeholder: "Example: Generate a monthly billing report for tenant X"
+    validations:
+      required: true
+
+  - type: textarea
+    id: background
+    attributes:
+      label: Background
+      description: "Context and pain point"
+      placeholder: "Why is this needed?"
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: "Allowed modules/directories to change"
+      placeholder: "Example: odoo_modules/seisei/ only"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: do_not_touch
+    attributes:
+      label: Do-Not-Touch
+      description: "Areas that must not be changed"
+      options:
+        - label: production (prod)
+        - label: secrets
+        - label: billing
+        - label: infra
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      description: "Measurable outcomes"
+      placeholder: "Example: Report totals reconcile with ledger"
+    validations:
+      required: true
+
+  - type: textarea
+    id: risk_compliance
+    attributes:
+      label: Risk & Compliance
+      description: "Risk level and compliance impact"
+      placeholder: "Example: P1 - impacts invoicing accuracy"
+    validations:
+      required: true
+
+  - type: textarea
+    id: rollback
+    attributes:
+      label: Rollback expectation
+      description: "Preferred rollback method"
+      placeholder: "Example: Revert PR"
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: "Anything else"
+      placeholder: "Optional"
+    validations:
+      required: false
