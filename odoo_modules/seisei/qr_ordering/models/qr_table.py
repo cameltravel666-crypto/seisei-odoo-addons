@@ -188,10 +188,13 @@ class QrTable(models.Model):
     @api.depends('qr_token', 'short_code')
     def _compute_qr_url(self):
         """计算点餐链接 (V1, V2 和短链接)"""
-        qr_base_url = self.env['ir.config_parameter'].sudo().get_param(
-            'qr_ordering.base_url',
-            default='https://demo.nagashiro.top'
+        config = self.env['ir.config_parameter'].sudo()
+        qr_base_url = (
+            config.get_param('qr_ordering.base_url')
+            or config.get_param('web.base.url')
+            or 'https://demo.nagashiro.top'
         )
+        qr_base_url = (qr_base_url or '').rstrip('/')
         # 获取当前数据库名称，用于多租户环境下正确路由
         db_name = self.env.cr.dbname
         for record in self:
