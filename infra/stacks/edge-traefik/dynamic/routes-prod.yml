@@ -11,6 +11,7 @@ http:
         certResolver: cloudflare
       middlewares:
         - crm-strip-prefix
+        - crm-odoo19-dbfilter
         - secure-headers@file
 
     # Seisei Corporate Website
@@ -74,6 +75,11 @@ http:
       stripPrefix:
         prefixes:
           - "/crm-api"
+
+    crm-odoo19-dbfilter:
+      headers:
+        customRequestHeaders:
+          X-Odoo-Database: "odoo19"
 
   services:
     # Odoo 19 CRM API Service (external server)

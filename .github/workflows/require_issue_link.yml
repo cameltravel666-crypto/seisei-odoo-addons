@@ -1,0 +1,42 @@
+name: Require Issue Link
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  require-issue-link:
+    name: require-issue-link
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for issue link
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const prNumber = context.payload.pull_request.number;
+
+            const pr = await github.rest.pulls.get({ owner, repo, pull_number: prNumber });
+            const commits = await github.paginate(github.rest.pulls.listCommits, {
+              owner,
+              repo,
+              pull_number: prNumber,
+              per_page: 100
+            });
+
+            const text = [pr.data.body || "", ...commits.map(c => c.commit.message || "")].join("\n");
+            const pattern = /(Closes|Fixes|Resolves) #\d+/i;
+
+            if (!pattern.test(text)) {
+              core.setFailed(
+                'Missing issue link. Include "Closes #<number>", "Fixes #<number>", or "Resolves #<number>" in PR description or commit messages.'
+              );
+            } else {
+              core.info('Issue link found.');
+            }

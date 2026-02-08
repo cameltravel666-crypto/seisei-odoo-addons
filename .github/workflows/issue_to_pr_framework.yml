@@ -1,0 +1,193 @@
+name: Issue to PR Framework
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: read
+
+jobs:
+  issue-to-pr:
+    name: issue-to-pr
+    if: github.event.label.name == 'ready-for-dev'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate issue fields and create draft PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const issue = context.payload.issue;
+            const body = issue.body || "";
+
+            const sections = {};
+            const regex = /###\s*(.+)\n([\s\S]*?)(?=\n###\s+|$)/g;
+            for (const match of body.matchAll(regex)) {
+              const title = match[1].trim().toLowerCase();
+              const content = (match[2] || "").trim();
+              sections[title] = content;
+            }
+
+            function hasSection(keywords) {
+              return Object.entries(sections).some(([title, content]) => {
+                const hit = keywords.some(k => title.includes(k));
+                const meaningful = content.replace(/[\s_*`>-]/g, "").length > 0;
+                return hit && meaningful;
+              });
+            }
+
+            const missing = [];
+            if (!hasSection(["goal", "目标"])) missing.push("Goal/目标");
+            if (!hasSection(["scope", "范围"])) missing.push("Scope/范围");
+            if (!hasSection(["acceptance", "验收", "criteria"])) missing.push("Acceptance/验收标准");
+            if (!hasSection(["risk", "风险"])) missing.push("Risk/风险");
+
+            if (missing.length > 0) {
+              core.setFailed(`Missing required issue fields: ${missing.join(", ")}`);
+              return;
+            }
+
+            const base = context.payload.repository.default_branch;
+            const branch = `auto/issue-${issue.number}`;
+
+            const baseRef = await github.rest.git.getRef({
+              owner,
+              repo,
+              ref: `heads/${base}`
+            });
+
+            try {
+              await github.rest.git.getRef({ owner, repo, ref: `heads/${branch}` });
+            } catch (error) {
+              if (error.status === 404) {
+                await github.rest.git.createRef({
+                  owner,
+                  repo,
+                  ref: `refs/heads/${branch}`,
+                  sha: baseRef.data.object.sha
+                });
+              } else {
+                throw error;
+              }
+            }
+
+            const existing = await github.rest.pulls.list({
+              owner,
+              repo,
+              head: `${owner}:${branch}`,
+              state: "open"
+            });
+
+            if (existing.data.length > 0) {
+              core.info(`Draft PR already exists: #${existing.data[0].number}`);
+              return;
+            }
+
+            const comparison = await github.rest.repos.compareCommits({
+              owner,
+              repo,
+              base,
+              head: branch
+            });
+
+            if (comparison.data.ahead_by === 0) {
+              const branchRef = await github.rest.git.getRef({
+                owner,
+                repo,
+                ref: `heads/${branch}`
+              });
+
+              const baseCommit = await github.rest.git.getCommit({
+                owner,
+                repo,
+                commit_sha: baseRef.data.object.sha
+              });
+
+              const draftPath = `docs/ISSUE_DRAFTS/issue-${issue.number}.md`;
+              const draftContent = [
+                `# Issue Draft: #${issue.number}`,
+                "",
+                "Auto-generated to create a diff for the draft PR.",
+                "Remove or replace this file during implementation.",
+                "",
+                `Issue: ${issue.html_url}`
+              ].join("\n");
+
+              const blob = await github.rest.git.createBlob({
+                owner,
+                repo,
+                content: draftContent,
+                encoding: "utf-8"
+              });
+
+              const tree = await github.rest.git.createTree({
+                owner,
+                repo,
+                base_tree: baseCommit.data.tree.sha,
+                tree: [
+                  {
+                    path: draftPath,
+                    mode: "100644",
+                    type: "blob",
+                    sha: blob.data.sha
+                  }
+                ]
+              });
+
+              const commit = await github.rest.git.createCommit({
+                owner,
+                repo,
+                message: `chore: init draft for issue #${issue.number}`,
+                tree: tree.data.sha,
+                parents: [baseRef.data.object.sha]
+              });
+
+              await github.rest.git.updateRef({
+                owner,
+                repo,
+                ref: `heads/${branch}`,
+                sha: commit.data.sha,
+                force: true
+              });
+            }
+
+            const quotedIssue = body
+              .split("\n")
+              .map(line => `> ${line}`)
+              .join("\n");
+
+            const planTemplate = [
+              "## Execution Plan",
+              "- [ ] Clarify scope and files to change",
+              "- [ ] Implement changes in small commits",
+              "- [ ] Add/update tests (if applicable)",
+              "- [ ] Verify locally / in CI",
+              "- [ ] Prepare rollback notes"
+            ].join("\n");
+
+            const prBody = [
+              `Closes #${issue.number}`,
+              "",
+              `> Note: This draft PR includes an auto-generated placeholder file at \`docs/ISSUE_DRAFTS/issue-${issue.number}.md\` to enable PR creation. Remove or replace before merge.`,
+              "",
+              "## Issue Context",
+              quotedIssue,
+              "",
+              planTemplate
+            ].join("\n");
+
+            const pr = await github.rest.pulls.create({
+              owner,
+              repo,
+              title: `[Draft] ${issue.title}`,
+              head: branch,
+              base,
+              body: prBody,
+              draft: true
+            });
+
+            core.info(`Draft PR created: #${pr.data.number}`);
