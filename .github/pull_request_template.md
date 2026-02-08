@@ -1,6 +1,9 @@
 ## Summary
 - [ ] What changed?
 
+## Issue Link
+- [ ] Closes #<number>
+
 ## Scope
 - [ ] Impacted areas/directories:
 
@@ -17,6 +20,9 @@
 - [ ] No secrets touched
 - [ ] Requires GitHub Secrets updates (describe):
 
+## Do-Not-Touch
+- [ ] Secrets / production config / deploy logic not touched
+
 ## Verification
 - [ ] CI
 - [ ] Staging validation steps:
@@ -26,6 +32,6 @@
 - [ ] Rollback workflow
 - [ ] Tag/Release rollback
 
-## Screenshots or Logs
+## Evidence (Screenshots or Logs)
 - [ ] N/A
 - [ ] Attached
