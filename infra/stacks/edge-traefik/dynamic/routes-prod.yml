@@ -79,7 +79,7 @@ http:
     crm-odoo19-dbfilter:
       headers:
         customRequestHeaders:
-          X-Odoo-dbfilter: "odoo19"
+          X-Odoo-Database: "odoo19"
 
   services:
     # Odoo 19 CRM API Service (external server)
