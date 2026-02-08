@@ -35,7 +35,8 @@
 services:
   web:
     # SAME image as production - only configuration differs
-    # IMAGE_REF must include full digest (image@sha256:...) for staging deployments
+    # IMAGE_REF must include full digest (image@sha256:...) for staging
+    # deployments
     image: ${IMAGE_REF}
     container_name: odoo18-staging-web
     restart: unless-stopped
@@ -92,6 +93,7 @@ services:
       - "traefik.http.routers.odoo18-staging.service=odoo18-staging"
       - "traefik.http.services.odoo18-staging.loadbalancer.server.port=8069"
       # Longpolling / WebSocket
+      # yamllint disable-line rule:line-length
       - "traefik.http.routers.odoo18-staging-lp.rule=Host(`staging.erp.seisei.tokyo`) && (PathPrefix(`/longpolling`) || PathPrefix(`/websocket`))"
       - "traefik.http.routers.odoo18-staging-lp.entrypoints=websecure"
       - "traefik.http.routers.odoo18-staging-lp.tls.certresolver=cloudflare"
