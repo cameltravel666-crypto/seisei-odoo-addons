@@ -1,0 +1,145 @@
+name: AI Run (Self-Hosted)
+
+on:
+  issues:
+    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: "Issue number to run"
+        required: true
+        type: number
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  ai-run:
+    name: ai-run
+    if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'ai-run'
+    runs-on: [self-hosted, staging-ai-executor]
+    steps:
+      - name: Resolve issue metadata
+        id: issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const issueNumber = context.eventName === "workflow_dispatch"
+              ? Number(context.payload.inputs.issue_number)
+              : context.payload.issue.number;
+
+            const { data: issue } = await github.rest.issues.get({
+              owner,
+              repo,
+              issue_number: issueNumber
+            });
+
+            const headRef = `auto/issue-${issueNumber}`;
+            let prNumber = "";
+
+            try {
+              const { data: prs } = await github.rest.pulls.list({
+                owner,
+                repo,
+                head: `${owner}:${headRef}`,
+                state: "open"
+              });
+              if (prs.length > 0) prNumber = String(prs[0].number);
+            } catch (error) {
+              core.info(`PR lookup failed: ${error.message}`);
+            }
+
+            core.setOutput("number", issueNumber);
+            core.setOutput("title", issue.title || "");
+            core.setOutput("url", issue.html_url || "");
+            core.setOutput("head_ref", headRef);
+            core.setOutput("pr_number", prNumber);
+
+      - name: Ensure auto branch exists
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const headRef = "${{ steps.issue.outputs.head_ref }}";
+
+            try {
+              await github.rest.git.getRef({ owner, repo, ref: `heads/${headRef}` });
+            } catch (error) {
+              if (error.status === 404) {
+                core.setFailed(
+                  "Auto branch not found. Add label 'ready-for-dev' first to create the draft PR branch."
+                );
+                return;
+              }
+              throw error;
+            }
+
+      - name: Checkout auto branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.issue.outputs.head_ref }}
+          fetch-depth: 0
+
+      - name: Run AI command
+        env:
+          AI_RUN_CMD: ${{ vars.AI_RUN_CMD }}
+          ISSUE_NUMBER: ${{ steps.issue.outputs.number }}
+          ISSUE_TITLE: ${{ steps.issue.outputs.title }}
+          ISSUE_URL: ${{ steps.issue.outputs.url }}
+          PR_NUMBER: ${{ steps.issue.outputs.pr_number }}
+        run: |
+          if [ -z "$AI_RUN_CMD" ]; then
+            echo "::error::AI_RUN_CMD is not set. Define it in Repo Settings → Actions → Variables."
+            exit 1
+          fi
+          echo "Running AI command from AI_RUN_CMD."
+          bash -lc "$AI_RUN_CMD"
+
+      - name: Commit and push changes
+        if: success()
+        env:
+          ISSUE_NUMBER: ${{ steps.issue.outputs.number }}
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            git config user.name "ai-executor"
+            git config user.email "ai-executor@users.noreply.github.com"
+            git add -A
+            git commit -m "ai: update for issue #$ISSUE_NUMBER"
+            git push origin HEAD
+          else
+            echo "No changes detected. Skipping commit."
+          fi
+
+      - name: Attach summary to PR
+        if: always()
+        continue-on-error: true
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require("fs");
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const prNumber = Number("${{ steps.issue.outputs.pr_number }}");
+            const summaryPath = "/tmp/ai_run_summary.md";
+
+            if (!prNumber) {
+              core.info("No PR found for auto branch; skipping PR comment.");
+              return;
+            }
+
+            let body = "AI run completed. / AI 执行完成。";
+            if (fs.existsSync(summaryPath)) {
+              body = fs.readFileSync(summaryPath, "utf8");
+            }
+
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: prNumber,
+              body
+            });
