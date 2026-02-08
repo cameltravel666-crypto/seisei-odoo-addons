@@ -52,7 +52,8 @@ services:
     labels:
       - "traefik.enable=true"
       # Main router - only biznexus.seisei.tokyo and erp.seisei.tokyo (root)
-      # *.erp.seisei.tokyo (subdomains) are routed to Odoo backend via odoo18-prod stack
+      # *.erp.seisei.tokyo (subdomains) are routed to Odoo backend via
+      # odoo18-prod stack
       # yamllint disable-line rule:line-length
       - "traefik.http.routers.erp.rule=Host(`erp.seisei.tokyo`) || Host(`biznexus.seisei.tokyo`)"
       - "traefik.http.routers.erp.entrypoints=websecure"
