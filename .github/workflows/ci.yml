@@ -28,7 +28,17 @@ jobs:
 
       - name: Lint YAML files
         run: |
-          yamllint infra/ --no-warnings || true
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            git fetch origin "${GITHUB_BASE_REF}"
+            changed=$(git diff --name-only "origin/${GITHUB_BASE_REF}...HEAD" | grep -E '\.ya?ml$' || true)
+            if [ -z "$changed" ]; then
+              echo "No YAML changes detected; skipping yamllint."
+              exit 0
+            fi
+            echo "$changed" | xargs yamllint --no-warnings
+          else
+            yamllint infra/ --no-warnings
+          fi
 
   security-check:
     name: Security Check
