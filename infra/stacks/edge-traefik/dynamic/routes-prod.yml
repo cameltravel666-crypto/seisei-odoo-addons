@@ -2,6 +2,7 @@ http:
   routers:
     # CRM API: www.seisei.tokyo/crm-api/* -> Odoo 19
     crm-api-prod:
+      # yamllint disable-line rule:line-length
       rule: "(Host(`seisei.tokyo`) || Host(`www.seisei.tokyo`)) && PathPrefix(`/crm-api`)"
       service: odoo19-crm
       priority: 200
