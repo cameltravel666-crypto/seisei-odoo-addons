@@ -87,6 +87,67 @@ jobs:
               return;
             }
 
+            const branchRef = await github.rest.git.getRef({
+              owner,
+              repo,
+              ref: `heads/${branch}`
+            });
+
+            if (branchRef.data.object.sha === baseRef.data.object.sha) {
+              const baseCommit = await github.rest.git.getCommit({
+                owner,
+                repo,
+                commit_sha: baseRef.data.object.sha
+              });
+
+              const draftPath = `docs/ISSUE_DRAFTS/issue-${issue.number}.md`;
+              const draftContent = [
+                `# Issue Draft: #${issue.number}`,
+                "",
+                "Auto-generated to create a diff for the draft PR.",
+                "Remove or replace this file during implementation.",
+                "",
+                `Issue: ${issue.html_url}`
+              ].join("\n");
+
+              const blob = await github.rest.git.createBlob({
+                owner,
+                repo,
+                content: draftContent,
+                encoding: "utf-8"
+              });
+
+              const tree = await github.rest.git.createTree({
+                owner,
+                repo,
+                base_tree: baseCommit.data.tree.sha,
+                tree: [
+                  {
+                    path: draftPath,
+                    mode: "100644",
+                    type: "blob",
+                    sha: blob.data.sha
+                  }
+                ]
+              });
+
+              const commit = await github.rest.git.createCommit({
+                owner,
+                repo,
+                message: `chore: init draft for issue #${issue.number}`,
+                tree: tree.data.sha,
+                parents: [baseRef.data.object.sha]
+              });
+
+              await github.rest.git.updateRef({
+                owner,
+                repo,
+                ref: `heads/${branch}`,
+                sha: commit.data.sha,
+                force: true
+              });
+            }
+
             const quotedIssue = body
               .split("\n")
               .map(line => `> ${line}`)
@@ -103,6 +164,8 @@ jobs:
 
             const prBody = [
               `Closes #${issue.number}`,
+              "",
+              `> Note: This draft PR includes an auto-generated placeholder file at \`docs/ISSUE_DRAFTS/issue-${issue.number}.md\` to enable PR creation. Remove or replace before merge.`,
               "",
               "## Issue Context",
               quotedIssue,
