@@ -84,6 +84,7 @@ services:
       # =================================================================
       # Router 1: *.erp.seisei.tokyo (wildcard for production tenants)
       # =================================================================
+      # yamllint disable-line rule:line-length
       - "traefik.http.routers.odoo18-prod.rule=HostRegexp(`{subdomain:[a-z0-9-]+}.erp.seisei.tokyo`) && !Host(`testodoo.seisei.tokyo`)"
       - "traefik.http.routers.odoo18-prod.entrypoints=websecure"
       - "traefik.http.routers.odoo18-prod.tls.certresolver=cloudflare"
@@ -93,6 +94,7 @@ services:
       - "traefik.http.services.odoo18-prod.loadbalancer.sticky.cookie=true"
       - "traefik.http.services.odoo18-prod.loadbalancer.sticky.cookie.name=odoo_session"
       # Longpolling / WebSocket for seisei.tokyo
+      # yamllint disable-line rule:line-length
       - "traefik.http.routers.odoo18-prod-lp.rule=HostRegexp(`{subdomain:[a-z0-9-]+}.erp.seisei.tokyo`) && (PathPrefix(`/longpolling`) || PathPrefix(`/websocket`))"
       - "traefik.http.routers.odoo18-prod-lp.entrypoints=websecure"
       - "traefik.http.routers.odoo18-prod-lp.tls.certresolver=cloudflare"
@@ -109,6 +111,7 @@ services:
       - "traefik.http.routers.odoo18-nagashiro.middlewares=secure-headers@file,rate-limit@file,nagashiro-dbfilter@file"
       - "traefik.http.routers.odoo18-nagashiro.service=odoo18-prod"
       # Longpolling / WebSocket for nagashiro.top
+      # yamllint disable-line rule:line-length
       - "traefik.http.routers.odoo18-nagashiro-lp.rule=Host(`demo.nagashiro.top`) && (PathPrefix(`/longpolling`) || PathPrefix(`/websocket`))"
       - "traefik.http.routers.odoo18-nagashiro-lp.entrypoints=websecure"
       - "traefik.http.routers.odoo18-nagashiro-lp.tls.certresolver=cloudflare"

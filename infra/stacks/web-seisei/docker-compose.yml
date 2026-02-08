@@ -10,13 +10,16 @@ services:
     labels:
       - "traefik.enable=true"
       # Main site
+      # yamllint disable-line rule:line-length
       - "traefik.http.routers.www.rule=Host(`seisei.tokyo`) || Host(`www.seisei.tokyo`)"
       - "traefik.http.routers.www.entrypoints=websecure"
       - "traefik.http.routers.www.tls.certresolver=cloudflare"
       - "traefik.http.routers.www.middlewares=secure-headers@file,compress@file"
       - "traefik.http.services.www.loadbalancer.server.port=3000"
       # Redirect www to non-www (optional)
+      # yamllint disable-line rule:line-length
       # - "traefik.http.middlewares.www-redirect.redirectregex.regex=^https://www\\.seisei\\.tokyo/(.*)"
+      # yamllint disable-line rule:line-length
       # - "traefik.http.middlewares.www-redirect.redirectregex.replacement=https://seisei.tokyo/$${1}"
       # - "traefik.http.middlewares.www-redirect.redirectregex.permanent=true"
       # Version labels
