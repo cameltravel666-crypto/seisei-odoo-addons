@@ -1,0 +1,19 @@
+# Default owner for the repo
+* @cameltravel666-crypto
+
+# Workflows require owner approval
+.github/workflows/** @cameltravel666-crypto
+
+# Infra/deployment paths
+infra/** @cameltravel666-crypto
+deployment/** @cameltravel666-crypto
+scripts/deploy* @cameltravel666-crypto
+infra/scripts/deploy* @cameltravel666-crypto
+**/docker-compose*.yml @cameltravel666-crypto
+**/docker-compose*.yaml @cameltravel666-crypto
+
+# Sensitive domains (if present)
+**/*billing*/** @cameltravel666-crypto
+**/*accounting*/** @cameltravel666-crypto
+**/*ocr*/** @cameltravel666-crypto
+**/*security*/** @cameltravel666-crypto
