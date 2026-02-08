@@ -52,6 +52,7 @@ http:
 
     # HTTP redirect for all
     staging-http-redirect:
+      # yamllint disable-line rule:line-length
       rule: "Host(`staging.seisei.tokyo`) || Host(`staging.www.seisei.tokyo`) || Host(`staging.biznexus.seisei.tokyo`) || Host(`staging.erp.seisei.tokyo`) || Host(`staging.odoo.seisei.tokyo`)"
       service: odoo-staging
       entryPoints:
