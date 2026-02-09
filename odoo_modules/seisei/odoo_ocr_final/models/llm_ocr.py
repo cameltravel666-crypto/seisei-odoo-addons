@@ -442,6 +442,9 @@ def _normalize_new_format(extracted: dict) -> dict:
 
         # Use gross_amount as primary amount (tax-inclusive)
         amount = line.get('gross_amount') or line.get('net_amount')
+        # If gross_amount is 0 but net + tax are available, compute it
+        if not amount and line.get('net_amount') and line.get('tax_amount'):
+            amount = line['net_amount'] + line['tax_amount']
         item['amount'] = amount
 
         # Convert tax_rate string to number: "10%" -> 10, "8%" -> 8, "exempt" -> 0
@@ -459,6 +462,30 @@ def _normalize_new_format(extracted: dict) -> dict:
         item['suggested_account'] = line.get('suggested_account')
 
         line_items.append(item)
+
+    # Fallback: if lines are empty but we have totals, create a summary line
+    totals = extracted.get('totals_on_doc', {})
+    if not line_items and totals.get('total_gross'):
+        _logger.warning('[OCR] No lines extracted, creating fallback summary line from totals')
+        total_gross = totals['total_gross']
+        total_tax = totals.get('total_tax') or 0
+        # Determine tax rate from by_rate data
+        by_rate = totals.get('by_rate', {})
+        fallback_tax_rate = 10  # Default for services
+        if by_rate.get('8%', {}).get('gross') and not by_rate.get('10%', {}).get('gross'):
+            fallback_tax_rate = 8
+        # Build fallback line
+        doc_type = extracted.get('document', {}).get('doc_type', 'unknown')
+        issuer_name = extracted.get('issuer', {}).get('issuer_name', '')
+        fallback_name = issuer_name or doc_type
+        line_items.append({
+            'product_name': fallback_name,
+            'quantity': 1,
+            'unit_price': total_gross,
+            'amount': total_gross,
+            'tax_rate': fallback_tax_rate,
+            'suggested_account': None,  # Let account_move.py determine
+        })
 
     normalized['line_items'] = line_items
 

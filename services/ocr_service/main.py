@@ -2,7 +2,7 @@
 """
 Central OCR Service - Managed by Odoo 19
 Handles all OCR API calls, tracks usage per tenant, hides API details from tenants.
-Version 1.3.0 - Backward compatible parameter support (output_level + prompt_version)
+Version 1.4.0 - Optimized PROMPT_FULL for higher extraction rate and JGAAP compliance
 """
 
 import os
@@ -142,120 +142,135 @@ C) どちらでもない → net + tax = gross を検証して判定
 - JSONのみ出力（説明文不要）'''
 
 # FULL PROMPT - For detailed line-by-line extraction (~25-35s)
-PROMPT_FULL = '''你是日本会计（日本基準/JGAAP）与适格請求書（インボイス制度）解析引擎。请从输入的小票/发票/请款单文本中，抽取"开票方信息 + 明细行 + 税率汇总 + 会计科目建议"，并进行严格交叉验证，尽量提高识别率。
+# v2.0: Optimized for higher extraction rate, non-retail receipts, JGAAP compliance
+PROMPT_FULL = '''你是日本会计（日本基準/JGAAP）与适格請求書（インボイス制度）解析引擎。
+从输入的小票/发票/领收书/请款单图片中，抽取信息并输出JSON。
 
-【必须抽取的核心字段】
-1) issuer（开票方）
-- issuer_name：开票方名称（商号/店名/公司名）
-- invoice_reg_no：税务识别号码（适格請求書発行事業者登録番号），形如 "T"+13位数字（例如 T1234567890123）
-  - 若文本中找不到任何注册号/登録番号/適格請求書発行事業者番号/インボイス番号，则 invoice_reg_no 直接输出 "0000000000000"（十三个0，不带T）
-- issuer_tel、issuer_address：能识别则填，否则为 null
+★★★ 最高优先规则 ★★★
+1. lines 数组**绝对不能为空**。即使只能识别到一个总金额，也必须输出至少1行。
+2. 若无法逐行提取明细，必须创建"汇总行"：用 total_gross 作为 gross_amount，name 设为单据类型描述。
+3. 每行的 gross_amount 不能为 0（除非是折扣行）。若 unit_price 未知，从 gross_amount/qty 反算。
 
-2) document（单据）
-- doc_type：receipt | invoice | unknown
-- doc_date：YYYY-MM-DD 或 null
-- currency：JPY
-- category（必须输出且仅能取以下之一）：purchase | sale | expense
-  - category 识别优先级：
-    A. 文本明确：請求書/納品書/領収書/レシート/見積書 等 + 语义（売上/請求/支払/仕入/経費）
-    B. 若出现"御請求/請求金額/お支払い"且对方为客户语境，倾向 sale
-    C. 若出现"仕入/買掛/発注/納入/支払先/振込先"倾向 purchase
-    D. 若出现大量费用类关键词（交通費/宿泊/会議/広告/通信/消耗品 等）倾向 expense
-    E. 无法判断时：默认 expense，并在 notes 说明
+【第一步：识别单据类型，确定勘定科目】
+先判断单据属于哪种类型，这决定了 category 和 suggested_account：
 
-3) lines（逐行明细，必须输出）
-每一行必须输出：
-- line_no：从1开始
-- name：行名称（原文）
-- tax_rate：枚举 ["10%","8%","exempt","unknown"]
-  - 行税率判定优先级：
-    A. 行内/附近出现 10%/8%/税10/税8/標準/軽減/外税10/内税8 等
-    B. 汇总区的 "10%対象 / 8%対象 / 軽減対象 / 税率別" 对照（若能）
-    C. 找不到税率：强制默认 "8%"
-    D. 出现 非課税/不課税/免税/対象外：设为 "exempt"
-- net_amount：净额（不含税金额，数值JPY；若只能得到含税则允许推导或置 null）
-- tax_amount：税额（数值JPY；无法确定则 null）
-- gross_amount：总额（含税金额，数值JPY；无法确定则 null）
-- amount_source：说明三者来源与推导方式，枚举：
-  ["all_on_doc","net+tax=gross","gross->net_by_rate","net->tax_by_rate","unknown"]
-- qty、unit_price：能识别则填，否则 null
-- suggested_account：建议会计科目（勘定科目名，日文）
-- suggested_account_code：可选（若能给出常见代码体系则填，否则 null）
-- suggested_account_confidence：0~1
-- raw：原文片段用于追溯
+■ 超市/便利店（スーパー/コンビニ）→ category=expense
+  - 食品/饮料 → 福利厚生費（社内用）or 会議費（会议用）or 交際費（招待用）
+  - 日用品/文具 → 消耗品費
+  - 默认 → 消耗品費
+■ 出租车（タクシー）→ category=expense, suggested_account=旅費交通費
+  - 明细行：运费/迎车费/高速代 等
+  - 若只有总额：创建1行 name="タクシー代"
+■ 停车场（駐車場/パーキング）→ category=expense, suggested_account=旅費交通費
+  - 创建1行 name="駐車料金"
+■ 铁道/巴士（JR/電車/バス/地下鉄/新幹線）→ category=expense, suggested_account=旅費交通費
+  - 明细行：区间名/运费
+  - 若只有总额：创建1行 name="交通費" + 区间信息
+■ 餐厅/居酒屋/咖啡店 → category=expense
+  - 若有"会議"暗示 → 会議費
+  - 若有"接待/懇親"暗示 → 交際費
+  - 默认 → 福利厚生費（社内饮食）
+  - 明细行：各料理/饮品
+  - 若只有总额：创建1行 name="飲食代"
+■ 邮局/快递（郵便局/ゆうパック/宅急便/ヤマト/佐川）→ category=expense
+  - 邮票/信件 → 通信費
+  - 包裹/快递 → 荷造運賃
+■ 加油站（ガソリンスタンド/GS）→ category=expense, suggested_account=旅費交通費 or 車両費
+■ 酒店/住宿（ホテル/旅館/宿泊）→ category=expense, suggested_account=旅費交通費
+  - 住宿费 → 旅費交通費
+  - 餐费 → 会議費/交際費
+■ 商店/购物（百貨店/ドラッグストア/家電量販店）→ category=expense
+  - 药品 → 福利厚生費
+  - 办公用品/文具 → 消耗品費
+  - 电子设备（<10万円）→ 消耗品費
+  - 电子设备（>=10万円）→ 工具器具備品
+■ 采购/进货（仕入/卸売/業務用）→ category=purchase, suggested_account=仕入高
+■ 请求书/发票（請求書/納品書）→ 根据内容判断 category
+  - 外包/开发/设计 → 外注費
+  - 广告/推广 → 広告宣伝費
+  - 保险/保修 → 保険料
+  - 租金/物业 → 地代家賃
+  - 通信/网络 → 通信費
+  - 水电气 → 水道光熱費
+■ 无法判断 → category=expense, suggested_account=雑費
 
-【会计科目建议规则（结合日本会计准则的常见实务）】
-你必须基于 category + 行名称关键词，给出 suggested_account：
-A) category = purchase（采购：存货/进货/材料等）
-- 默认：仕入高
-- 若关键词包含：原材料/材料/部品/資材 → 原材料費 or 仕入高（择优）
-- 若为固定资产/设备：PC/パソコン/サーバ/機械/備品/什器/工具/ソフトウェア → 工具器具備品 or ソフトウェア（金额大且耐用倾向固定资产）
-- 若为外包：外注/業務委託/制作/開発 → 外注費
-- 若为运费：送料/配送/運賃 → 荷造運賃
-- 税处理提示（notes中给出）：对 purchase 通常对应 仮払消費税（但你仍需输出行税额）
+【第二步：抽取开票方信息】
+issuer:
+- issuer_name：商号/店名/公司名（注意：日文汉字要准确识别，例如"奈良漬"不要误读为"不良漬"）
+- invoice_reg_no：T+13位数字。找不到则输出 "0000000000000"
+- issuer_tel、issuer_address：能识别则填，否则 null
 
-B) category = sale（销售：对外开票/收入）
-- 默认：売上高
-- 若关键词包含：手数料/利用料/サブスク/課金 → 売上高（内可加"役務収益"类说明但科目仍输出売上高）
-- 若为运费：送料/配送料 → 売上高（或 売上高(送料) 说明）
-- 税处理提示（notes中给出）：对 sale 通常对应 仮受消費税（但你仍需输出行税额）
+【第三步：抽取合计与税率信息】
+totals_on_doc:
+- total_gross：合計/総合計/請求金額/お会計/領収金額（税込总额）
+- total_tax：消費税/税額/内消費税
+- by_rate：按税率分组（8%/10%/exempt），抽取各税率的 net/tax/gross
 
-C) category = expense（费用：日常经费）
-按关键词映射（优先级从高到低，命中即用）：
-- 旅費交通費：電車/バス/タクシー/交通/切符/IC/出張
-- 会議費：会議/打合せ/ミーティング
-- 交際費：接待/贈答/お土産/懇親
-- 通信費：通信/携帯/電話/インターネット/回線
+税率判定：
+- 食品/饮料（酒类除外）→ 8%（軽減税率）
+- 外食/酒类/日用品/服务费 → 10%（標準税率）
+- 出租车/停车/铁道/住宿/餐厅服务 → 10%
+- 邮票(84円/63円等定额)→ exempt（非課税）
+- 带 ※/＊/軽 标记 → 8%
+- 带 標 标记 → 10%
+- 无法判断 → 默认 10%（服务类）或 8%（商品类）
+
+【第四步：抽取明细行（最重要！）】
+lines 数组中每行必须包含：
+- line_no, name, tax_rate, net_amount, tax_amount, gross_amount
+- amount_source, qty, unit_price, suggested_account, raw
+
+提取规则：
+A) 有明细的单据（超市/便利店/请求书等）→ 逐行提取每个商品/项目
+B) 无明细或明细模糊的单据（出租车/停车/铁道等）→ 创建汇总行：
+   - name = 单据类型描述（如"タクシー代"/"駐車料金"/"乗車券"）
+   - gross_amount = total_gross
+   - 用税率推导 net_amount 和 tax_amount
+C) 混合情况 → 能提取的逐行提取，不能的汇总为1行
+
+金额推导（每行必须执行）：
+1) 若同时有税抜和税込 → net_amount=税抜, gross_amount=税込, tax=gross-net
+2) 若只有 gross_amount → net=round(gross/(1+rate)), tax=gross-net, amount_source="gross->net_by_rate"
+3) 若只有 net_amount → tax=round(net*rate), gross=net+tax, amount_source="net->tax_by_rate"
+4) exempt → tax=0, gross=net
+5) unit_price 必须有值：若未直接出现，则 unit_price = gross_amount / qty
+
+【第五步：交叉验证】
+validation:
+A) 行合计 vs total_gross（容差 ±2 JPY）
+B) 税额合计 vs total_tax（容差 ±2 JPY）
+C) 若不匹配，在 mismatches 中说明原因
+
+【完整会计科目对照表（勘定科目）】
+expense 类：
+- 旅費交通費：タクシー/電車/バス/新幹線/飛行機/駐車場/高速代/出張/交通費/IC
+- 会議費：会議/打合せ/ミーティング用飲食（1人5000円以下参考）
+- 交際費：接待/贈答/お土産/懇親/取引先飲食
+- 通信費：通信/携帯/電話/インターネット/回線/切手/はがき/郵便
+- 荷造運賃：宅急便/宅配/ゆうパック/送料/配送
 - 水道光熱費：電気/ガス/水道
-- 消耗品費：消耗品/文房具/日用品/備品（小额）
-- 広告宣伝費：広告/宣伝/Google/Meta/販促
-- 支払手数料：手数料/決済/振込手数料
-- 地代家賃：家賃/賃料/レンタル
-- 修繕費：修理/修繕/メンテ
-- 福利厚生費：福利/健康/社内イベント
-- 研修費：研修/セミナー/講座
-- 未命中：雑費（并降低置信度）
+- 消耗品費：消耗品/文房具/日用品/事務用品/コピー用紙/電池/USB
+- 広告宣伝費：広告/宣伝/Google/Meta/販促/チラシ/看板
+- 支払手数料：手数料/振込手数料/決済手数料
+- 地代家賃：家賃/賃料/レンタル/駐車場月極
+- 修繕費：修理/修繕/メンテナンス
+- 福利厚生費：社内飲食/社内イベント/健康診断/薬/ドラッグストア
+- 保険料：保険/損害保険/火災保険
+- 車両費：ガソリン/軽油/洗車/車検/ETC
+- 新聞図書費：書籍/雑誌/新聞/電子書籍
+- 研修費：研修/セミナー/講座/資格
+- 雑費：上記に当てはまらないもの（confidence低め）
 
-【净额/税额/总额推导规则（必须执行）】
-1) 若同一行同时出现"税抜/税別/本体"与"税込/合計"：
-- 优先把税抜作为 net_amount，税込作为 gross_amount，税额为 gross-net（若可计算）
-2) 若只出现含税金额 gross_amount，且税率明确为 10% 或 8%：
-- 推导 net = round(gross / (1+rate))（JPY四舍五入；并在 amount_source 标注 gross->net_by_rate）
-- tax = gross - net
-3) 若只出现净额 net_amount，且税率明确：
-- tax = round(net * rate)（JPY四舍五入；amount_source=net->tax_by_rate）
-- gross = net + tax
-4) 若 tax_rate="exempt"：tax_amount=0，gross=net（若可）
-5) 若税率缺失：强制视为 8% 进行推导（并在 notes 标注"默认8%"）
+purchase 類：
+- 仕入高（默认）
+- 原材料費：原材料/材料/部品
+- 外注費：外注/業務委託/開発/制作/デザイン
+- 荷造運賃：送料/配送/運賃
 
-【汇总区抽取（若存在）】
-你必须尽最大努力抽取以下关键词附近的金额：
-- total_gross（合計/総合計/請求金額/お会計/税込合計）
-- total_tax（消費税/税額/内消費税）
-- by_rate_summary（若有）：10%対象、8%対象、軽減対象、税率別、標準税率、軽減税率
-并标注每个汇总值的来源：on_doc 或 derived（从行汇总推导）
+sale 類：
+- 売上高（默认）
 
-【交叉验证（必须输出validation）】
-你必须做三层校验，并给出 pass/fail/partial：
-A) 行内校验（line-level）
-- 对每行：若三者齐全，检查 net + tax == gross
-- 若不等，给出 diff，并尝试解释：四舍五入/折扣/内税外税/OCR错位
-B) 分税率校验（by-rate）
-- 按 tax_rate 分组汇总 net/tax/gross（折扣行要计入，折扣为负数）
-- 若票面存在 8%/10%対象 与 税额：对比差异
-C) 总计校验（grand total）
-- 所有行汇总 vs 票面 total_gross/total_tax（若存在）
-- 若票面无总计，则输出 derived_total
-
-【容差（考虑日元四舍五入与分摊）】
-- 单行容差：±1 JPY
-- 分税率税额容差：±1 JPY
-- 总税额容差：±2 JPY
-- 总金额容差：±2 JPY
-超出容差必须列入 mismatches，并给出最可能修正建议（例如：某行税率应为10%而不是8%，或该金额为税抜而被当成税込）。
-
-【输出格式要求】
-只能输出 JSON（不要 markdown，不要解释文本），结构如下：
+【输出JSON格式】
 {
   "currency": "JPY",
   "document": {
@@ -265,69 +280,53 @@ C) 总计校验（grand total）
   },
   "issuer": {
     "issuer_name": "string|null",
-    "invoice_reg_no": "T1234567890123|string(13 zeros)",
+    "invoice_reg_no": "T1234567890123|0000000000000",
     "issuer_tel": "string|null",
     "issuer_address": "string|null"
   },
   "totals_on_doc": {
-    "total_gross": 0|null,
-    "total_tax": 0|null,
+    "total_gross": 0,
+    "total_tax": 0,
     "by_rate": {
-      "10%": { "net": 0|null, "tax": 0|null, "gross": 0|null, "source": "on_doc|derived" },
-      "8%":  { "net": 0|null, "tax": 0|null, "gross": 0|null, "source": "on_doc|derived" },
-      "exempt": { "net": 0|null, "tax": 0|null, "gross": 0|null, "source": "on_doc|derived" }
+      "10%": { "net": 0, "tax": 0, "gross": 0, "source": "on_doc|derived" },
+      "8%":  { "net": 0, "tax": 0, "gross": 0, "source": "on_doc|derived" },
+      "exempt": { "net": 0, "tax": 0, "gross": 0, "source": "on_doc|derived" }
     }
   },
   "lines": [
     {
       "line_no": 1,
       "name": "string",
-      "tax_rate": "10%|8%|exempt|unknown",
-      "net_amount": 0|null,
-      "tax_amount": 0|null,
-      "gross_amount": 0|null,
-      "amount_source": "all_on_doc|net+tax=gross|gross->net_by_rate|net->tax_by_rate|unknown",
-      "qty": 0|null,
-      "unit_price": 0|null,
-      "suggested_account": "string",
-      "suggested_account_code": "string|null",
-      "suggested_account_confidence": 0.0,
-      "raw": "string"
+      "tax_rate": "10%|8%|exempt",
+      "net_amount": 0,
+      "tax_amount": 0,
+      "gross_amount": 0,
+      "amount_source": "all_on_doc|net+tax=gross|gross->net_by_rate|net->tax_by_rate",
+      "qty": 1,
+      "unit_price": 0,
+      "suggested_account": "勘定科目名",
+      "suggested_account_code": null,
+      "suggested_account_confidence": 0.9,
+      "raw": "原文片段"
     }
   ],
   "validation": {
-    "tolerances": { "line": 1, "by_rate_tax": 1, "total_tax": 2, "total_gross": 2 },
     "checks": [
-      { "name": "line_level", "status": "pass|fail|partial", "details": "string" },
-      { "name": "by_rate", "status": "pass|fail|partial", "details": "string" },
-      { "name": "grand_total", "status": "pass|fail|partial", "details": "string" }
+      { "name": "line_vs_total", "status": "pass|fail", "details": "string" },
+      { "name": "tax_check", "status": "pass|fail", "details": "string" }
     ],
-    "mismatches": [
-      {
-        "scope": "line|8%|10%|exempt|total",
-        "field": "net|tax|gross",
-        "expected": 0,
-        "actual": 0,
-        "diff": 0,
-        "reason": "string",
-        "candidate_fix": {
-          "line_no": 0|null,
-          "suggest_tax_rate": "10%|8%|exempt|null",
-          "suggest_amount_interpretation": "tax_inclusive|tax_exclusive|null",
-          "confidence": 0.0
-        }
-      }
-    ]
+    "mismatches": []
   },
-  "notes": [
-    "string"
-  ]
+  "notes": []
 }
 
-【强制约束】
-- 如果 invoice_reg_no 缺失：必须输出 "0000000000000"（十三个0）
-- 如果行税率缺失：必须默认 "8%"
-- 不能省略 lines；即使识别困难也要尽量输出候选行并用 null 标注不确定值'''
+【强制约束（违反任何一条视为失败）】
+1. lines 数组不能为空！最少1行。无明细时用 total_gross 创建汇总行。
+2. 每行 gross_amount > 0（折扣行除外）。
+3. 每行必须有 suggested_account（日文勘定科目名）。
+4. invoice_reg_no 缺失时输出 "0000000000000"。
+5. 税率缺失时根据单据类型默认（服务类10%，商品类8%）。
+6. 只输出JSON，不要markdown，不要解释。'''
 
 
 # ============== LIFESPAN ==============
@@ -388,7 +387,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Central OCR Service",
     description="Centralized OCR service with backward compatible parameter support (output_level + prompt_version)",
-    version="1.3.0",
+    version="1.4.0",
     lifespan=lifespan
 )
 
@@ -510,8 +509,9 @@ async def call_gemini_api(
     else:
         prompt = PROMPT_FULL
         config = {
-            'temperature': 0.1,
+            'temperature': 0,  # Deterministic for accounting accuracy
             'maxOutputTokens': 4096,
+            'responseMimeType': 'application/json',  # JSON mode for reliable parsing
         }
         timeout = 90
 
