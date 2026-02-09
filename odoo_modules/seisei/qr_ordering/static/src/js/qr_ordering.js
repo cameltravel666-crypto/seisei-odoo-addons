@@ -1121,7 +1121,8 @@
                 const nameMatch = p.name.toLowerCase().includes(lowerFilter);
                 const descMatch = (p.description && p.description.toLowerCase().includes(lowerFilter));
                 const variantMatch = (p.variants || []).some(v => (v.name || '').toLowerCase().includes(lowerFilter));
-                return nameMatch || descMatch || variantMatch;
+                const keywordMatch = (p.search_keywords && p.search_keywords.toLowerCase().includes(lowerFilter));
+                return nameMatch || descMatch || variantMatch || keywordMatch;
             });
         }
 
