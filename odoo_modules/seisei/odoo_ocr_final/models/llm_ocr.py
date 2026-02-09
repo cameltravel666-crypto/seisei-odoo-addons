@@ -316,7 +316,18 @@ def _call_ocr_service(file_data: bytes, mimetype: str, tenant_id: str,
                         normalized.get('vendor_name') or
                         'Unknown'
                     )
-                    suggested = extracted.get('suggested_account') or extracted.get('category', '')
+                    # Look for suggested_account in multiple places (nested Gemini format)
+                    suggested = (
+                        extracted.get('suggested_account') or
+                        normalized.get('suggested_account') or
+                        extracted.get('category') or
+                        (extracted.get('document', {}) or {}).get('category', '')
+                    )
+                    # Also try first line's suggested_account if lines exist but were empty after conversion
+                    if not suggested:
+                        raw_lines = extracted.get('lines', [])
+                        if raw_lines and isinstance(raw_lines, list):
+                            suggested = raw_lines[0].get('suggested_account', '')
                     line_items = [{
                         'product_name': vendor,
                         'quantity': 1,
@@ -361,7 +372,7 @@ def _normalize_extracted(extracted: dict) -> dict:
 
     # Clean invoice_reg_no at top level (flat format from Gemini)
     if 'invoice_reg_no' in extracted:
-        reg = re.sub(r'[()（）]', '', str(extracted['invoice_reg_no']))
+        reg = re.sub(r'[()（）\s]', '', str(extracted['invoice_reg_no']))
         extracted['invoice_reg_no'] = reg
 
     # Check if this is the fast prompt format
@@ -440,9 +451,9 @@ def _normalize_new_format(extracted: dict) -> dict:
         normalized['vendor_address'] = issuer.get('issuer_address')
         # Convert invoice_reg_no (T1234...) to tax_id format
         reg_no = issuer.get('invoice_reg_no', '')
-        # Strip parentheses: T(1050001019926) → T1050001019926
+        # Strip parentheses and spaces: T(105000 1019926) → T1050001019926
         if reg_no:
-            reg_no = re.sub(r'[()（）]', '', str(reg_no))
+            reg_no = re.sub(r'[()（）\s]', '', str(reg_no))
         if reg_no and reg_no != '0000000000000':
             normalized['tax_id'] = reg_no if reg_no.startswith('T') else f'T{reg_no}'
         normalized['issuer_tel'] = issuer.get('issuer_tel')
@@ -519,7 +530,7 @@ def _normalize_new_format(extracted: dict) -> dict:
             'unit_price': total_gross,
             'amount': total_gross,
             'tax_rate': fallback_tax_rate,
-            'suggested_account': None,  # Let account_move.py determine
+            'suggested_account': extracted.get('document', {}).get('suggested_account') or None,
         })
 
     normalized['line_items'] = line_items
