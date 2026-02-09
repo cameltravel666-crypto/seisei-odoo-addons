@@ -409,13 +409,11 @@ class AccountMove(models.Model):
                 if suggested:
                     account = self.env['account.account'].search([
                         ('name', '=', suggested),
-                        ('company_id', '=', self.company_id.id),
                     ], limit=1)
                     if not account:
                         # Fuzzy match with ilike
                         account = self.env['account.account'].search([
                             ('name', 'ilike', suggested),
-                            ('company_id', '=', self.company_id.id),
                         ], limit=1)
                     if account:
                         _logger.info(f'[OCR] Using suggested_account "{suggested}" -> {account.code} {account.name}')
@@ -692,12 +690,10 @@ class AccountMove(models.Model):
             if any(kw in combined for kw in keywords):
                 account = Account.search([
                     ('name', '=', account_name),
-                    ('company_id', '=', self.company_id.id),
                 ], limit=1)
                 if not account:
                     account = Account.search([
                         ('name', 'ilike', account_name),
-                        ('company_id', '=', self.company_id.id),
                     ], limit=1)
                 if account:
                     _logger.info(f'[OCR] Keyword inference: "{account_name}" matched -> {account.code} {account.name}')
