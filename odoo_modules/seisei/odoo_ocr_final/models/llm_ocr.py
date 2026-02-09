@@ -283,6 +283,12 @@ def _call_ocr_service(file_data: bytes, mimetype: str, tenant_id: str,
             # Multiple fallbacks for line_items
             if not line_items:
                 line_items = extracted.get('line_items', [])
+            # Propagate top-level suggested_account to items that lack it (flat format)
+            top_suggested = extracted.get('suggested_account') or normalized.get('suggested_account')
+            if top_suggested and line_items:
+                for li in line_items:
+                    if not li.get('suggested_account'):
+                        li['suggested_account'] = top_suggested
             if not line_items:
                 # Support new format with 'lines' field
                 lines = extracted.get('lines', [])
