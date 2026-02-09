@@ -16,8 +16,6 @@ permissions:
   contents: read
 
 env:
-  SSH_HOST: ${{ secrets.DEPLOY_SSH_HOST || '54.65.127.141' }}
-  SSH_USER: ${{ secrets.DEPLOY_SSH_USER || 'ubuntu' }}
   REPO_PATH: /opt/seisei-odoo-addons
 
 jobs:
@@ -25,6 +23,9 @@ jobs:
     name: Update scripts on ${{ inputs.server }}
     runs-on: ubuntu-latest
     environment: ${{ inputs.server }}
+    env:
+      SSH_HOST: ${{ secrets.DEPLOY_SSH_HOST || '54.65.127.141' }}
+      SSH_USER: ${{ secrets.DEPLOY_SSH_USER || 'ubuntu' }}
 
     steps:
       - name: Checkout repository

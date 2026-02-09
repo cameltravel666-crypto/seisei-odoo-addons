@@ -40,8 +40,6 @@ permissions:
   contents: read
 
 env:
-  SSH_HOST: ${{ secrets.DEPLOY_SSH_HOST || '54.65.127.141' }}
-  SSH_USER: ${{ secrets.DEPLOY_SSH_USER || 'ubuntu' }}
   REPO_PATH: /opt/seisei-odoo-addons
 
 jobs:
@@ -50,6 +48,9 @@ jobs:
     runs-on: ubuntu-latest
     # Use GitHub Environments for protection rules (approval, secrets, etc.)
     environment: ${{ inputs.environment }}
+    env:
+      SSH_HOST: ${{ secrets.DEPLOY_SSH_HOST || '54.65.127.141' }}
+      SSH_USER: ${{ secrets.DEPLOY_SSH_USER || 'ubuntu' }}
 
     steps:
       - name: Validate inputs
