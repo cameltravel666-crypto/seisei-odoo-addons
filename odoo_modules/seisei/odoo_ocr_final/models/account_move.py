@@ -407,18 +407,17 @@ class AccountMove(models.Model):
                 account = None
                 suggested = item.get('suggested_account')
                 if suggested:
-                    account = self.env['account.account'].search([
-                        ('name', '=', suggested),
-                        ('company_id', '=', self.company_id.id),
-                    ], limit=1)
-                    if not account:
-                        # Fuzzy match with ilike
-                        account = self.env['account.account'].search([
-                            ('name', 'ilike', suggested),
-                            ('company_id', '=', self.company_id.id),
-                        ], limit=1)
+                    account = self._search_account_by_name(suggested)
                     if account:
                         _logger.info(f'[OCR] Using suggested_account "{suggested}" -> {account.code} {account.name}')
+
+                # Keyword-based inference when suggested_account is missing
+                if not account:
+                    vendor_name = extracted.get('vendor_name', '') if extracted else ''
+                    raw_text = self.ocr_extracted_texts or ''
+                    account = self._infer_account_from_keywords([
+                        product_name, vendor_name, raw_text,
+                    ])
 
                 # Fallback to product default account
                 if is_purchase:
@@ -644,14 +643,71 @@ class AccountMove(models.Model):
     def _get_default_ocr_account(self, is_purchase, extracted):
         """Resolve default account for OCR lines (supports suggested_account)."""
         suggested = extracted.get('suggested_account') if extracted else None
-        Account = self.env['account.account']
         if suggested:
-            account = Account.search([('name', '=', suggested)], limit=1)
+            account = self._search_account_by_name(suggested)
             if account:
                 return account
 
         # Fallback to company default accounts (Odoo 18: ir.property removed)
         return self._get_default_expense_account() if is_purchase else self._get_default_income_account()
+
+    def _search_account_by_name(self, name):
+        """Search account by name across multiple languages (ja_JP, zh_CN, en_US).
+
+        OCR returns Japanese account names (e.g. 旅費交通費) but user's Odoo
+        may be in Chinese or English. Odoo 18 stores names as jsonb and ORM
+        searches only in current user language by default.
+        """
+        Account = self.env['account.account']
+        # 1. Try current user language
+        account = Account.search([('name', '=', name)], limit=1)
+        if account:
+            return account
+        # 2. Try Japanese (OCR returns Japanese names)
+        account = Account.with_context(lang='ja_JP').search([('name', '=', name)], limit=1)
+        if account:
+            return account
+        # 3. Fuzzy match in current language
+        account = Account.search([('name', 'ilike', name)], limit=1)
+        if account:
+            return account
+        # 4. Fuzzy match in Japanese
+        account = Account.with_context(lang='ja_JP').search([('name', 'ilike', name)], limit=1)
+        return account or False
+
+    def _infer_account_from_keywords(self, text_sources):
+        """Infer account from keywords when OCR suggested_account is missing.
+
+        Args:
+            text_sources: list of strings to scan for keywords (vendor name, product name, raw text, etc.)
+
+        Returns:
+            account.account record or False
+        """
+        KEYWORD_ACCOUNT_MAP = [
+            ('旅費交通費', ['駐車', 'パーキング', 'コインパーキング', 'タクシー', '電車', 'JR', 'バス',
+                        '新幹線', '飛行機', '高速', 'ETC', 'ガソリン', '軽油', '宿泊', 'ホテル',
+                        '旅館', 'Suica', 'PASMO', 'IC', '交通', '出張', '乗車', '運賃',
+                        'タイムズ', 'タイムスペース', 'リパーク', 'NPC', '三井リパーク']),
+            ('会議費', ['会議', '打合せ', 'ミーティング']),
+            ('交際費', ['接待', '贈答', 'お土産', '懇親']),
+            ('通信費', ['通信', '携帯', '電話', 'インターネット', '切手', 'はがき', '郵便']),
+            ('荷造運賃', ['宅急便', '宅配', 'ゆうパック', '送料', '配送', 'ヤマト', '佐川']),
+            ('消耗品費', ['文房具', '事務用品', 'コピー', 'USB']),
+            ('福利厚生費', ['健康診断', '薬局', 'ドラッグストア']),
+            ('水道光熱費', ['電気', 'ガス代', '水道']),
+        ]
+        combined = ' '.join(str(s) for s in text_sources if s)
+        if not combined:
+            return False
+
+        for account_name, keywords in KEYWORD_ACCOUNT_MAP:
+            if any(kw in combined for kw in keywords):
+                account = self._search_account_by_name(account_name)
+                if account:
+                    _logger.info(f'[OCR] Keyword inference: "{account_name}" matched -> {account.code} {account.name}')
+                    return account
+        return False
 
     def _find_or_create_product(self, name, price=0, is_sale=False):
         """Find product by name, create if not found.
