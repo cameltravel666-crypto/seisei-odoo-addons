@@ -893,6 +893,45 @@ html, body {
     margin-bottom: 16px;
 }
 
+.qr-product-detail-variant {
+    font-size: 14px;
+    color: var(--qr-text-light);
+    margin-bottom: 12px;
+}
+
+.qr-variant-list {
+    display: grid;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.qr-variant-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border: 1px solid var(--qr-border);
+    background: var(--qr-background);
+    border-radius: var(--qr-radius);
+    cursor: pointer;
+    text-align: left;
+}
+
+.qr-variant-btn.active {
+    border-color: var(--qr-primary);
+    background: rgba(64, 122, 204, 0.08);
+}
+
+.qr-variant-name {
+    font-size: 14px;
+}
+
+.qr-variant-price {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--qr-primary);
+}
+
 .qr-qty-control {
     display: flex;
     align-items: center;

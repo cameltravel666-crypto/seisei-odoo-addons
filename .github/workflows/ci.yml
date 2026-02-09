@@ -28,7 +28,17 @@ jobs:
 
       - name: Lint YAML files
         run: |
-          yamllint infra/ --no-warnings || true
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            git fetch origin "${GITHUB_BASE_REF}"
+            changed=$(git diff --name-only "origin/${GITHUB_BASE_REF}...HEAD" | grep -E '\.ya?ml$' || true)
+            if [ -z "$changed" ]; then
+              echo "No YAML changes detected; skipping yamllint."
+              exit 0
+            fi
+            echo "$changed" | xargs yamllint --no-warnings
+          else
+            yamllint infra/ --no-warnings
+          fi
 
   security-check:
     name: Security Check
@@ -85,6 +95,51 @@ jobs:
             python -c "import yaml; yaml.safe_load(open('$f'))" || exit 1
           done
           echo "All traefik configs are valid YAML"
+
+      - name: Validate workflow YAML
+        run: |
+          for f in $(find .github/workflows -name "*.yml" -o -name "*.yaml"); do
+            echo "Validating: $f"
+            python -c "import yaml; yaml.safe_load(open('$f'))" || exit 1
+          done
+          echo "All workflow files are valid YAML"
+
+  python-validate:
+    name: Python Validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Compile Python files
+        run: |
+          TARGETS=()
+          if [ -d odoo_modules ]; then
+            TARGETS+=("odoo_modules")
+          fi
+          if [ -d addons ]; then
+            TARGETS+=("addons")
+          fi
+
+          if [ ${#TARGETS[@]} -eq 0 ]; then
+            echo "No Python addon directories found; skipping compileall."
+            exit 0
+          fi
+
+          python -m compileall "${TARGETS[@]}"
+
+      - name: Unit tests (placeholder if none configured)
+        run: |
+          if [ -f pytest.ini ] || [ -f tox.ini ] || [ -f pyproject.toml ]; then
+            python -m pip install pytest
+            python -m pytest -q || exit 1
+          else
+            echo "No pytest/tox configuration found; unit tests not configured."
+          fi
 
   route-check:
     name: Route Validation

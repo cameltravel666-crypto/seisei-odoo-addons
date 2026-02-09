@@ -52,6 +52,7 @@ services:
       - "traefik.http.routers.odoo18-test.middlewares=secure-headers@file"
       - "traefik.http.services.odoo18-test.loadbalancer.server.port=8069"
       # Longpolling/WebSocket router
+      # yamllint disable-line rule:line-length
       - "traefik.http.routers.odoo18-test-lp.rule=Host(`testodoo.seisei.tokyo`) && (PathPrefix(`/longpolling`) || PathPrefix(`/websocket`))"
       - "traefik.http.routers.odoo18-test-lp.entrypoints=websecure"
       - "traefik.http.routers.odoo18-test-lp.tls.certresolver=cloudflare"

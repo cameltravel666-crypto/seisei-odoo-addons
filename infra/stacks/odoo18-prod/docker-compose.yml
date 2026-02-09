@@ -14,11 +14,13 @@
 #   4. Run: docker compose pull && docker compose up -d
 #
 # Required environment variables in .env:
-#   GITHUB_REPO_OWNER    - GitHub organization/user (e.g., cameltravel666-crypto)
+#   GITHUB_REPO_OWNER    - GitHub organization/user
+#                          (e.g., cameltravel666-crypto)
 #   ODOO18_IMAGE_TAG     - Image tag (MUST use git SHA, e.g., sha-19b9b98)
 #   DB_PASSWORD          - PostgreSQL password (for seisei-db)
 #   REDIS_PASSWORD       - Redis password
-#   OCR_SERVICE_URL      - Central OCR service URL (e.g., http://172.17.0.1:8180/api/v1)
+#   OCR_SERVICE_URL      - Central OCR service URL
+#                          (e.g., http://172.17.0.1:8180/api/v1)
 #   OCR_SERVICE_KEY      - OCR service API key (required for OCR functionality)
 #
 # External dependencies:
@@ -32,7 +34,8 @@
 services:
   web:
     # Immutable image from GHCR - config and addons baked in
-    # IMAGE_REF must include full digest (image@sha256:...) for production deployments
+    # IMAGE_REF must include full digest (image@sha256:...)
+    # for production deployments
     image: ${IMAGE_REF}
     container_name: odoo18-prod-web
     restart: unless-stopped
@@ -77,6 +80,7 @@ services:
       # =================================================================
       # Router 1: *.erp.seisei.tokyo (wildcard for production tenants)
       # =================================================================
+      # yamllint disable-line rule:line-length
       - "traefik.http.routers.odoo18-prod.rule=HostRegexp(`{subdomain:[a-z0-9-]+}.erp.seisei.tokyo`) && !Host(`testodoo.seisei.tokyo`)"
       - "traefik.http.routers.odoo18-prod.entrypoints=websecure"
       - "traefik.http.routers.odoo18-prod.tls.certresolver=cloudflare"
@@ -86,6 +90,7 @@ services:
       - "traefik.http.services.odoo18-prod.loadbalancer.sticky.cookie=true"
       - "traefik.http.services.odoo18-prod.loadbalancer.sticky.cookie.name=odoo_session"
       # Longpolling / WebSocket for seisei.tokyo
+      # yamllint disable-line rule:line-length
       - "traefik.http.routers.odoo18-prod-lp.rule=HostRegexp(`{subdomain:[a-z0-9-]+}.erp.seisei.tokyo`) && (PathPrefix(`/longpolling`) || PathPrefix(`/websocket`))"
       - "traefik.http.routers.odoo18-prod-lp.entrypoints=websecure"
       - "traefik.http.routers.odoo18-prod-lp.tls.certresolver=cloudflare"
@@ -103,6 +108,7 @@ services:
       - "traefik.http.routers.odoo18-nagashiro.middlewares=secure-headers@file,rate-limit@file,nagashiro-dbfilter@file"
       - "traefik.http.routers.odoo18-nagashiro.service=odoo18-prod"
       # Longpolling / WebSocket for nagashiro.top
+      # yamllint disable-line rule:line-length
       - "traefik.http.routers.odoo18-nagashiro-lp.rule=Host(`demo.nagashiro.top`) && (PathPrefix(`/longpolling`) || PathPrefix(`/websocket`))"
       - "traefik.http.routers.odoo18-nagashiro-lp.entrypoints=websecure"
       - "traefik.http.routers.odoo18-nagashiro-lp.tls.certresolver=cloudflare"
