@@ -1957,8 +1957,8 @@
             <button class="qr-variant-btn ${v.id === state.selectedProduct.id ? 'active' : ''}"
                     data-variant-id="${v.id}"
                     onclick="QrOrdering.selectVariant(${v.id})">
-                <span class="qr-variant-name">${v.name}</span>
-                <span class="qr-variant-price">${t('currency')}${(v.price || 0).toFixed(0)}</span>
+                <span class="qr-variant-name">${v.variant_display_name || v.name}</span>
+                <span class="qr-variant-price">${t('currency')}${(v.price_with_tax || v.price || 0).toFixed(0)}</span>
             </button>
         `).join('');
 
@@ -1972,10 +1972,10 @@
                 <img class="qr-product-detail-image" src="${template.image_url}" alt="${template.name}"/>
             `}
             <div class="qr-product-detail-name" id="qr-detail-name">${template.name}</div>
-            ${variants.length > 1 ? `<div class="qr-product-detail-variant" id="qr-detail-variant">${state.selectedProduct.name}</div>` : ''}
+            ${variants.length > 1 ? `<div class="qr-product-detail-variant" id="qr-detail-variant">${state.selectedProduct.variant_display_name || state.selectedProduct.name}</div>` : ''}
             <div class="qr-product-detail-desc">${template.description || ''}</div>
             ${variants.length > 1 ? `<div class="qr-variant-list">${variantListHtml}</div>` : ''}
-            <div class="qr-product-detail-price" id="qr-detail-price">${t('currency')}${(state.selectedProduct.price || 0).toFixed(0)}</div>
+            <div class="qr-product-detail-price" id="qr-detail-price">${t('currency')}${(state.selectedProduct.price_with_tax || state.selectedProduct.price || 0).toFixed(0)}</div>
             <div class="qr-qty-control">
                 <button class="qr-qty-btn" onclick="QrOrdering.changeQty(-1)">-</button>
                 <span class="qr-qty-value" id="qr-detail-qty">1</span>
@@ -2143,9 +2143,9 @@
             if (!variant) return;
             state.selectedProduct = variant;
             const nameEl = document.getElementById('qr-detail-variant');
-            if (nameEl) nameEl.textContent = variant.name;
+            if (nameEl) nameEl.textContent = variant.variant_display_name || variant.name;
             const priceEl = document.getElementById('qr-detail-price');
-            if (priceEl) priceEl.textContent = `${t('currency')}${(variant.price || 0).toFixed(0)}`;
+            if (priceEl) priceEl.textContent = `${t('currency')}${(variant.price_with_tax || variant.price || 0).toFixed(0)}`;
             document.querySelectorAll('.qr-variant-btn').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.variantId === String(variantId));
             });
