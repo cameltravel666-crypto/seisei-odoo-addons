@@ -37,7 +37,14 @@
         const target = window.location.pathname + window.location.search;
         const params = new URLSearchParams(window.location.search);
         const db = params.get('db') || 'ten_testodoo';
-        const withBootstrap = target + (target.includes('?') ? '&' : '?') + 'bootstrap=1';
+        if (!params.has('bootstrap')) {
+            params.set('bootstrap', '1');
+        }
+        const query = params.toString();
+        const withBootstrap = window.location.pathname + (query ? '?' + query : '');
+
+        // Set short-lived cookie so Traefik can bypass rewrite
+        document.cookie = 'qr_bootstrap=1; Max-Age=300; Path=/; SameSite=Lax; Secure';
 
         // Establish session via fetch (this sets the cookie)
         fetch('/web?db=' + encodeURIComponent(db), { credentials: 'include' })
