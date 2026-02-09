@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': '扫码点餐 / QR Code Ordering',
-    'version': '18.0.1.0.2',
+    'version': '18.0.1.0.3',
     'category': 'Point of Sale',
     'summary': '客户扫描餐桌二维码自助点餐，订单同步到 POS',
     'description': '''

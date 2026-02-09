@@ -663,6 +663,23 @@ class QrOrderingController(http.Controller):
             tdata['price_with_tax_min'] = min(tdata['price_with_tax_min'], price_with_tax)
             tdata['price_with_tax_max'] = max(tdata['price_with_tax_max'], price_with_tax)
 
+        # Build search keywords for each template (all supported languages)
+        LANGS = ['zh_CN', 'ja_JP', 'en_US']
+        for tdata in templates_map.values():
+            keywords = set()
+            tmpl_record = request.env['product.template'].sudo().browse(tdata['id'])
+            for l in LANGS:
+                name = tmpl_record.with_context(lang=l).name
+                if name:
+                    keywords.add(name)
+            # Tags in all languages
+            for tag in tmpl_record.qr_tags:
+                for l in LANGS:
+                    tag_name = tag.with_context(lang=l).name
+                    if tag_name:
+                        keywords.add(tag_name)
+            tdata['search_keywords'] = ' '.join(keywords)
+
         # 输出模板列表（保持稳定顺序：置顶优先，其次序号、名称）
         menu['templates'] = sorted(
             templates_map.values(),
