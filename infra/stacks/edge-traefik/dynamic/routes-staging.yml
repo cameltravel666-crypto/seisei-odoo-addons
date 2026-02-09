@@ -38,43 +38,16 @@ http:
         - secure-headers@file
         - rate-limit@file
 
-    # QR Ordering - Session bootstrap for staging QR scans
-    odoo-staging-qr-direct-cookie:
-      # yamllint disable-line rule:line-length
-      rule: "Host(`staging.odoo.seisei.tokyo`) && PathPrefix(`/qr/order/`) && HeadersRegexp(`Cookie`, `qr_bootstrap=1`)"
-      service: odoo-staging
-      priority: 212
-      entryPoints:
-        - websecure
-      tls:
-        certResolver: cloudflare
-      middlewares:
-        - secure-headers@file
-        - rate-limit@file
-
-    odoo-staging-qr-direct:
-      # yamllint disable-line rule:line-length
-      rule: "Host(`staging.odoo.seisei.tokyo`) && PathPrefix(`/qr/order/`) && Query(`bootstrap`, `1`)"
-      service: odoo-staging
-      priority: 211
-      entryPoints:
-        - websecure
-      tls:
-        certResolver: cloudflare
-      middlewares:
-        - secure-headers@file
-        - rate-limit@file
-
-    odoo-staging-qr-bootstrap:
-      rule: "Host(`staging.odoo.seisei.tokyo`) && PathPrefix(`/qr/order/`)"
-      service: odoo-staging
+    # QR Ordering - route via staging nginx sidecar (prod-parity)
+    odoo-staging-qr-nginx:
+      rule: "Host(`staging.odoo.seisei.tokyo`) && PathPrefix(`/qr/`)"
+      service: odoo-staging-qr
       priority: 210
       entryPoints:
         - websecure
       tls:
         certResolver: cloudflare
       middlewares:
-        - qr-bootstrap-rewrite
         - secure-headers@file
         - rate-limit@file
 
@@ -106,11 +79,6 @@ http:
       stripPrefix:
         prefixes:
           - "/crm-api"
-    qr-bootstrap-rewrite:
-      replacePathRegex:
-        regex: "^/qr/order/.*"
-        replacement: "/qr_ordering/static/qr_bootstrap.html"
-
     crm-odoo19-dbfilter:
       headers:
         customRequestHeaders:
@@ -140,3 +108,9 @@ http:
       loadBalancer:
         servers:
           - url: "http://odoo18-staging-web:8069"
+
+    # Odoo Staging QR Nginx Sidecar
+    odoo-staging-qr:
+      loadBalancer:
+        servers:
+          - url: "http://odoo18-staging-qr-nginx:8080"
