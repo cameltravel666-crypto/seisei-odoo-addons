@@ -407,14 +407,7 @@ class AccountMove(models.Model):
                 account = None
                 suggested = item.get('suggested_account')
                 if suggested:
-                    account = self.env['account.account'].search([
-                        ('name', '=', suggested),
-                    ], limit=1)
-                    if not account:
-                        # Fuzzy match with ilike
-                        account = self.env['account.account'].search([
-                            ('name', 'ilike', suggested),
-                        ], limit=1)
+                    account = self._search_account_by_name(suggested)
                     if account:
                         _logger.info(f'[OCR] Using suggested_account "{suggested}" -> {account.code} {account.name}')
 
@@ -650,14 +643,37 @@ class AccountMove(models.Model):
     def _get_default_ocr_account(self, is_purchase, extracted):
         """Resolve default account for OCR lines (supports suggested_account)."""
         suggested = extracted.get('suggested_account') if extracted else None
-        Account = self.env['account.account']
         if suggested:
-            account = Account.search([('name', '=', suggested)], limit=1)
+            account = self._search_account_by_name(suggested)
             if account:
                 return account
 
         # Fallback to company default accounts (Odoo 18: ir.property removed)
         return self._get_default_expense_account() if is_purchase else self._get_default_income_account()
+
+    def _search_account_by_name(self, name):
+        """Search account by name across multiple languages (ja_JP, zh_CN, en_US).
+
+        OCR returns Japanese account names (e.g. 旅費交通費) but user's Odoo
+        may be in Chinese or English. Odoo 18 stores names as jsonb and ORM
+        searches only in current user language by default.
+        """
+        Account = self.env['account.account']
+        # 1. Try current user language
+        account = Account.search([('name', '=', name)], limit=1)
+        if account:
+            return account
+        # 2. Try Japanese (OCR returns Japanese names)
+        account = Account.with_context(lang='ja_JP').search([('name', '=', name)], limit=1)
+        if account:
+            return account
+        # 3. Fuzzy match in current language
+        account = Account.search([('name', 'ilike', name)], limit=1)
+        if account:
+            return account
+        # 4. Fuzzy match in Japanese
+        account = Account.with_context(lang='ja_JP').search([('name', 'ilike', name)], limit=1)
+        return account or False
 
     def _infer_account_from_keywords(self, text_sources):
         """Infer account from keywords when OCR suggested_account is missing.
@@ -685,16 +701,9 @@ class AccountMove(models.Model):
         if not combined:
             return False
 
-        Account = self.env['account.account']
         for account_name, keywords in KEYWORD_ACCOUNT_MAP:
             if any(kw in combined for kw in keywords):
-                account = Account.search([
-                    ('name', '=', account_name),
-                ], limit=1)
-                if not account:
-                    account = Account.search([
-                        ('name', 'ilike', account_name),
-                    ], limit=1)
+                account = self._search_account_by_name(account_name)
                 if account:
                     _logger.info(f'[OCR] Keyword inference: "{account_name}" matched -> {account.code} {account.name}')
                     return account
