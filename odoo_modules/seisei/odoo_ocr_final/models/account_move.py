@@ -403,19 +403,36 @@ class AccountMove(models.Model):
                 existing[0].write({'quantity': existing[0].quantity + quantity})
                 _logger.info(f'[OCR] Updated line: {product_name} (qty: +{quantity})')
             else:
-                # Get default account based on document type
+                # Try OCR suggested_account first (from Gemini)
+                account = None
+                suggested = item.get('suggested_account')
+                if suggested:
+                    account = self.env['account.account'].search([
+                        ('name', '=', suggested),
+                        ('company_id', '=', self.company_id.id),
+                    ], limit=1)
+                    if not account:
+                        # Fuzzy match with ilike
+                        account = self.env['account.account'].search([
+                            ('name', 'ilike', suggested),
+                            ('company_id', '=', self.company_id.id),
+                        ], limit=1)
+                    if account:
+                        _logger.info(f'[OCR] Using suggested_account "{suggested}" -> {account.code} {account.name}')
+
+                # Fallback to product default account
                 if is_purchase:
-                    # Expense account for vendor bills
-                    account = product.property_account_expense_id or \
-                              product.categ_id.property_account_expense_categ_id
+                    if not account:
+                        account = product.property_account_expense_id or \
+                                  product.categ_id.property_account_expense_categ_id
                     if not account:
                         default_categ = self.env.ref('product.product_category_all', raise_if_not_found=False)
                         account = default_categ and default_categ.property_account_expense_categ_id
                     price = price_unit or product.standard_price
                 else:
-                    # Income account for customer invoices
-                    account = product.property_account_income_id or \
-                              product.categ_id.property_account_income_categ_id
+                    if not account:
+                        account = product.property_account_income_id or \
+                                  product.categ_id.property_account_income_categ_id
                     if not account:
                         default_categ = self.env.ref('product.product_category_all', raise_if_not_found=False)
                         account = default_categ and default_categ.property_account_income_categ_id

@@ -2,7 +2,7 @@
 """
 Central OCR Service - Managed by Odoo 19
 Handles all OCR API calls, tracks usage per tenant, hides API details from tenants.
-Version 1.4.0 - Optimized PROMPT_FULL for higher extraction rate and JGAAP compliance
+Version 1.4.1 - Fix prompt account names to match staging chart of accounts
 """
 
 import os
@@ -175,7 +175,7 @@ PROMPT_FULL = '''你是日本会计（日本基準/JGAAP）与适格請求書（
 ■ 邮局/快递（郵便局/ゆうパック/宅急便/ヤマト/佐川）→ category=expense
   - 邮票/信件 → 通信費
   - 包裹/快递 → 荷造運賃
-■ 加油站（ガソリンスタンド/GS）→ category=expense, suggested_account=旅費交通費 or 車両費
+■ 加油站（ガソリンスタンド/GS）→ category=expense, suggested_account=旅費交通費
 ■ 酒店/住宿（ホテル/旅館/宿泊）→ category=expense, suggested_account=旅費交通費
   - 住宿费 → 旅費交通費
   - 餐费 → 会議費/交際費
@@ -189,7 +189,7 @@ PROMPT_FULL = '''你是日本会计（日本基準/JGAAP）与适格請求書（
   - 外包/开发/设计 → 外注費
   - 广告/推广 → 広告宣伝費
   - 保险/保修 → 保険料
-  - 租金/物业 → 地代家賃
+  - 租金/物业 → 賃借料
   - 通信/网络 → 通信費
   - 水电气 → 水道光熱費
 ■ 无法判断 → category=expense, suggested_account=雑費
@@ -252,14 +252,10 @@ expense 类：
 - 消耗品費：消耗品/文房具/日用品/事務用品/コピー用紙/電池/USB
 - 広告宣伝費：広告/宣伝/Google/Meta/販促/チラシ/看板
 - 支払手数料：手数料/振込手数料/決済手数料
-- 地代家賃：家賃/賃料/レンタル/駐車場月極
-- 修繕費：修理/修繕/メンテナンス
+- 賃借料：家賃/賃料/レンタル/駐車場月極
 - 福利厚生費：社内飲食/社内イベント/健康診断/薬/ドラッグストア
 - 保険料：保険/損害保険/火災保険
-- 車両費：ガソリン/軽油/洗車/車検/ETC
-- 新聞図書費：書籍/雑誌/新聞/電子書籍
-- 研修費：研修/セミナー/講座/資格
-- 雑費：上記に当てはまらないもの（confidence低め）
+- 雑費：上記に当てはまらないもの/修理/修繕/メンテナンス/ガソリン/軽油/洗車/車検/ETC/書籍/雑誌/新聞/電子書籍/研修/セミナー/講座/資格（confidence低め）
 
 purchase 類：
 - 仕入高（默认）
@@ -387,7 +383,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Central OCR Service",
     description="Centralized OCR service with backward compatible parameter support (output_level + prompt_version)",
-    version="1.4.0",
+    version="1.4.1",
     lifespan=lifespan
 )
 
@@ -643,7 +639,7 @@ async def update_usage(
 async def health_check():
     return {
         "status": "healthy",
-        "version": "1.3.0",
+        "version": "1.4.1",
         "prompts": ["fast", "full"],
         "parameters": {
             "legacy": ["prompt_version"],
