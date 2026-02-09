@@ -644,7 +644,9 @@ class QrOrderingController(http.Controller):
             # 追加变体
             tdata['variants'].append({
                 'id': pdata.get('id'),
-                'name': pdata.get('name'),
+                'name': pdata.get('name'),  # 完整产品名称
+                'variant_display_name': pdata.get('variant_display_name', pdata.get('name')),  # 变体显示名称
+                'attribute_values': pdata.get('attribute_values', []),  # 属性值列表
                 'price': pdata.get('price', 0.0),
                 'price_with_tax': pdata.get('price_with_tax', pdata.get('price', 0.0)),
                 'tax_rate': pdata.get('tax_rate', 0.0),

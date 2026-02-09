@@ -116,9 +116,29 @@ class ProductProduct(models.Model):
                 if price > 0:
                     tax_rate = (price_with_tax - price) / price * 100
 
+        # 获取产品变体属性值（用于前端展示区分不同规格）
+        # 例如: JJ 产品的 Size=中杯/350ml 和 Size=大杯/500ml
+        attribute_values = []
+        display_name_parts = []
+        if self.product_template_attribute_value_ids:
+            for ptav in self.product_template_attribute_value_ids:
+                attr_name = ptav.attribute_id.name  # e.g., "Size"
+                attr_value = ptav.name  # e.g., "中杯/350ml"
+                attribute_values.append({
+                    'attribute_name': attr_name,
+                    'attribute_value': attr_value,
+                })
+                # 构建显示名称用于变体按钮 (e.g., "中杯/350ml")
+                display_name_parts.append(attr_value)
+
+        # 变体显示名称：优先使用属性值，否则回退到产品全名
+        variant_display_name = ' | '.join(display_name_parts) if display_name_parts else product.name
+
         return {
             'id': self.id,
-            'name': product.name,
+            'name': product.name,  # 完整产品名称 (e.g., "JJ [Size: 中杯/350ml]")
+            'variant_display_name': variant_display_name,  # 变体显示名称 (e.g., "中杯/350ml")
+            'attribute_values': attribute_values,  # 属性值列表
             'price': price,  # 不含税价格
             'price_with_tax': price_with_tax,  # 含税价格
             'tax_rate': tax_rate,  # 税率百分比
