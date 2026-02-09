@@ -38,7 +38,7 @@ http:
         - rate-limit@file
 
     # QR Ordering - Session bootstrap for staging QR scans
-    odoo-staging-qr-session:
+    odoo-staging-qr-bootstrap:
       rule: "Host(`staging.odoo.seisei.tokyo`) && PathPrefix(`/qr/order/`)"
       service: odoo-staging
       priority: 210
@@ -47,7 +47,7 @@ http:
       tls:
         certResolver: cloudflare
       middlewares:
-        - qr-session-redirect
+        - qr-bootstrap-rewrite
         - secure-headers@file
         - rate-limit@file
 
@@ -77,11 +77,10 @@ http:
       stripPrefix:
         prefixes:
           - "/crm-api"
-    qr-session-redirect:
-      redirectRegex:
-        regex: "^https?://staging\\.odoo\\.seisei\\.tokyo/qr/order/([^?]+).*"
-        replacement: "https://staging.odoo.seisei.tokyo/web?db=ten_testodoo&redirect=/qr/order/$1"
-        permanent: false
+    qr-bootstrap-rewrite:
+      replacePathRegex:
+        regex: "^/qr/order/.*"
+        replacement: "/qr_ordering/static/qr_bootstrap.html"
 
   services:
     # Odoo 19 CRM API Service (external server)
