@@ -215,11 +215,14 @@ class QrOrderingController(http.Controller):
             return request.not_found()
         
         # 构建完整的点餐 URL
-        # 使用固定的公开域名 demo.nagashiro.top
-        qr_base_url = request.env['ir.config_parameter'].sudo().get_param(
-            'qr_ordering.base_url',
-            default='https://demo.nagashiro.top'
+        # 优先使用配置的公开域名；未设置时回退到 web.base.url / 当前请求域名
+        config = request.env['ir.config_parameter'].sudo()
+        qr_base_url = (
+            config.get_param('qr_ordering.base_url')
+            or config.get_param('web.base.url')
+            or request.httprequest.host_url
         )
+        qr_base_url = (qr_base_url or '').rstrip('/')
         # 获取当前数据库名称，确保多租户环境下正确路由
         db_name = request.env.cr.dbname
         qr_content_url = f"{qr_base_url}/qr/order/{table.qr_token}?db={db_name}"
@@ -593,7 +596,8 @@ class QrOrderingController(http.Controller):
         # 按分类组织数据
         menu = {
             'categories': [],
-            'products': [],
+            'products': [],   # 变体列表（用于购物车与下单）
+            'templates': [],  # 模板列表（用于菜单展示）
         }
         
         for cat in categories:
@@ -604,10 +608,66 @@ class QrOrderingController(http.Controller):
                 'parent_id': cat.parent_id.id if cat.parent_id else False,
             })
         
+        templates_map = {}
         for product in products:
             # 传递 POS 配置以计算含税价格
-            menu['products'].append(product.get_qr_ordering_data(lang, pos_config=pos_config))
+            pdata = product.get_qr_ordering_data(lang, pos_config=pos_config)
+            menu['products'].append(pdata)
 
+            tmpl = product.product_tmpl_id.with_context(lang=lang)
+            tmpl_id = tmpl.id
+            tdata = templates_map.get(tmpl_id)
+            if not tdata:
+                tdata = {
+                    'id': tmpl_id,
+                    'name': tmpl.name,
+                    'description': pdata.get('description', ''),
+                    'image_url': pdata.get('image_url'),
+                    'video_url': pdata.get('video_url'),
+                    'category_id': pdata.get('category_id'),
+                    'category_name': pdata.get('category_name'),
+                    'available': pdata.get('available'),
+                    'sold_out': pdata.get('sold_out'),
+                    'highlight': pdata.get('highlight'),
+                    'pinned': pdata.get('pinned'),
+                    'pinned_sequence': pdata.get('pinned_sequence'),
+                    'tags': pdata.get('tags') or [],
+                    'variants': [],
+                    'price_min': pdata.get('price', 0.0),
+                    'price_max': pdata.get('price', 0.0),
+                    'price_with_tax_min': pdata.get('price_with_tax', pdata.get('price', 0.0)),
+                    'price_with_tax_max': pdata.get('price_with_tax', pdata.get('price', 0.0)),
+                    'default_variant_id': pdata.get('id'),
+                }
+                templates_map[tmpl_id] = tdata
+
+            # 追加变体
+            tdata['variants'].append({
+                'id': pdata.get('id'),
+                'name': pdata.get('name'),  # 完整产品名称
+                'variant_display_name': pdata.get('variant_display_name', pdata.get('name')),  # 变体显示名称
+                'attribute_values': pdata.get('attribute_values', []),  # 属性值列表
+                'price': pdata.get('price', 0.0),
+                'price_with_tax': pdata.get('price_with_tax', pdata.get('price', 0.0)),
+                'tax_rate': pdata.get('tax_rate', 0.0),
+                'image_url': pdata.get('image_url'),
+                'available': pdata.get('available'),
+                'sold_out': pdata.get('sold_out'),
+            })
+
+            # 更新价格区间
+            price = pdata.get('price', 0.0)
+            price_with_tax = pdata.get('price_with_tax', price)
+            tdata['price_min'] = min(tdata['price_min'], price)
+            tdata['price_max'] = max(tdata['price_max'], price)
+            tdata['price_with_tax_min'] = min(tdata['price_with_tax_min'], price_with_tax)
+            tdata['price_with_tax_max'] = max(tdata['price_with_tax_max'], price_with_tax)
+
+        # 输出模板列表（保持稳定顺序：置顶优先，其次序号、名称）
+        menu['templates'] = sorted(
+            templates_map.values(),
+            key=lambda t: (not t.get('pinned', False), t.get('pinned_sequence', 10), t.get('name', ''))
+        )
         return menu
 
     def _get_current_order(self, session):
@@ -859,4 +919,3 @@ class QrOrderingController(http.Controller):
             'lines': lines_data,
             'source': 'pos',  # 标记为 POS 来源订单
         }
-

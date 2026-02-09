@@ -11,6 +11,7 @@ http:
         certResolver: cloudflare
       middlewares:
         - crm-strip-prefix
+        - crm-odoo19-dbfilter
         - secure-headers@file
 
     # Seisei Corporate Website Staging
@@ -53,6 +54,7 @@ http:
 
     # Odoo Staging - ERP only
     odoo-staging-domain:
+      # yamllint disable-line rule:line-length
       rule: "Host(`staging.erp.seisei.tokyo`) || Host(`staging.odoo.seisei.tokyo`)"
       service: odoo-staging
       entryPoints:
@@ -65,6 +67,7 @@ http:
 
     # HTTP redirect for all
     staging-http-redirect:
+      # yamllint disable-line rule:line-length
       rule: "Host(`staging.seisei.tokyo`) || Host(`staging.www.seisei.tokyo`) || Host(`staging.biznexus.seisei.tokyo`) || Host(`staging.erp.seisei.tokyo`) || Host(`staging.odoo.seisei.tokyo`)"
       service: odoo-staging
       entryPoints:
@@ -81,6 +84,11 @@ http:
       replacePathRegex:
         regex: "^/qr/order/.*"
         replacement: "/qr_ordering/static/qr_bootstrap.html"
+
+    crm-odoo19-dbfilter:
+      headers:
+        customRequestHeaders:
+          X-Odoo-Database: "odoo19"
 
   services:
     # Odoo 19 CRM API Service (external server)

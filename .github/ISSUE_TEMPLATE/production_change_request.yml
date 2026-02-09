@@ -1,0 +1,76 @@
+name: "Production Change Request / 生产变更申请"
+description: "Request for production changes with risk review / 生产变更申请与风险评估"
+title: "[Prod Change] "
+labels: ["production", "change-request"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This form is for **production changes only**. / 本表单仅用于**生产变更**。
+  - type: textarea
+    id: summary
+    attributes:
+      label: "Summary / 变更摘要"
+      description: "What will change and why / 变更内容与原因"
+      placeholder: "Example: Enable feature flag X for tenant Y / 例：为租户Y启用功能开关X"
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: "Scope / 影响范围"
+      description: "Systems, modules, or directories impacted / 影响的系统、模块或目录"
+      placeholder: "Example: odoo18-prod, module: sales / 例：odoo18-prod，模块：销售"
+    validations:
+      required: true
+  - type: textarea
+    id: risk
+    attributes:
+      label: "Risk / 风险"
+      description: "P0/P1/P2 and rationale / 风险等级与理由"
+      placeholder: "Example: P1 - may affect invoicing / 例：P1-可能影响开票"
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: "Verification / 验证方式"
+      description: "How to verify success / 如何验证成功"
+      placeholder: "Example: Run report R, check KPI / 例：运行报表R并检查指标"
+    validations:
+      required: true
+  - type: textarea
+    id: rollback
+    attributes:
+      label: "Rollback / 回滚方案"
+      description: "How to revert safely / 如何安全回滚"
+      placeholder: "Example: Revert PR, restore snapshot / 例：回滚PR，恢复快照"
+    validations:
+      required: true
+  - type: textarea
+    id: window
+    attributes:
+      label: "Change Window / 变更窗口"
+      description: "Planned time window / 计划执行时间"
+      placeholder: "YYYY-MM-DD HH:MM - HH:MM (TZ)"
+    validations:
+      required: true
+  - type: checkboxes
+    id: do_not_touch
+    attributes:
+      label: "Do-Not-Touch / 禁止触碰"
+      description: "Select areas that must remain untouched / 选择必须禁止变更的区域"
+      options:
+        - label: "Secrets or credentials / 密钥或凭据"
+        - label: "Billing engine / 计费引擎"
+        - label: "Infrastructure or deploy logic / 基础设施或部署逻辑"
+        - label: "Data retention policies / 数据保留策略"
+  - type: checkboxes
+    id: approvals
+    attributes:
+      label: "Approvals / 审批"
+      description: "Confirm approvals are obtained / 确认已获得审批"
+      options:
+        - label: "Owner approval obtained / 已获得Owner审批"
+        - label: "Security review completed / 已完成安全审核"
+        - label: "Rollback plan reviewed / 回滚方案已评审"

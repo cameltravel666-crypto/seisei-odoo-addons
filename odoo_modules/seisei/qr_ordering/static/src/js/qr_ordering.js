@@ -326,10 +326,12 @@
         lang: 'zh_CN',
         categories: [],
         products: [],
+        templates: [],
         cart: [],           // 已选菜品（未下单）
         orders: [],         // 已下单列表
         selectedCategory: 'all',
         selectedProduct: null,
+        selectedTemplate: null,
         isSubmitting: false, // 防止重复提交
     };
 
@@ -875,6 +877,7 @@
                 state.accessToken = result.data.access_token;
                 state.categories = result.data.menu.categories || [];
                 state.products = result.data.menu.products || [];
+                state.templates = result.data.menu.templates || [];
                 state.orders = result.data.current_order || [];
 
                 // Load cart from existing orders
@@ -940,6 +943,7 @@
             if (result.success) {
                 state.categories = result.data.categories;
                 state.products = result.data.products;
+                state.templates = result.data.templates || [];
                 renderCategories();
                 renderProducts();
             }
@@ -1102,7 +1106,8 @@
     }
 
     function renderProducts(filter = '') {
-        let products = state.products;
+        const useTemplates = Array.isArray(state.templates) && state.templates.length > 0;
+        let products = useTemplates ? state.templates : state.products;
 
         // Filter by category
         if (state.selectedCategory !== 'all') {
@@ -1112,10 +1117,12 @@
         // Filter by search
         if (filter) {
             const lowerFilter = filter.toLowerCase();
-            products = products.filter(p =>
-                p.name.toLowerCase().includes(lowerFilter) ||
-                (p.description && p.description.toLowerCase().includes(lowerFilter))
-            );
+            products = products.filter(p => {
+                const nameMatch = p.name.toLowerCase().includes(lowerFilter);
+                const descMatch = (p.description && p.description.toLowerCase().includes(lowerFilter));
+                const variantMatch = (p.variants || []).some(v => (v.name || '').toLowerCase().includes(lowerFilter));
+                return nameMatch || descMatch || variantMatch;
+            });
         }
 
         // P1-5: 类别空态增强
@@ -1143,10 +1150,17 @@
         });
 
         $products.innerHTML = products.map(p => {
-            const inCartQty = cartQtyMap[p.id] || 0;
+            const inCartQty = useTemplates
+                ? (p.variants || []).reduce((sum, v) => sum + (cartQtyMap[v.id] || 0), 0)
+                : (cartQtyMap[p.id] || 0);
+            const priceMin = p.price_min !== undefined ? p.price_min : p.price;
+            const priceMax = p.price_max !== undefined ? p.price_max : p.price;
+            const priceText = (priceMin !== undefined && priceMax !== undefined && priceMin !== priceMax)
+                ? `${t('currency')}${priceMin.toFixed(0)} ~ ${t('currency')}${priceMax.toFixed(0)}`
+                : `${t('currency')}${(priceMin ?? 0).toFixed(0)}`;
             return `
             <div class="qr-product-card ${p.sold_out ? 'sold-out' : ''} ${p.highlight ? 'highlight' : ''}"
-                 onclick="QrOrdering.openProduct(${p.id})">
+                 onclick="${useTemplates ? `QrOrdering.openTemplate(${p.id})` : `QrOrdering.openProduct(${p.id})`}">
                 <div class="qr-product-image-container">
                     <img class="qr-product-image" src="${p.image_url}" alt="${p.name}" loading="lazy"/>
                     ${p.video_url ? '<div class="qr-product-video-indicator">🎬</div>' : ''}
@@ -1162,9 +1176,9 @@
                     <div class="qr-product-name">${p.name}</div>
                     <div class="qr-product-desc">${p.description || ''}</div>
                     <div class="qr-product-price-row">
-                        <span class="qr-product-price">${t('currency')}${p.price.toFixed(0)} <span class="qr-tax-hint">${t('tax_excluded')}</span></span>
+                        <span class="qr-product-price">${priceText} <span class="qr-tax-hint">${t('tax_excluded')}</span></span>
                         ${!p.sold_out ? `
-                            <button class="qr-add-btn" onclick="event.stopPropagation(); QrOrdering.quickAdd(${p.id})">+</button>
+                            <button class="qr-add-btn" onclick="event.stopPropagation(); ${useTemplates ? `QrOrdering.quickAddTemplate(${p.id})` : `QrOrdering.quickAdd(${p.id})`}">+</button>
                         ` : ''}
                     </div>
                 </div>
@@ -1902,6 +1916,7 @@
         if (!product) return;
 
         state.selectedProduct = product;
+        state.selectedTemplate = null;
 
         const $detail = document.getElementById('qr-product-detail');
         $detail.innerHTML = `
@@ -1925,6 +1940,51 @@
         `;
 
         // P0-2: 使用 OverlayManager
+        OverlayManager.open('product');
+    }
+
+    function openTemplateModal(templateId) {
+        const template = (state.templates || []).find(t => t.id === templateId);
+        if (!template) return;
+
+        const variants = template.variants || [];
+        if (variants.length === 0) return;
+
+        state.selectedTemplate = template;
+        state.selectedProduct = variants[0];
+
+        const variantListHtml = variants.map(v => `
+            <button class="qr-variant-btn ${v.id === state.selectedProduct.id ? 'active' : ''}"
+                    data-variant-id="${v.id}"
+                    onclick="QrOrdering.selectVariant(${v.id})">
+                <span class="qr-variant-name">${v.variant_display_name || v.name}</span>
+                <span class="qr-variant-price">${t('currency')}${(v.price_with_tax || v.price || 0).toFixed(0)}</span>
+            </button>
+        `).join('');
+
+        const $detail = document.getElementById('qr-product-detail');
+        $detail.innerHTML = `
+            ${template.video_url ? `
+                <video class="qr-product-detail-video" controls>
+                    <source src="${template.video_url}" type="video/mp4"/>
+                </video>
+            ` : `
+                <img class="qr-product-detail-image" src="${template.image_url}" alt="${template.name}"/>
+            `}
+            <div class="qr-product-detail-name" id="qr-detail-name">${template.name}</div>
+            ${variants.length > 1 ? `<div class="qr-product-detail-variant" id="qr-detail-variant">${state.selectedProduct.variant_display_name || state.selectedProduct.name}</div>` : ''}
+            <div class="qr-product-detail-desc">${template.description || ''}</div>
+            ${variants.length > 1 ? `<div class="qr-variant-list">${variantListHtml}</div>` : ''}
+            <div class="qr-product-detail-price" id="qr-detail-price">${t('currency')}${(state.selectedProduct.price_with_tax || state.selectedProduct.price || 0).toFixed(0)}</div>
+            <div class="qr-qty-control">
+                <button class="qr-qty-btn" onclick="QrOrdering.changeQty(-1)">-</button>
+                <span class="qr-qty-value" id="qr-detail-qty">1</span>
+                <button class="qr-qty-btn" onclick="QrOrdering.changeQty(1)">+</button>
+            </div>
+            <input type="text" class="qr-note-input" id="qr-detail-note" placeholder="${t('note_placeholder')}"/>
+            <button class="qr-add-to-cart-btn" onclick="QrOrdering.addFromDetail()">${t('add_to_cart')}</button>
+        `;
+
         OverlayManager.open('product');
     }
 
@@ -2058,8 +2118,37 @@
             openProductModal(productId);
         },
 
+        openTemplate(templateId) {
+            openTemplateModal(templateId);
+        },
+
         quickAdd(productId) {
             addToCart(productId, 1, '');
+        },
+
+        quickAddTemplate(templateId) {
+            const template = (state.templates || []).find(t => t.id === templateId);
+            if (!template) return;
+            const variants = template.variants || [];
+            if (variants.length === 1) {
+                addToCart(variants[0].id, 1, '');
+            } else {
+                openTemplateModal(templateId);
+            }
+        },
+
+        selectVariant(variantId) {
+            if (!state.selectedTemplate) return;
+            const variant = (state.selectedTemplate.variants || []).find(v => v.id === variantId);
+            if (!variant) return;
+            state.selectedProduct = variant;
+            const nameEl = document.getElementById('qr-detail-variant');
+            if (nameEl) nameEl.textContent = variant.variant_display_name || variant.name;
+            const priceEl = document.getElementById('qr-detail-price');
+            if (priceEl) priceEl.textContent = `${t('currency')}${(variant.price_with_tax || variant.price || 0).toFixed(0)}`;
+            document.querySelectorAll('.qr-variant-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.variantId === String(variantId));
+            });
         },
 
         changeQty(delta) {
@@ -2085,9 +2174,14 @@
         
         filterHighlight() {
             // P1-5: 筛选推荐菜品
-            const highlightProducts = state.products.filter(p => p.highlight);
+            const list = (state.templates && state.templates.length > 0) ? state.templates : state.products;
+            const highlightProducts = list.filter(p => p.highlight);
             if (highlightProducts.length > 0) {
-                state.products = highlightProducts;
+                if (state.templates && state.templates.length > 0) {
+                    state.templates = highlightProducts;
+                } else {
+                    state.products = highlightProducts;
+                }
                 renderProducts();
             }
         },
@@ -2110,4 +2204,3 @@
     }
 
 })();
-

@@ -1,0 +1,76 @@
+name: "Finance Task / 财务任务"
+description: "Non-technical finance request / 非技术财务需求"
+title: "[Finance] "
+labels: ["finance"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please fill this form in **English or Chinese**. / 请用**中文或英文**填写。
+  - type: textarea
+    id: goal
+    attributes:
+      label: "Goal / 目标"
+      description: "What do you want to achieve? / 你想达成什么目标？"
+      placeholder: "Example: Generate monthly billing report / 例：生成月度账单报告"
+    validations:
+      required: true
+  - type: textarea
+    id: background
+    attributes:
+      label: "Background / 背景"
+      description: "Context and pain point / 背景与痛点"
+      placeholder: "Why is this needed? / 为什么需要？"
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: "Scope / 范围"
+      description: "Allowed modules or directories / 允许修改的模块或目录"
+      placeholder: "Example: docs/, reports/ / 例：docs/, reports/"
+    validations:
+      required: true
+  - type: checkboxes
+    id: do_not_touch
+    attributes:
+      label: "Do-Not-Touch / 禁止触碰"
+      description: "Select all areas that must not be changed / 选择必须禁止变更的区域"
+      options:
+        - label: "Production systems / 生产系统"
+        - label: "Secrets or credentials / 密钥或凭据"
+        - label: "Billing engine / 计费引擎"
+        - label: "Infrastructure or deploy logic / 基础设施或部署逻辑"
+        - label: "Data retention policies / 数据保留策略"
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: "Acceptance Criteria / 验收标准"
+      description: "Measurable outcomes / 可量化的验收结果"
+      placeholder: "Example: Report includes last 3 months and totals / 例：包含最近3个月合计"
+    validations:
+      required: true
+  - type: textarea
+    id: risk
+    attributes:
+      label: "Risk & Compliance / 风险与合规"
+      description: "Any compliance or data risk? / 是否涉及合规或数据风险？"
+      placeholder: "Example: Contains PII, requires masking / 例：包含PII需脱敏"
+    validations:
+      required: true
+  - type: textarea
+    id: rollback
+    attributes:
+      label: "Rollback Expectation / 回滚期望"
+      description: "How should we rollback if needed? / 需要回滚时如何处理？"
+      placeholder: "Example: Revert PR / 例：回滚PR"
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: "Notes / 补充"
+      description: "Any additional context / 其他补充信息"
+      placeholder: "Optional / 可选"
+    validations:
+      required: false

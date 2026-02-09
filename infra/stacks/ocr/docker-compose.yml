@@ -1,5 +1,6 @@
 services:
   ocr-service:
+    # yamllint disable-line rule:line-length
     image: ghcr.io/${GITHUB_REPO_OWNER:-seisei}/ocr-service:${OCR_IMAGE_TAG:-latest}
     container_name: ocr-service
     restart: unless-stopped
