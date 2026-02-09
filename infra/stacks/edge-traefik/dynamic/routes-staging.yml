@@ -39,6 +39,18 @@ http:
         - rate-limit@file
 
     # QR Ordering - Session bootstrap for staging QR scans
+    odoo-staging-qr-direct:
+      rule: "Host(`staging.odoo.seisei.tokyo`) && PathPrefix(`/qr/order/`) && QueryRegexp(`bootstrap`, `1`)"
+      service: odoo-staging
+      priority: 211
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: cloudflare
+      middlewares:
+        - secure-headers@file
+        - rate-limit@file
+
     odoo-staging-qr-bootstrap:
       rule: "Host(`staging.odoo.seisei.tokyo`) && PathPrefix(`/qr/order/`)"
       service: odoo-staging

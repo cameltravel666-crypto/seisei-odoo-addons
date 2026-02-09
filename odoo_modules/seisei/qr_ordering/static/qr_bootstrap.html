@@ -37,11 +37,12 @@
         const target = window.location.pathname + window.location.search;
         const params = new URLSearchParams(window.location.search);
         const db = params.get('db') || 'ten_testodoo';
+        const withBootstrap = target + (target.includes('?') ? '&' : '?') + 'bootstrap=1';
 
         // Establish session via fetch (this sets the cookie)
         fetch('/web?db=' + encodeURIComponent(db), { credentials: 'include' })
-            .then(() => { window.location.href = target; })
-            .catch(() => { window.location.href = target; });
+            .then(() => { window.location.href = withBootstrap; })
+            .catch(() => { window.location.href = withBootstrap; });
     </script>
 </body>
 </html>
