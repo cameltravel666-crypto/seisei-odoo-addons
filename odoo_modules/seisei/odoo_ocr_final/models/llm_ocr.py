@@ -300,6 +300,33 @@ def _call_ocr_service(file_data: bytes, mimetype: str, tenant_id: str,
                         }
                         line_items.append(item)
 
+            # UNIVERSAL FALLBACK: if line_items is still empty, create from gross_amount/total
+            if not line_items:
+                total_amount = (
+                    extracted.get('gross_amount') or
+                    extracted.get('total_gross') or
+                    extracted.get('total') or
+                    normalized.get('total') or
+                    (extracted.get('totals_on_doc', {}) or {}).get('total_gross')
+                )
+                if total_amount:
+                    vendor = (
+                        extracted.get('vendor_name') or
+                        extracted.get('issuer_name') or
+                        normalized.get('vendor_name') or
+                        'Unknown'
+                    )
+                    suggested = extracted.get('suggested_account') or extracted.get('category', '')
+                    line_items = [{
+                        'product_name': vendor,
+                        'quantity': 1,
+                        'unit_price': total_amount,
+                        'amount': total_amount,
+                        'tax_rate': _parse_tax_rate(extracted.get('tax_rate', '10%')),
+                        'suggested_account': suggested if suggested else None,
+                    }]
+                    _logger.warning(f'[OCR] Universal fallback: created summary line from total={total_amount}')
+
             _logger.info(f'[OCR] Final line_items count: {len(line_items)}')
 
             return {
@@ -332,6 +359,11 @@ def _normalize_extracted(extracted: dict) -> dict:
     _logger.info(f'[OCR] extracted keys in normalize: {list(extracted.keys())}')
     _logger.info(f'[OCR] extracted data in normalize: {json.dumps(extracted, ensure_ascii=False, indent=2)}')
 
+    # Clean invoice_reg_no at top level (flat format from Gemini)
+    if 'invoice_reg_no' in extracted:
+        reg = re.sub(r'[()（）]', '', str(extracted['invoice_reg_no']))
+        extracted['invoice_reg_no'] = reg
+
     # Check if this is the fast prompt format
     # FAST format has: vendor_name, gross, net, r8_gross, r8_tax, r10_gross, r10_tax
     has_vendor = 'vendor_name' in extracted or 'vendor' in extracted
@@ -351,7 +383,7 @@ def _normalize_extracted(extracted: dict) -> dict:
     key_mapping = {
         'vendor_name': ['vendor_name_仕入先名', 'vendor_name', '仕入先名', 'vendor', 'store_name_店舗名', 'store_name', '店舗名'],
         'vendor_address': ['vendor_address_住所', 'vendor_address', '住所', 'address'],
-        'tax_id': ['tax_id_登録番号', 'tax_id', '登録番号', 'registration_number'],
+        'tax_id': ['tax_id_登録番号', 'tax_id', '登録番号', 'registration_number', 'invoice_reg_no'],
         'date': ['date_日付', 'date', '日付'],
         'invoice_number': ['invoice_number_請求書番号', 'invoice_number', '請求書番号', 'receipt_number_レシート番号', 'receipt_number', 'レシート番号'],
         'subtotal': ['subtotal_小計', 'subtotal', '小計'],
@@ -408,6 +440,9 @@ def _normalize_new_format(extracted: dict) -> dict:
         normalized['vendor_address'] = issuer.get('issuer_address')
         # Convert invoice_reg_no (T1234...) to tax_id format
         reg_no = issuer.get('invoice_reg_no', '')
+        # Strip parentheses: T(1050001019926) → T1050001019926
+        if reg_no:
+            reg_no = re.sub(r'[()（）]', '', str(reg_no))
         if reg_no and reg_no != '0000000000000':
             normalized['tax_id'] = reg_no if reg_no.startswith('T') else f'T{reg_no}'
         normalized['issuer_tel'] = issuer.get('issuer_tel')
