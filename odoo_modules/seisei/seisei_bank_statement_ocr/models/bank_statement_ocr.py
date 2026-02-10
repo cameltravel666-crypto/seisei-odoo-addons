@@ -150,12 +150,19 @@ class SeiseiBankStatementOcr(models.Model):
             self._apply_ocr_result(merged)
             self.state = 'review'
 
+            # Link scan attachments to this record so they appear in Chatter
+            self.attachment_ids.write({
+                'res_model': self._name,
+                'res_id': self.id,
+            })
+
             self.message_post(
                 body=_(
                     'OCR completed: %(pages)s pages, %(txns)s transactions extracted.',
                     pages=total_pages,
                     txns=len(merged['transactions']),
                 ),
+                attachment_ids=self.attachment_ids.ids,
             )
 
             OcrUsage = self.env['ocr.usage'].sudo()
@@ -297,6 +304,7 @@ class SeiseiBankStatementOcr(models.Model):
                 sname=statement.name,
                 count=len(self.line_ids),
             ),
+            attachment_ids=self.attachment_ids.ids,
         )
 
         return {
