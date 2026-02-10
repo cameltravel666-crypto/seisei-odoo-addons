@@ -25,8 +25,8 @@ jobs:
             git reset --hard origin/staging
 
             echo "--- UPDATING SERVICES ---"
-            docker compose pull
+            docker compose pull || true
             docker compose up -d
 
             echo "--- MIGRATING DATABASE (IF NEEDED) ---"
-            docker compose exec -T odoo odoo -u all --stop-after-init
+            docker compose exec -T web odoo -u all --stop-after-init
