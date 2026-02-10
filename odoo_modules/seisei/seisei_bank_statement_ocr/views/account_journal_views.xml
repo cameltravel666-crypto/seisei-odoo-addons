@@ -10,7 +10,7 @@
                 <a name="action_ocr_bank_statement_upload" type="object"
                    class="oe_inline" style="margin-right: 8px;"
                    groups="account.group_account_invoice">
-                    OCR上传
+                    OCR Upload
                 </a>
             </xpath>
         </field>
