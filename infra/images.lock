@@ -1,0 +1,11 @@
+# images.lock — Canonical image digest registry
+# Updated: 2026-02-10T21:55Z
+# All production/staging services MUST reference digests from this file.
+# To update: change digest here, then update compose files, deploy to staging first.
+#
+# Format: service_name | image_repo | tag | digest | updated_at_utc
+
+ocr-service | ghcr.io/cameltravel666-crypto/ocr-service | sha-a52d5aa | sha256:77484f1571054d04934414bb4a7ce867143ef7afee1808df34600e452435bd7d | 2026-02-10T21:55Z
+biznexus-app | ghcr.io/cameltravel666-crypto/seisei-erp | (frozen-from-prod) | sha256:c81f8ed44a7b4c0ac413c5a6804c3b2c2c3b25db3f7332c5d9ce541bc1253bbc | 2026-02-10T21:55Z
+seisei-www | ghcr.io/cameltravel666-crypto/seisei-www | pin-20260129-d75f3637 | (already pinned by tag) | 2026-02-10T21:55Z
+traefik | traefik | v2.10 | (deployed, repo says v2.11 — align on next maintenance) | 2026-02-10T21:55Z
