@@ -333,7 +333,7 @@ while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
     log_success "Containers recreated"
 
     # Wait for stabilization
-    if ! wait_for_healthy "$SYMLINK_TARGET" 180 "web"; then
+    if ! wait_for_healthy "$SYMLINK_TARGET" 300 "web"; then
         log_warn "Container not healthy after rollback, proceeding to smoke test..."
     fi
 

@@ -356,10 +356,13 @@ done
 
 # Wait for a docker compose service to become healthy
 # Usage: wait_for_healthy <compose_dir> [max_seconds] [service_name]
-# Returns: 0 if healthy, 1 if unhealthy/timeout/no-healthcheck-fallback
+# Returns: 0 if healthy, 1 if timeout
+# Note: Does NOT bail on "unhealthy" — on Docker < 25, containers report
+# unhealthy during start_period even though they're still starting up.
+# We keep polling until "healthy" or timeout.
 wait_for_healthy() {
     local compose_dir="$1"
-    local max_wait="${2:-180}"
+    local max_wait="${2:-300}"
     local service="${3:-web}"
     local interval=10
     local waited=0
@@ -396,16 +399,16 @@ wait_for_healthy() {
         if [ "$health" = "healthy" ]; then
             log_success "'$service' healthy after ${waited}s"
             return 0
-        elif [ "$health" = "unhealthy" ]; then
-            log_warn "'$service' unhealthy after ${waited}s"
-            return 1
         fi
+
+        # Don't bail on "unhealthy" — Docker < 25 reports unhealthy
+        # during start_period. Keep waiting until healthy or timeout.
 
         sleep $interval
         waited=$((waited + interval))
     done
 
-    log_warn "'$service' health check timeout (${max_wait}s)"
+    log_warn "'$service' not healthy after ${max_wait}s (last: $health)"
     return 1
 }
 
