@@ -1,7 +1,7 @@
 services:
   ocr-service:
     # yamllint disable-line rule:line-length
-    image: ghcr.io/${GITHUB_REPO_OWNER:-seisei}/ocr-service:${OCR_IMAGE_TAG:-latest}
+    image: ghcr.io/cameltravel666-crypto/ocr-service:sha-a52d5aa@sha256:77484f1571054d04934414bb4a7ce867143ef7afee1808df34600e452435bd7d
     container_name: ocr-service
     restart: unless-stopped
     environment:
@@ -19,7 +19,7 @@ services:
       - ocr-internal
       - edge
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:8080/health')\""]
       interval: 30s
       timeout: 10s
       retries: 3

@@ -536,6 +536,15 @@ if [ -f "$ODOO_CONF" ]; then
     else
         log_warn "DB_PASSWORD not found in .env, odoo.conf db_password unchanged"
     fi
+
+    # Inject ADMIN_PASSWORD from .env into odoo.conf admin_passwd
+    ADMIN_PASSWORD_VALUE=$(grep "^ADMIN_PASSWORD=" "$ENV_FILE" | cut -d'=' -f2-)
+    if [ -n "$ADMIN_PASSWORD_VALUE" ]; then
+        sed -i "s|^admin_passwd = .*|admin_passwd = $ADMIN_PASSWORD_VALUE|" "$ODOO_CONF"
+        log_success "Injected ADMIN_PASSWORD into odoo.conf"
+    else
+        log_warn "ADMIN_PASSWORD not found in .env, odoo.conf admin_passwd unchanged"
+    fi
 fi
 
 echo ""
