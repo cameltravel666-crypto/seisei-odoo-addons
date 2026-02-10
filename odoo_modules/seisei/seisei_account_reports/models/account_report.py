@@ -138,10 +138,9 @@ class AccountReportLine(models.Model):
         help="Action to execute when clicking on this line's name.",
     )
 
-    _report_line_code_uniq = models.Constraint(
-        'UNIQUE(code, report_id)',
-        'The code must be unique per report.',
-    )
+    _sql_constraints = [
+        ('report_line_code_uniq', 'UNIQUE(code, report_id)', 'The code must be unique per report.'),
+    ]
 
 
 class AccountReportExpression(models.Model):
@@ -200,10 +199,9 @@ class AccountReportExpression(models.Model):
         store=True,
     )
 
-    _line_label_uniq = models.Constraint(
-        'UNIQUE(report_line_id, label)',
-        'The expression label must be unique per report line.',
-    )
+    _sql_constraints = [
+        ('line_label_uniq', 'UNIQUE(report_line_id, label)', 'The expression label must be unique per report line.'),
+    ]
 
     @api.depends('engine')
     def _compute_auditable(self):
