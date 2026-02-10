@@ -1,5 +1,6 @@
 import ast
 import base64
+import copy
 import io
 import json
 
@@ -63,6 +64,7 @@ class AccountReportActions(models.Model):
         report_line_id = params.get('report_line_id')
         expression_label = params.get('expression_label')
         calling_line_dict_id = params.get('calling_line_dict_id', '')
+        column_group_key = params.get('column_group_key', 'default')
 
         if not report_line_id or not expression_label:
             return {}
@@ -75,8 +77,15 @@ class AccountReportActions(models.Model):
         if not expression:
             return {}
 
+        # For multi-period, use the specific column group's date range
+        audit_options = options
+        column_groups = options.get('column_groups', {})
+        if column_group_key and column_group_key in column_groups:
+            audit_options = copy.deepcopy(options)
+            audit_options['date'] = column_groups[column_group_key]['date']
+
         # Build domain for audit
-        domain = self._get_audit_domain(options, expression, calling_line_dict_id)
+        domain = self._get_audit_domain(audit_options, expression, calling_line_dict_id)
 
         return {
             'name': _("Journal Items"),
@@ -149,13 +158,18 @@ class AccountReportActions(models.Model):
 
         lines = self._get_lines(options)
 
+        column_headers = options.get('column_headers', [[]])
+        is_multi_period = len(options.get('column_groups', {})) > 1
+
         # Build report data for template
         report_data = {
             'report_name': self.name,
             'date_string': options.get('date', {}).get('string', ''),
             'company_name': self.env.company.name,
             'lines': lines,
-            'column_headers': options.get('column_headers', [[]])[0],
+            'column_headers': column_headers[-1] if column_headers else [],
+            'multi_period': is_multi_period,
+            'period_headers': column_headers[0] if is_multi_period and len(column_headers) > 1 else [],
         }
 
         content = self.env['ir.qweb']._render(
@@ -254,12 +268,42 @@ class AccountReportActions(models.Model):
         row += 2
 
         # Headers
-        column_headers = options.get('column_headers', [[]])[0]
+        column_headers = options.get('column_headers', [[]])
+        is_multi_period = len(options.get('column_groups', {})) > 1
+
+        period_header_style = workbook.add_format({
+            'bold': True, 'font_size': 10, 'bottom': 1,
+            'bg_color': '#f8f9fa', 'align': 'center',
+        })
+
         sheet.write(row, 0, 'Name', header_style)
         sheet.set_column(0, 0, 40)
-        for col_idx, col_header in enumerate(column_headers, 1):
-            sheet.write(row, col_idx, col_header.get('name', ''), header_right_style)
-            sheet.set_column(col_idx, col_idx, 15)
+
+        if is_multi_period and len(column_headers) > 1:
+            # Period header row
+            col_offset = 1
+            for period in column_headers[0]:
+                colspan = period.get('colspan', 1)
+                if colspan > 1:
+                    sheet.merge_range(
+                        row, col_offset, row, col_offset + colspan - 1,
+                        period.get('name', ''), period_header_style
+                    )
+                else:
+                    sheet.write(row, col_offset, period.get('name', ''), period_header_style)
+                col_offset += colspan
+            row += 1
+            # Label header row
+            sheet.write(row, 0, '', header_style)
+            for col_idx, col_header in enumerate(column_headers[-1], 1):
+                sheet.write(row, col_idx, col_header.get('name', ''), header_right_style)
+                sheet.set_column(col_idx, col_idx, 15)
+        else:
+            flat_headers = column_headers[0] if column_headers else []
+            for col_idx, col_header in enumerate(flat_headers, 1):
+                sheet.write(row, col_idx, col_header.get('name', ''), header_right_style)
+                sheet.set_column(col_idx, col_idx, 15)
+
         row += 1
 
         # Lines

@@ -1,6 +1,6 @@
 /** @odoo-module **/
 
-import { Component, useState, onWillStart, useSubEnv } from "@odoo/owl";
+import { Component, useState, onWillStart, onMounted, onPatched, useRef, useSubEnv } from "@odoo/owl";
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 import { AccountReportController } from "./controller";
@@ -32,9 +32,22 @@ export class AccountReport extends Component {
 
         useSubEnv({ controller: this.controller });
 
+        this.pageRef = useRef("page");
+
         onWillStart(async () => {
             await this.controller.load();
         });
+
+        onMounted(() => this._updateCpHeight());
+        onPatched(() => this._updateCpHeight());
+    }
+
+    _updateCpHeight() {
+        const page = this.pageRef.el;
+        if (!page) return;
+        const cp = page.querySelector(".o_account_report_control_panel");
+        if (!cp) return;
+        page.style.setProperty("--cp-height", `${cp.offsetHeight}px`);
     }
 }
 

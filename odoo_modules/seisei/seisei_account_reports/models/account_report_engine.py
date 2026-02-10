@@ -1,8 +1,9 @@
 import ast
+import copy
 import datetime
 import json
 import re
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from itertools import groupby
 
 from odoo import api, fields, models, _
@@ -111,6 +112,7 @@ class AccountReportEngine(models.Model):
         previous_options = previous_options or {}
 
         self._init_options_date(options, previous_options)
+        self._init_options_comparison(options, previous_options)
         self._init_options_all_entries(options, previous_options)
         self._init_options_journals(options, previous_options)
         self._init_options_hide_0_lines(options, previous_options)
@@ -196,6 +198,191 @@ class AccountReportEngine(models.Model):
             'date_to': date_to_str,
         }
 
+    def _init_options_comparison(self, options, previous_options):
+        """Initialize comparison options and build column_groups."""
+        prev_comparison = previous_options.get('comparison', {})
+
+        # GL reports (custom handler) skip comparison
+        custom_handler = self._get_custom_handler_model()
+        if custom_handler:
+            options['comparison'] = {
+                'filter': 'no_comparison',
+                'number_period': 1,
+                'period_order': 'ascending',
+            }
+            options['column_groups'] = OrderedDict({
+                'default': {'date': options['date']},
+            })
+            return
+
+        comparison_filter = prev_comparison.get('filter', 'no_comparison')
+        number_period = prev_comparison.get('number_period', 1)
+        period_order = prev_comparison.get('period_order', 'ascending')
+
+        options['comparison'] = {
+            'filter': comparison_filter,
+            'number_period': max(1, min(int(number_period), 12)),
+            'period_order': period_order,
+        }
+
+        # Build column_groups based on filter
+        if comparison_filter == 'no_comparison':
+            options['column_groups'] = OrderedDict({
+                'default': {'date': options['date']},
+            })
+        elif comparison_filter == 'quarterly':
+            options['column_groups'] = self._get_quarterly_periods(options)
+        elif comparison_filter == 'semi_annual':
+            options['column_groups'] = self._get_semi_annual_periods(options)
+        elif comparison_filter == 'previous_period':
+            options['column_groups'] = self._get_previous_periods(options)
+        elif comparison_filter == 'same_last_year':
+            options['column_groups'] = self._get_same_period_last_year(options)
+        else:
+            options['column_groups'] = OrderedDict({
+                'default': {'date': options['date']},
+            })
+
+    def _get_quarterly_periods(self, options):
+        """Generate Q1-Q4 periods for the year of the current date range."""
+        date_to = fields.Date.from_string(options['date']['date_to'])
+        year = date_to.year
+        groups = OrderedDict()
+        for q in range(1, 5):
+            month_start = (q - 1) * 3 + 1
+            month_end = q * 3
+            d_from = datetime.date(year, month_start, 1)
+            # Last day of quarter
+            if month_end == 12:
+                d_to = datetime.date(year, 12, 31)
+            else:
+                d_to = datetime.date(year, month_end + 1, 1) - datetime.timedelta(days=1)
+            key = f'Q{q}_{year}'
+            groups[key] = {
+                'date': {
+                    'date_from': fields.Date.to_string(d_from),
+                    'date_to': fields.Date.to_string(d_to),
+                    'string': f'Q{q} {year}',
+                    'mode': 'range',
+                },
+            }
+        return groups
+
+    def _get_semi_annual_periods(self, options):
+        """Generate H1/H2 periods for the year of the current date range."""
+        date_to = fields.Date.from_string(options['date']['date_to'])
+        year = date_to.year
+        groups = OrderedDict()
+        groups[f'H1_{year}'] = {
+            'date': {
+                'date_from': fields.Date.to_string(datetime.date(year, 1, 1)),
+                'date_to': fields.Date.to_string(datetime.date(year, 6, 30)),
+                'string': f'H1 {year}',
+                'mode': 'range',
+            },
+        }
+        groups[f'H2_{year}'] = {
+            'date': {
+                'date_from': fields.Date.to_string(datetime.date(year, 7, 1)),
+                'date_to': fields.Date.to_string(datetime.date(year, 12, 31)),
+                'string': f'H2 {year}',
+                'mode': 'range',
+            },
+        }
+        return groups
+
+    def _get_previous_periods(self, options):
+        """Generate current period + N previous periods.
+
+        Uses date_utils to shift periods backward by a consistent delta,
+        handling month boundaries correctly.
+        """
+        date_from = fields.Date.from_string(
+            options['date'].get('date_from') or options['date']['date_to']
+        )
+        date_to = fields.Date.from_string(options['date']['date_to'])
+        number_period = options['comparison']['number_period']
+
+        # Compute period length as timedelta
+        period_delta = date_to - date_from  # e.g. 89 days for a quarter
+
+        periods = []
+        # Current period
+        periods.append((date_from, date_to))
+
+        # Previous periods: each ends the day before the previous one starts
+        cur_from = date_from
+        for i in range(number_period):
+            prev_to = cur_from - datetime.timedelta(days=1)
+            prev_from = prev_to - period_delta
+            periods.append((prev_from, prev_to))
+            cur_from = prev_from
+
+        # Reverse for ascending order
+        if options['comparison'].get('period_order', 'ascending') == 'ascending':
+            periods.reverse()
+
+        groups = OrderedDict()
+        for d_from, d_to in periods:
+            d_from_str = fields.Date.to_string(d_from)
+            d_to_str = fields.Date.to_string(d_to)
+            string = _('%(date_from)s - %(date_to)s',
+                       date_from=format_date(self.env, d_from_str),
+                       date_to=format_date(self.env, d_to_str))
+            key = f'{d_from_str}_{d_to_str}'
+            groups[key] = {
+                'date': {
+                    'date_from': d_from_str,
+                    'date_to': d_to_str,
+                    'string': string,
+                    'mode': 'range',
+                },
+            }
+        return groups
+
+    def _get_same_period_last_year(self, options):
+        """Generate current period + same period last year."""
+        date_from = fields.Date.from_string(
+            options['date'].get('date_from') or options['date']['date_to']
+        )
+        date_to = fields.Date.from_string(options['date']['date_to'])
+
+        # Last year (handle leap year edge case: Feb 29 → Feb 28)
+        try:
+            ly_from = date_from.replace(year=date_from.year - 1)
+        except ValueError:
+            ly_from = date_from.replace(year=date_from.year - 1, day=28)
+        try:
+            ly_to = date_to.replace(year=date_to.year - 1)
+        except ValueError:
+            ly_to = date_to.replace(year=date_to.year - 1, day=28)
+
+        groups = OrderedDict()
+
+        # Last year first (ascending)
+        ly_from_str = fields.Date.to_string(ly_from)
+        ly_to_str = fields.Date.to_string(ly_to)
+        ly_string = _('%(date_from)s - %(date_to)s',
+                      date_from=format_date(self.env, ly_from_str),
+                      date_to=format_date(self.env, ly_to_str))
+        groups[f'{ly_from_str}_{ly_to_str}'] = {
+            'date': {
+                'date_from': ly_from_str,
+                'date_to': ly_to_str,
+                'string': ly_string,
+                'mode': options['date']['mode'],
+            },
+        }
+
+        # Current period
+        cur_from_str = options['date'].get('date_from') or False
+        cur_to_str = options['date']['date_to']
+        groups[f'{cur_from_str}_{cur_to_str}'] = {
+            'date': options['date'],
+        }
+
+        return groups
+
     def _init_options_all_entries(self, options, previous_options):
         """Initialize the draft/posted filter."""
         if self.filter_show_draft:
@@ -255,20 +442,62 @@ class AccountReportEngine(models.Model):
         options['unfolded_lines'] = previous_options.get('unfolded_lines', [])
 
     def _init_options_column_headers(self, options):
-        """Build column headers from report columns."""
-        headers = []
+        """Build column headers from report columns.
+
+        For multi-period comparison, generates:
+        - column_headers: [[period row], [label row]] (two rows for multi-period)
+        - columns: flat list of column dicts with column_group_key
+        """
+        report_columns = []
         for col in self.column_ids:
-            headers.append({
+            report_columns.append({
                 'name': col.name,
                 'expression_label': col.expression_label,
                 'figure_type': col.figure_type,
                 'blank_if_zero': col.blank_if_zero,
             })
-        options['column_headers'] = [headers] if headers else [[{
-            'name': _("Balance"),
-            'expression_label': 'balance',
-            'figure_type': 'monetary',
-        }]]
+        if not report_columns:
+            report_columns = [{
+                'name': _("Balance"),
+                'expression_label': 'balance',
+                'figure_type': 'monetary',
+            }]
+
+        column_groups = options.get('column_groups', OrderedDict({'default': {'date': options['date']}}))
+        is_multi_period = len(column_groups) > 1
+
+        if not is_multi_period:
+            # Single period: keep backward-compatible format
+            options['column_headers'] = [report_columns]
+            options['columns'] = []
+            for col in report_columns:
+                options['columns'].append({
+                    **col,
+                    'column_group_key': list(column_groups.keys())[0],
+                })
+        else:
+            # Multi-period: build two-row headers and flat columns list
+            period_header_row = []
+            label_header_row = []
+            flat_columns = []
+
+            for group_key, group_data in column_groups.items():
+                period_header_row.append({
+                    'name': group_data['date'].get('string', group_key),
+                    'colspan': len(report_columns),
+                })
+                for col in report_columns:
+                    label_header_row.append({
+                        **col,
+                        'column_group_key': group_key,
+                    })
+                    flat_columns.append({
+                        **col,
+                        'column_group_key': group_key,
+                    })
+
+            options['column_headers'] = [period_header_row, label_header_row]
+            options['columns'] = flat_columns
 
     def _init_options_companies(self, options):
         """Set company info."""
@@ -377,11 +606,19 @@ class AccountReportEngine(models.Model):
         self.ensure_one()
 
         lines = self._get_lines(options)
-        columns = options.get('column_headers', [[]])[0]
+
+        # For multi-period, return all header rows; for single, return flat list
+        column_headers = options.get('column_headers', [[]])
+        is_multi_period = len(options.get('column_groups', {})) > 1
+
+        # show_comparison: only for non-custom-handler reports
+        custom_handler = self._get_custom_handler_model()
+        show_comparison = not custom_handler
 
         return {
             'lines': lines,
-            'column_headers_render_data': columns,
+            'column_headers_render_data': column_headers,
+            'columns': options.get('columns', []),
             'options': options,
             'report': {
                 'id': self.id,
@@ -394,8 +631,10 @@ class AccountReportEngine(models.Model):
                 'show_draft': self.filter_show_draft,
                 'show_journals': self.filter_journals,
                 'show_hide_0': self.filter_hide_0_lines != 'never',
+                'show_comparison': show_comparison,
             },
             'display': self._get_display_config(),
+            'multi_period': is_multi_period,
         }
 
     def _get_display_config(self):
@@ -414,6 +653,22 @@ class AccountReportEngine(models.Model):
     # GET LINES
     # ==========================================================================
 
+    def _compute_expression_totals_for_all_groups(self, options):
+        """Compute expression totals for each column group.
+
+        Returns {group_key: {expression_id: value}}
+        """
+        column_groups = options.get('column_groups', {'default': {'date': options['date']}})
+        result = {}
+
+        for group_key, group_data in column_groups.items():
+            # Build a copy of options with this group's date
+            group_options = copy.deepcopy(options)
+            group_options['date'] = group_data['date']
+            result[group_key] = self._compute_expression_totals(group_options)
+
+        return result
+
     def _get_lines(self, options, all_column_groups_expression_totals=None):
         """Generate all report lines.
 
@@ -423,9 +678,14 @@ class AccountReportEngine(models.Model):
 
         # Compute expression totals if not provided
         if all_column_groups_expression_totals is None:
-            all_column_groups_expression_totals = self._compute_expression_totals(
-                options
-            )
+            column_groups = options.get('column_groups', {})
+            if len(column_groups) > 1:
+                all_column_groups_expression_totals = self._compute_expression_totals_for_all_groups(options)
+            else:
+                # Single period: wrap in dict for uniform access
+                totals = self._compute_expression_totals(options)
+                group_key = list(column_groups.keys())[0] if column_groups else 'default'
+                all_column_groups_expression_totals = {group_key: totals}
 
         lines = []
         for report_line in self.line_ids.filtered(lambda l: not l.parent_id):
@@ -500,42 +760,89 @@ class AccountReportEngine(models.Model):
         return lines
 
     def _build_line_columns(self, report_line, options, expression_totals):
-        """Build column values for a report line."""
+        """Build column values for a report line.
+
+        expression_totals is either:
+        - {expr_id: value} for single period (backward compat)
+        - {group_key: {expr_id: value}} for multi-period
+        """
         columns = []
-        column_headers = options.get('column_headers', [[]])[0]
+        flat_columns = options.get('columns', [])
 
-        for col_header in column_headers:
-            expr_label = col_header.get('expression_label', 'balance')
-            figure_type = col_header.get('figure_type', 'monetary')
+        if flat_columns:
+            # Multi-period path: iterate over flat columns list
+            for col_def in flat_columns:
+                expr_label = col_def.get('expression_label', 'balance')
+                figure_type = col_def.get('figure_type', 'monetary')
+                group_key = col_def.get('column_group_key', 'default')
 
-            # Find the expression
-            expression = report_line.expression_ids.filtered(
-                lambda e: e.label == expr_label
-            )
+                # Get the totals for this group
+                group_totals = expression_totals.get(group_key, {})
 
-            if expression and expression.id in expression_totals:
-                value = expression_totals[expression.id]
-            elif expression and expression.engine == 'aggregation':
-                # Try to compute aggregation
-                value = self._compute_aggregation_value(
-                    expression, expression_totals
+                expression = report_line.expression_ids.filtered(
+                    lambda e: e.label == expr_label
                 )
+
+                if expression and expression.id in group_totals:
+                    value = group_totals[expression.id]
+                elif expression and expression.engine == 'aggregation':
+                    value = self._compute_aggregation_value(
+                        expression, group_totals
+                    )
+                else:
+                    value = 0.0
+
+                if expression and expression.figure_type:
+                    figure_type = expression.figure_type
+
+                blank_if_zero = (
+                    col_def.get('blank_if_zero')
+                    or (expression and expression.blank_if_zero)
+                )
+
+                column = self._build_column_dict(
+                    value, figure_type, blank_if_zero, options, expression
+                )
+                column['column_group_key'] = group_key
+                columns.append(column)
+        else:
+            # Fallback: single-period backward compat
+            column_headers = options.get('column_headers', [[]])[0]
+            # Flatten expression_totals if it's multi-level
+            if expression_totals and isinstance(next(iter(expression_totals.values()), None), dict):
+                flat_totals = next(iter(expression_totals.values()))
             else:
-                value = 0.0
+                flat_totals = expression_totals
 
-            # Use expression-level figure_type if set
-            if expression and expression.figure_type:
-                figure_type = expression.figure_type
+            for col_header in column_headers:
+                expr_label = col_header.get('expression_label', 'balance')
+                figure_type = col_header.get('figure_type', 'monetary')
 
-            blank_if_zero = (
-                col_header.get('blank_if_zero')
-                or (expression and expression.blank_if_zero)
-            )
+                expression = report_line.expression_ids.filtered(
+                    lambda e: e.label == expr_label
+                )
 
-            column = self._build_column_dict(
-                value, figure_type, blank_if_zero, options, expression
-            )
-            columns.append(column)
+                if expression and expression.id in flat_totals:
+                    value = flat_totals[expression.id]
+                elif expression and expression.engine == 'aggregation':
+                    value = self._compute_aggregation_value(
+                        expression, flat_totals
+                    )
+                else:
+                    value = 0.0
+
+                if expression and expression.figure_type:
+                    figure_type = expression.figure_type
+
+                blank_if_zero = (
+                    col_header.get('blank_if_zero')
+                    or (expression and expression.blank_if_zero)
+                )
+
+                column = self._build_column_dict(
+                    value, figure_type, blank_if_zero, options, expression
+                )
+                columns.append(column)
 
         return columns
 
@@ -822,7 +1129,14 @@ class AccountReportEngine(models.Model):
             if not report_line.exists():
                 return {'lines': []}
 
-            expression_totals = self._compute_expression_totals(options)
+            # Compute multi-group totals
+            column_groups = options.get('column_groups', {})
+            if len(column_groups) > 1:
+                expression_totals = self._compute_expression_totals_for_all_groups(options)
+            else:
+                totals = self._compute_expression_totals(options)
+                group_key = list(column_groups.keys())[0] if column_groups else 'default'
+                expression_totals = {group_key: totals}
 
             lines = []
             # Check for groupby expansion
@@ -873,64 +1187,141 @@ class AccountReportEngine(models.Model):
             return []
 
         date_scope = domain_expr.date_scope or 'strict_range'
-        base_domain = self._get_options_domain(options, date_scope=date_scope)
-        full_domain = base_domain + expr_domain
+        column_groups = options.get('column_groups', {'default': {'date': options['date']}})
+        is_multi_period = len(column_groups) > 1
 
-        # Read grouped data
-        try:
-            groups = self.env['account.move.line'].read_group(
-                full_domain,
-                ['balance'],
-                [groupby_field],
-                offset=offset,
-                limit=limit + 1,  # +1 to detect "load more"
-                orderby=f'{groupby_field}',
-            )
-        except Exception:
-            return []
-
-        has_more = len(groups) > limit
-        if has_more:
-            groups = groups[:limit]
-
+        has_more = False
         lines = []
-        for group in groups:
-            group_value = group[groupby_field]
-            if isinstance(group_value, (list, tuple)):
-                group_id = group_value[0]
-                group_name = group_value[1]
-            elif isinstance(group_value, bool):
-                group_id = None
-                group_name = _("Undefined") if not group_value else str(group_value)
-            else:
-                group_id = group_value
-                group_name = str(group_value) if group_value else _("Undefined")
 
-            line_id = self._get_generic_line_id(
-                groupby_field.replace('_id', '').replace('_', '.') if '_id' in groupby_field else None,
-                group_id,
-                markup={'groupby': groupby_field},
-                parent_line_id=parent_line_id,
-            )
+        if not is_multi_period:
+            # Single period path (original behavior)
+            base_domain = self._get_options_domain(options, date_scope=date_scope)
+            full_domain = base_domain + expr_domain
 
-            balance = group.get('balance', 0.0)
-            columns = self._build_groupby_columns(balance, options)
+            try:
+                groups = self.env['account.move.line'].read_group(
+                    full_domain,
+                    ['balance'],
+                    [groupby_field],
+                    offset=offset,
+                    limit=limit + 1,
+                    orderby=f'{groupby_field}',
+                )
+            except Exception:
+                return []
 
-            # Hide zero lines
-            if options.get('hide_0_lines') and float_is_zero(balance, precision_digits=2):
-                continue
+            has_more = len(groups) > limit
+            if has_more:
+                groups = groups[:limit]
 
-            lines.append({
-                'id': line_id,
-                'name': group_name,
-                'level': report_line.hierarchy_level + 1,
-                'columns': columns,
-                'unfoldable': False,
-                'unfolded': False,
-                'parent_id': parent_line_id,
-            })
+            lines = []
+            for group in groups:
+                group_value = group[groupby_field]
+                if isinstance(group_value, (list, tuple)):
+                    group_id = group_value[0]
+                    group_name = group_value[1]
+                elif isinstance(group_value, bool):
+                    group_id = None
+                    group_name = _("Undefined") if not group_value else str(group_value)
+                else:
+                    group_id = group_value
+                    group_name = str(group_value) if group_value else _("Undefined")
 
-        # Add "Load More" line if needed
+                line_id = self._get_generic_line_id(
+                    groupby_field.replace('_id', '').replace('_', '.') if '_id' in groupby_field else None,
+                    group_id,
+                    markup={'groupby': groupby_field},
+                    parent_line_id=parent_line_id,
+                )
+
+                balance = group.get('balance', 0.0)
+                columns = self._build_groupby_columns(balance, options)
+
+                if options.get('hide_0_lines') and float_is_zero(balance, precision_digits=2):
+                    continue
+
+                lines.append({
+                    'id': line_id,
+                    'name': group_name,
+                    'level': report_line.hierarchy_level + 1,
+                    'columns': columns,
+                    'unfoldable': False,
+                    'unfolded': False,
+                    'parent_id': parent_line_id,
+                })
+        else:
+            # Multi-period: query each group separately and merge
+            # First, get all distinct groupby values from all periods
+            all_group_values = {}
+            per_group_data = {}
+
+            for group_key, group_data in column_groups.items():
+                group_options = copy.deepcopy(options)
+                group_options['date'] = group_data['date']
+                base_domain = self._get_options_domain(group_options, date_scope=date_scope)
+                full_domain = base_domain + expr_domain
+
+                try:
+                    groups = self.env['account.move.line'].read_group(
+                        full_domain,
+                        ['balance'],
+                        [groupby_field],
+                        orderby=f'{groupby_field}',
+                    )
+                except Exception:
+                    groups = []
+
+                for group in groups:
+                    group_value = group[groupby_field]
+                    if isinstance(group_value, (list, tuple)):
+                        gid = group_value[0]
+                        gname = group_value[1]
+                    elif isinstance(group_value, bool):
+                        gid = None
+                        gname = _("Undefined") if not group_value else str(group_value)
+                    else:
+                        gid = group_value
+                        gname = str(group_value) if group_value else _("Undefined")
+
+                    gid_key = gid if gid is not None else '__none__'
+                    all_group_values[gid_key] = (gid, gname)
+                    per_group_data.setdefault(gid_key, {})[group_key] = group.get('balance', 0.0)
+
+            lines = []
+            for gid_key, (gid, gname) in sorted(all_group_values.items(), key=lambda x: str(x[1][1])):
+                line_id = self._get_generic_line_id(
+                    groupby_field.replace('_id', '').replace('_', '.') if '_id' in groupby_field else None,
+                    gid,
+                    markup={'groupby': groupby_field},
+                    parent_line_id=parent_line_id,
+                )
+
+                group_balances = per_group_data.get(gid_key, {})
+                # Fill missing groups with 0
+                for gk in column_groups:
+                    group_balances.setdefault(gk, 0.0)
+
+                total_balance = sum(group_balances.values())
+                if options.get('hide_0_lines') and float_is_zero(total_balance, precision_digits=2):
+                    continue
+
+                columns = self._build_groupby_columns(0, options, group_balances=group_balances)
+
+                lines.append({
+                    'id': line_id,
+                    'name': gname,
+                    'level': report_line.hierarchy_level + 1,
+                    'columns': columns,
+                    'unfoldable': False,
+                    'unfolded': False,
+                    'parent_id': parent_line_id,
+                })
+
+            has_more = False  # Multi-period groupby doesn't paginate
+
+        # Determine number of columns for load more
+        num_cols = len(options.get('columns', [])) or len(options.get('column_headers', [[]])[0])
+
         if has_more:
             lines.append({
                 'id': self._get_generic_line_id(
@@ -939,7 +1330,7 @@ class AccountReportEngine(models.Model):
                 ),
                 'name': _("Load More..."),
                 'level': report_line.hierarchy_level + 1,
-                'columns': [{'name': ''} for _ in options.get('column_headers', [[]])[0]],
+                'columns': [{'name': ''} for _ in range(num_cols)],
                 'unfoldable': False,
                 'unfolded': False,
                 'parent_id': parent_line_id,
@@ -950,15 +1341,29 @@ class AccountReportEngine(models.Model):
 
         return lines
 
-    def _build_groupby_columns(self, balance, options):
-        """Build columns for a groupby line."""
+    def _build_groupby_columns(self, balance, options, group_balances=None):
+        """Build columns for a groupby line.
+
+        For multi-period, group_balances is {group_key: balance_value}.
+        """
         columns = []
-        column_headers = options.get('column_headers', [[]])[0]
-        for col_header in column_headers:
-            figure_type = col_header.get('figure_type', 'monetary')
-            columns.append(self._build_column_dict(
-                balance, figure_type, False, options
-            ))
+        flat_columns = options.get('columns', [])
+
+        if flat_columns and group_balances:
+            for col_def in flat_columns:
+                figure_type = col_def.get('figure_type', 'monetary')
+                group_key = col_def.get('column_group_key', 'default')
+                value = group_balances.get(group_key, 0.0)
+                col = self._build_column_dict(value, figure_type, False, options)
+                col['column_group_key'] = group_key
+                columns.append(col)
+        else:
+            column_headers = options.get('column_headers', [[]])[0]
+            for col_header in column_headers:
+                figure_type = col_header.get('figure_type', 'monetary')
+                columns.append(self._build_column_dict(
+                    balance, figure_type, False, options
+                ))
         return columns
 
     # ==========================================================================

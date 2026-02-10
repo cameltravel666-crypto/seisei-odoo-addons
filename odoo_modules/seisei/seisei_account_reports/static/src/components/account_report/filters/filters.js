@@ -49,6 +49,22 @@ export class AccountReportFilters extends Component {
         return this.controller.options?.hide_0_lines;
     }
 
+    get showComparison() {
+        return this.controller.filters?.show_comparison;
+    }
+
+    get comparisonFilter() {
+        return this.controller.options?.comparison?.filter || "no_comparison";
+    }
+
+    get comparisonNumberPeriod() {
+        return this.controller.options?.comparison?.number_period || 1;
+    }
+
+    get isPreviousPeriod() {
+        return this.comparisonFilter === "previous_period";
+    }
+
     async onDateFromChange(ev) {
         const dateFrom = ev.target.value;
         const dateTo = this.dateTo;
@@ -77,5 +93,16 @@ export class AccountReportFilters extends Component {
 
     async onToggleHideZero(ev) {
         await this.controller.toggleHideZeroLines();
+    }
+
+    async onComparisonChange(ev) {
+        const filter = ev.target.value;
+        const numberPeriod = this.comparisonNumberPeriod;
+        await this.controller.updateComparison(filter, numberPeriod);
+    }
+
+    async onNumberPeriodChange(ev) {
+        const numberPeriod = parseInt(ev.target.value) || 1;
+        await this.controller.updateComparison("previous_period", numberPeriod);
     }
 }

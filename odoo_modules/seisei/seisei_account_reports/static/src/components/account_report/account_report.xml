@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <templates>
     <t t-name="seisei_account_reports.AccountReport">
-        <div class="o_account_report_page">
+        <div class="o_account_report_page" t-ref="page">
             <!-- Control Panel -->
             <div class="o_account_report_control_panel d-flex justify-content-between align-items-center p-2 bg-white border-bottom">
                 <div class="d-flex align-items-center gap-2">
@@ -20,7 +20,7 @@
 
             <!-- Report Table -->
             <div t-if="!controller.isLoading" class="o_account_report_table_wrapper">
-                <table class="o_account_report_table table table-hover table-sm">
+                <table t-att-class="'o_account_report_table table table-hover table-sm' + (controller.multiPeriod ? ' o_account_report_multi_period' : '')">
                     <!-- Header -->
                     <thead>
                         <AccountReportHeader/>

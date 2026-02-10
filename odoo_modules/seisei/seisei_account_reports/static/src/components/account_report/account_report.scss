@@ -19,7 +19,7 @@
 
         thead {
             position: sticky;
-            top: 50px;
+            top: var(--cp-height, 50px);
             z-index: 5;
             background: white;
 
@@ -140,6 +140,34 @@
 
         &:hover {
             text-decoration: underline;
+        }
+    }
+
+    // Multi-period table adjustments
+    .o_account_report_multi_period {
+        thead {
+            .o_account_report_period_header_row {
+                th.o_account_report_period_header {
+                    text-align: center;
+                    background-color: #f8f9fa;
+                    font-size: 0.8rem;
+                    font-weight: 600;
+                    border-bottom: 1px solid #dee2e6;
+                }
+            }
+        }
+
+        // Narrower columns in multi-period mode
+        thead th.o_account_report_column_header {
+            min-width: 90px;
+            font-size: 0.8rem;
+            padding: 4px 8px;
+        }
+
+        tbody td.o_account_report_column_cell {
+            min-width: 90px;
+            font-size: 0.8rem;
+            padding: 4px 8px;
         }
     }
 

@@ -12,10 +12,12 @@ export class AccountReportController {
         this.reportName = "";
         this.reportId = null;
         this.columnHeaders = [];
+        this.columns = [];
         this.buttons = [];
         this.filters = {};
         this.display = {};
         this.loadMoreLimit = 80;
+        this.multiPeriod = false;
 
         this.isLoading = false;
         this.cachedFilterOptions = {};
@@ -53,11 +55,13 @@ export class AccountReportController {
 
             this.lines = result.lines || [];
             this.columnHeaders = result.column_headers_render_data || [];
+            this.columns = result.columns || [];
             this.reportName = result.report?.name || "";
             this.loadMoreLimit = result.report?.load_more_limit || 80;
             this.buttons = result.buttons || [];
             this.filters = result.filters || {};
             this.display = result.display || {};
+            this.multiPeriod = result.multi_period || false;
             this.cachedFilterOptions = { ...this.options };
         } finally {
             this.isLoading = false;
@@ -203,12 +207,12 @@ export class AccountReportController {
         }
     }
 
-    async auditCell(lineId, expressionLabel, reportLineId) {
+    async auditCell(lineId, expressionLabel, reportLineId, columnGroupKey) {
         const params = {
             report_line_id: reportLineId,
             expression_label: expressionLabel,
             calling_line_dict_id: lineId,
-            column_group_key: "default",
+            column_group_key: columnGroupKey || "default",
         };
 
         const result = await this.orm.call(
@@ -303,6 +307,17 @@ export class AccountReportController {
 
     async toggleUnfoldAll() {
         this.options.unfold_all = !this.options.unfold_all;
+        this.options.unfolded_lines = [];
+        await this.reload();
+    }
+
+    async updateComparison(filter, numberPeriod) {
+        this.options.comparison = {
+            ...this.options.comparison,
+            filter: filter,
+            number_period: numberPeriod || 1,
+        };
+        // Reset unfold state when changing comparison
         this.options.unfolded_lines = [];
         await this.reload();
     }

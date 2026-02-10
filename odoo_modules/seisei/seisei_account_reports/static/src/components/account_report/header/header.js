@@ -10,7 +10,26 @@ export class AccountReportHeader extends Component {
         this.controller = useState(this.env.controller);
     }
 
+    get isMultiPeriod() {
+        return this.controller.multiPeriod;
+    }
+
+    get periodHeaders() {
+        // First row: period names with colspan
+        const headers = this.controller.columnHeaders;
+        if (this.isMultiPeriod && headers.length > 1) {
+            return headers[0];
+        }
+        return [];
+    }
+
     get columns() {
-        return this.controller.columnHeaders || [];
+        // For multi-period: second row (label row)
+        // For single period: first (only) row
+        const headers = this.controller.columnHeaders;
+        if (this.isMultiPeriod && headers.length > 1) {
+            return headers[1];
+        }
+        return headers[0] || [];
     }
 }

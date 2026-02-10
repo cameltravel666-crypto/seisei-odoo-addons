@@ -48,6 +48,27 @@
                 </div>
             </div>
 
+            <!-- Comparison filter -->
+            <div t-if="showComparison" class="d-flex align-items-center gap-1 ms-2">
+                <select class="form-select form-select-sm"
+                        style="width: auto; font-size: 0.85rem;"
+                        t-att-value="comparisonFilter"
+                        t-on-change="onComparisonChange">
+                    <option value="no_comparison">No Comparison</option>
+                    <option value="quarterly">Quarterly</option>
+                    <option value="semi_annual">Semi-Annual</option>
+                    <option value="previous_period">Previous Period</option>
+                    <option value="same_last_year">Same Last Year</option>
+                </select>
+                <input t-if="isPreviousPeriod"
+                       type="number"
+                       class="form-control form-control-sm"
+                       style="width: 60px; font-size: 0.85rem;"
+                       min="1" max="12"
+                       t-att-value="comparisonNumberPeriod"
+                       t-on-change="onNumberPeriodChange"/>
+            </div>
+
             <!-- Hide zero lines -->
             <div class="form-check form-switch ms-2">
                 <input type="checkbox"

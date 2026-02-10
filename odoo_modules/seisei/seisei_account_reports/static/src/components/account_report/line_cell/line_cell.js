@@ -26,6 +26,7 @@ export class AccountReportLineCell extends Component {
             this.props.line.id,
             this.props.column.expression_label,
             this.props.column.report_line_id,
+            this.props.column.column_group_key,
         );
     }
 }
