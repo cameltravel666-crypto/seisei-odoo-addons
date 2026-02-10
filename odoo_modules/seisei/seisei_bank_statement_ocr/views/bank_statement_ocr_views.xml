@@ -60,7 +60,7 @@
                     </group>
                     <notebook>
                         <page string="取引明細 / 交易明细 / Transactions" name="lines">
-                            <field name="line_ids" nolabel="1">
+                            <field name="line_ids" nolabel="1" limit="200">
                                 <list editable="bottom">
                                     <field name="sequence" widget="handle"/>
                                     <field name="date"/>
