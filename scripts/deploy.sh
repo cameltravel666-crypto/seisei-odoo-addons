@@ -525,6 +525,19 @@ if ! grep -q "^COMPOSE_PROJECT_NAME=" "$ENV_FILE"; then
     log_success "Added COMPOSE_PROJECT_NAME=$EXPECTED_PROJECT_NAME"
 fi
 
+# Inject DB_PASSWORD from .env into odoo.conf (if exists)
+# odoo.conf takes precedence over env vars for Odoo, so we must patch it
+ODOO_CONF="$RELEASE_DIR/config/odoo.conf"
+if [ -f "$ODOO_CONF" ]; then
+    DB_PASSWORD_VALUE=$(grep "^DB_PASSWORD=" "$ENV_FILE" | cut -d'=' -f2-)
+    if [ -n "$DB_PASSWORD_VALUE" ]; then
+        sed -i "s|^db_password = .*|db_password = $DB_PASSWORD_VALUE|" "$ODOO_CONF"
+        log_success "Injected DB_PASSWORD into odoo.conf"
+    else
+        log_warn "DB_PASSWORD not found in .env, odoo.conf db_password unchanged"
+    fi
+fi
+
 echo ""
 
 # =============================================================================
