@@ -202,7 +202,12 @@ class SeiseiBankStatementOcr(models.Model):
 
     @staticmethod
     def _deduplicate_transactions(transactions):
-        """Remove duplicate transactions based on (date, description, withdrawal, deposit)."""
+        """Remove duplicate transactions based on (date, desc, withdrawal, deposit, balance).
+
+        Balance is included so that legitimate same-day, same-amount
+        transactions (e.g. multiple 振込手数料 495) are preserved while
+        true cross-page boundary duplicates (same balance) are removed.
+        """
         seen = set()
         unique = []
         for txn in transactions:
@@ -211,6 +216,7 @@ class SeiseiBankStatementOcr(models.Model):
                 txn.get('description', ''),
                 txn.get('withdrawal', 0),
                 txn.get('deposit', 0),
+                txn.get('balance', 0),
             )
             if key not in seen:
                 seen.add(key)
