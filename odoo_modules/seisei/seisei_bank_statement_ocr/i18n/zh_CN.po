@@ -331,3 +331,18 @@ msgstr "请选择文件。"
 #: model_terms:ir.ui.view,arch_db:seisei_bank_statement_ocr.view_bank_statement_ocr_form
 msgid "Opening + Deposits - Withdrawals differs from Closing by"
 msgstr "期初余额 + 收入合计 - 支出合计 与 期末余额 的差额为"
+
+#. module: seisei_bank_statement_ocr
+#: model_terms:ir.ui.view,arch_db:seisei_bank_statement_ocr.view_bank_statement_ocr_form
+msgid "Scan Files"
+msgstr "扫描文件"
+
+#. module: seisei_bank_statement_ocr
+#: code:addons/seisei_bank_statement_ocr/models/bank_statement_ocr.py:0
+msgid "OCR completed: %(pages)s pages, %(txns)s transactions extracted."
+msgstr "OCR完成：%(pages)s页，提取%(txns)s条交易记录。"
+
+#. module: seisei_bank_statement_ocr
+#: code:addons/seisei_bank_statement_ocr/models/bank_statement_ocr.py:0
+msgid "Imported as bank statement <a href=\"#\" data-oe-model=\"account.bank.statement\" data-oe-id=\"%(sid)s\">%(sname)s</a> (%(count)s lines)."
+msgstr "已导入为银行对账单 <a href=\"#\" data-oe-model=\"account.bank.statement\" data-oe-id=\"%(sid)s\">%(sname)s</a>（%(count)s条明细）。"

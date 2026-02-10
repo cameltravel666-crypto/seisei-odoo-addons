@@ -331,3 +331,18 @@ msgstr "ファイルを選択してください。"
 #: model_terms:ir.ui.view,arch_db:seisei_bank_statement_ocr.view_bank_statement_ocr_form
 msgid "Opening + Deposits - Withdrawals differs from Closing by"
 msgstr "期首残高 + 入金合計 - 出金合計 と 期末残高 に次の差額があります:"
+
+#. module: seisei_bank_statement_ocr
+#: model_terms:ir.ui.view,arch_db:seisei_bank_statement_ocr.view_bank_statement_ocr_form
+msgid "Scan Files"
+msgstr "スキャンファイル"
+
+#. module: seisei_bank_statement_ocr
+#: code:addons/seisei_bank_statement_ocr/models/bank_statement_ocr.py:0
+msgid "OCR completed: %(pages)s pages, %(txns)s transactions extracted."
+msgstr "OCR完了: %(pages)sページ、%(txns)s件の取引を抽出しました。"
+
+#. module: seisei_bank_statement_ocr
+#: code:addons/seisei_bank_statement_ocr/models/bank_statement_ocr.py:0
+msgid "Imported as bank statement <a href=\"#\" data-oe-model=\"account.bank.statement\" data-oe-id=\"%(sid)s\">%(sname)s</a> (%(count)s lines)."
+msgstr "銀行対账単 <a href=\"#\" data-oe-model=\"account.bank.statement\" data-oe-id=\"%(sid)s\">%(sname)s</a> として取り込みました（%(count)s件）。"

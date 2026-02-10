@@ -54,10 +54,6 @@
                             <field name="ocr_pages" readonly="1"/>
                         </group>
                     </group>
-                    <group string="Scan Files"
-                           invisible="state not in ('draft', 'failed')">
-                        <field name="attachment_ids" widget="many2many_binary"/>
-                    </group>
                     <notebook>
                         <page string="Transactions" name="lines">
                             <field name="line_ids" nolabel="1" limit="200">
@@ -77,6 +73,10 @@
                                 </list>
                             </field>
                         </page>
+                        <page string="Scan Files" name="scans">
+                            <field name="attachment_ids" widget="many2many_binary"
+                                   readonly="state not in ('draft', 'failed')"/>
+                        </page>
                         <page string="OCR Raw Data" name="raw"
                               invisible="not ocr_raw_data">
                             <field name="ocr_raw_data" readonly="1"/>
@@ -87,6 +87,7 @@
                         <field name="statement_id"/>
                     </group>
                 </sheet>
+                <chatter/>
             </form>
         </field>
     </record>

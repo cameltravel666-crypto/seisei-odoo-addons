@@ -9,6 +9,7 @@ _logger = logging.getLogger(__name__)
 
 class SeiseiBankStatementOcr(models.Model):
     _name = 'seisei.bank.statement.ocr'
+    _inherit = ['mail.thread', 'mail.activity.mixin']
     _description = 'Bank Statement OCR Record'
     _order = 'create_date desc'
 
@@ -17,7 +18,7 @@ class SeiseiBankStatementOcr(models.Model):
     )
     journal_id = fields.Many2one(
         'account.journal', 'Bank Account', required=True,
-        domain=[('type', '=', 'bank')],
+        domain=[('type', '=', 'bank')], tracking=True,
     )
     attachment_ids = fields.Many2many(
         'ir.attachment', string='Scan Files',
@@ -29,17 +30,17 @@ class SeiseiBankStatementOcr(models.Model):
         ('review', 'Review'),
         ('done', 'Done'),
         ('failed', 'Error'),
-    ], default='draft', string='State')
+    ], default='draft', string='State', tracking=True)
 
     # OCR extracted header (all editable)
-    bank_name = fields.Char('Bank Name')
+    bank_name = fields.Char('Bank Name', tracking=True)
     branch_name = fields.Char('Branch')
     account_number = fields.Char('Account No.')
     account_holder = fields.Char('Holder')
     statement_date = fields.Date('Statement Date')
     statement_period = fields.Char('Period')
-    balance_start = fields.Float('Opening Balance', digits=(16, 0))
-    balance_end = fields.Float('Closing Balance', digits=(16, 0))
+    balance_start = fields.Float('Opening Balance', digits=(16, 0), tracking=True)
+    balance_end = fields.Float('Closing Balance', digits=(16, 0), tracking=True)
 
     # OCR raw data
     ocr_raw_data = fields.Text('OCR Raw JSON')
@@ -56,7 +57,7 @@ class SeiseiBankStatementOcr(models.Model):
     # Import result
     statement_id = fields.Many2one(
         'account.bank.statement', 'Generated Statement',
-        readonly=True,
+        readonly=True, tracking=True,
     )
 
     # Balance integrity check
@@ -148,6 +149,14 @@ class SeiseiBankStatementOcr(models.Model):
                 self.ocr_error_message = '; '.join(errors)
             self._apply_ocr_result(merged)
             self.state = 'review'
+
+            self.message_post(
+                body=_(
+                    'OCR completed: %(pages)s pages, %(txns)s transactions extracted.',
+                    pages=total_pages,
+                    txns=len(merged['transactions']),
+                ),
+            )
 
             OcrUsage = self.env['ocr.usage'].sudo()
             if hasattr(OcrUsage, 'increment_usage'):
@@ -271,6 +280,24 @@ class SeiseiBankStatementOcr(models.Model):
         statement = self.env['account.bank.statement'].create(stmt_vals)
         self.statement_id = statement.id
         self.state = 'done'
+
+        # Attach original scans to the bank statement for audit trail
+        for att in self.attachment_ids:
+            att.copy({
+                'res_model': 'account.bank.statement',
+                'res_id': statement.id,
+            })
+
+        self.message_post(
+            body=_(
+                'Imported as bank statement <a href="#" '
+                'data-oe-model="account.bank.statement" data-oe-id="%(sid)s">'
+                '%(sname)s</a> (%(count)s lines).',
+                sid=statement.id,
+                sname=statement.name,
+                count=len(self.line_ids),
+            ),
+        )
 
         return {
             'type': 'ir.actions.act_window',
