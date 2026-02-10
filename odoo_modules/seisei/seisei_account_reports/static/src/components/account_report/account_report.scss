@@ -146,9 +146,11 @@
     // Multi-period table adjustments
     .o_account_report_multi_period {
         thead {
+            position: static;
+
             .o_account_report_period_header_row {
                 th.o_account_report_period_header {
-                    text-align: center;
+                    text-align: right;
                     background-color: #f8f9fa;
                     font-size: 0.8rem;
                     font-weight: 600;
@@ -168,6 +170,26 @@
             min-width: 90px;
             font-size: 0.8rem;
             padding: 4px 8px;
+        }
+
+        // Even narrower for monthly (12 columns)
+        &.o_account_report_monthly {
+            thead th.o_account_report_column_header {
+                min-width: 70px;
+                font-size: 0.75rem;
+                padding: 3px 4px;
+            }
+
+            tbody td.o_account_report_column_cell {
+                min-width: 70px;
+                font-size: 0.75rem;
+                padding: 3px 4px;
+            }
+
+            thead .o_account_report_period_header_row th.o_account_report_period_header {
+                font-size: 0.75rem;
+                padding: 3px 4px;
+            }
         }
     }
 

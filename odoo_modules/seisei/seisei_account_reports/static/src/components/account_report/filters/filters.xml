@@ -55,6 +55,7 @@
                         t-att-value="comparisonFilter"
                         t-on-change="onComparisonChange">
                     <option value="no_comparison">No Comparison</option>
+                    <option value="monthly">Monthly</option>
                     <option value="quarterly">Quarterly</option>
                     <option value="semi_annual">Semi-Annual</option>
                     <option value="previous_period">Previous Period</option>

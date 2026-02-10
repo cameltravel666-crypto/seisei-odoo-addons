@@ -20,7 +20,7 @@
 
             <!-- Report Table -->
             <div t-if="!controller.isLoading" class="o_account_report_table_wrapper">
-                <table t-att-class="'o_account_report_table table table-hover table-sm' + (controller.multiPeriod ? ' o_account_report_multi_period' : '')">
+                <table t-att-class="'o_account_report_table table table-hover table-sm' + (controller.multiPeriod ? ' o_account_report_multi_period' : '') + (controller.comparisonFilter === 'monthly' ? ' o_account_report_monthly' : '')">
                     <!-- Header -->
                     <thead>
                         <AccountReportHeader/>

@@ -15,17 +15,12 @@
                 <thead>
                     <t t-if="multi_period and period_headers">
                         <tr>
-                            <th t-att-rowspan="2" style="width: 30%; vertical-align: middle;">Name</th>
+                            <th style="width: 30%;">Name</th>
                             <t t-foreach="period_headers" t-as="period" t-key="period_index">
                                 <th class="text-center"
                                     style="background-color: #f8f9fa; font-size: 0.8rem;"
                                     t-att-colspan="period.get('colspan', 1)"
                                     t-esc="period.get('name', '')"/>
-                            </t>
-                        </tr>
-                        <tr>
-                            <t t-foreach="column_headers" t-as="col" t-key="col_index">
-                                <th class="text-end" t-esc="col.get('name', '')"/>
                             </t>
                         </tr>
                     </t>
