@@ -5,19 +5,19 @@
         <field name="name">seisei.bank.statement.ocr.upload.form</field>
         <field name="model">seisei.bank.statement.ocr.upload</field>
         <field name="arch" type="xml">
-            <form string="銀行取引明細OCR / 银行对账单OCR / Bank Statement OCR">
+            <form string="Bank Statement OCR">
                 <group>
                     <field name="journal_id"/>
                     <field name="attachment_ids" widget="many2many_binary"/>
                     <p class="text-muted">
-                        PDF（複数ページ対応）・画像（JPG, PNG）| 支持多页PDF及图片 | Multi-page PDF &amp; images supported
+                        Multi-page PDF &amp; images (JPG, PNG) supported.
                     </p>
                 </group>
                 <footer>
                     <button name="action_upload_and_ocr" type="object"
-                            string="OCR開始 / 开始OCR / Start OCR"
+                            string="Start OCR"
                             class="btn-primary"/>
-                    <button string="キャンセル / 取消 / Cancel"
+                    <button string="Cancel"
                             class="btn-secondary" special="cancel"/>
                 </footer>
             </form>
@@ -26,7 +26,7 @@
 
     <!-- Upload Wizard Action -->
     <record id="action_bank_statement_ocr_upload" model="ir.actions.act_window">
-        <field name="name">銀行取引明細OCR / 银行对账单OCR / Bank Statement OCR</field>
+        <field name="name">Bank Statement OCR</field>
         <field name="res_model">seisei.bank.statement.ocr.upload</field>
         <field name="view_mode">form</field>
         <field name="view_id" ref="view_bank_statement_ocr_upload_form"/>

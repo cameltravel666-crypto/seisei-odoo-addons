@@ -1,0 +1,348 @@
+# Japanese translation for seisei_bank_statement_ocr
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo 18.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-02-10 00:00+0000\n"
+"PO-Revision-Date: 2026-02-10 00:00+0000\n"
+"Language: ja\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. module: seisei_bank_statement_ocr
+#: model:ir.model,name:seisei_bank_statement_ocr.model_seisei_bank_statement_ocr
+msgid "Bank Statement OCR Record"
+msgstr "銀行取引明細OCR"
+
+#. module: seisei_bank_statement_ocr
+#: model:ir.model,name:seisei_bank_statement_ocr.model_seisei_bank_statement_ocr_line
+msgid "Bank Statement OCR Transaction Line"
+msgstr "OCR取引明細行"
+
+#. module: seisei_bank_statement_ocr
+#: model:ir.model,name:seisei_bank_statement_ocr.model_seisei_bank_statement_ocr_upload
+msgid "Bank Statement OCR Upload Wizard"
+msgstr "銀行取引明細OCRアップロード"
+
+#. module: seisei_bank_statement_ocr
+#: model_terms:ir.ui.view,arch_db:seisei_bank_statement_ocr.view_bank_statement_ocr_form
+msgid "Start OCR"
+msgstr "OCR開始"
+
+#. module: seisei_bank_statement_ocr
+#: model_terms:ir.ui.view,arch_db:seisei_bank_statement_ocr.view_bank_statement_ocr_form
+msgid "Import Statement"
+msgstr "対账単取込"
+
+#. module: seisei_bank_statement_ocr
+#: model_terms:ir.ui.view,arch_db:seisei_bank_statement_ocr.view_bank_statement_ocr_form
+msgid "Retry OCR"
+msgstr "OCR再実行"
+
+#. module: seisei_bank_statement_ocr
+#: model_terms:ir.ui.view,arch_db:seisei_bank_statement_ocr.view_bank_statement_ocr_form
+msgid "Reset"
+msgstr "リセット"
+
+#. module: seisei_bank_statement_ocr
+#: model_terms:ir.ui.view,arch_db:seisei_bank_statement_ocr.view_bank_statement_ocr_form
+msgid "Cancel"
+msgstr "キャンセル"
+
+#. module: seisei_bank_statement_ocr
+#: model:ir.model.fields,field_description:seisei_bank_statement_ocr.field_seisei_bank_statement_ocr__name
+msgid "Name"
+msgstr "名称"
+
+#. module: seisei_bank_statement_ocr
+#: model:ir.model.fields,field_description:seisei_bank_statement_ocr.field_seisei_bank_statement_ocr__journal_id
+#: model:ir.model.fields,field_description:seisei_bank_statement_ocr.field_seisei_bank_statement_ocr_upload__journal_id
+msgid "Bank Account"
+msgstr "銀行口座"
+
+#. module: seisei_bank_statement_ocr
+#: model:ir.model.fields,field_description:seisei_bank_statement_ocr.field_seisei_bank_statement_ocr__attachment_ids
+msgid "Scan Files"
+msgstr "スキャン画像/PDF"
+
+#. module: seisei_bank_statement_ocr
+#: model:ir.model.fields,field_description:seisei_bank_statement_ocr.field_seisei_bank_statement_ocr_upload__attachment_ids
+msgid "Files"
+msgstr "ファイル"
+
+#. module: seisei_bank_statement_ocr
+#: model:ir.model.fields,field_description:seisei_bank_statement_ocr.field_seisei_bank_statement_ocr__state
+msgid "State"
+msgstr "状態"
+
+#. module: seisei_bank_statement_ocr
+#: model:ir.model.fields.selection,name:seisei_bank_statement_ocr.selection__seisei_bank_statement_ocr__state__draft
+msgid "Draft"
+msgstr "下書き"
+
+#. module: seisei_bank_statement_ocr
+#: model:ir.model.fields.selection,name:seisei_bank_statement_ocr.selection__seisei_bank_statement_ocr__state__processing
+msgid "Processing"
+msgstr "OCR処理中"
+
+#. module: seisei_bank_statement_ocr
+#: model:ir.model.fields.selection,name:seisei_bank_statement_ocr.selection__seisei_bank_statement_ocr__state__review
+msgid "Review"
+msgstr "確認待ち"
+
+#. module: seisei_bank_statement_ocr
+#: model:ir.model.fields.selection,name:seisei_bank_statement_ocr.selection__seisei_bank_statement_ocr__state__done
+msgid "Done"
+msgstr "インポート済"
+
+#. module: seisei_bank_statement_ocr
+#: model:ir.model.fields.selection,name:seisei_bank_statement_ocr.selection__seisei_bank_statement_ocr__state__failed
+msgid "Error"
+msgstr "エラー"
+
+#. module: seisei_bank_statement_ocr
+#: model:ir.model.fields,field_description:seisei_bank_statement_ocr.field_seisei_bank_statement_ocr__bank_name
+msgid "Bank Name"
+msgstr "銀行名"
+
+#. module: seisei_bank_statement_ocr
+#: model:ir.model.fields,field_description:seisei_bank_statement_ocr.field_seisei_bank_statement_ocr__branch_name
+msgid "Branch"
+msgstr "支店名"
+
+#. module: seisei_bank_statement_ocr
+#: model:ir.model.fields,field_description:seisei_bank_statement_ocr.field_seisei_bank_statement_ocr__account_number
+msgid "Account No."
+msgstr "口座番号"
+
+#. module: seisei_bank_statement_ocr
+#: model:ir.model.fields,field_description:seisei_bank_statement_ocr.field_seisei_bank_statement_ocr__account_holder
+msgid "Holder"
+msgstr "口座名義"
+
+#. module: seisei_bank_statement_ocr
+#: model:ir.model.fields,field_description:seisei_bank_statement_ocr.field_seisei_bank_statement_ocr__statement_date
+msgid "Statement Date"
+msgstr "対账単日付"
+
+#. module: seisei_bank_statement_ocr
+#: model:ir.model.fields,field_description:seisei_bank_statement_ocr.field_seisei_bank_statement_ocr__statement_period
+msgid "Period"
+msgstr "対象期間"
+
+#. module: seisei_bank_statement_ocr
+#: model:ir.model.fields,field_description:seisei_bank_statement_ocr.field_seisei_bank_statement_ocr__balance_start
+msgid "Opening Balance"
+msgstr "期首残高"
+
+#. module: seisei_bank_statement_ocr
+#: model:ir.model.fields,field_description:seisei_bank_statement_ocr.field_seisei_bank_statement_ocr__balance_end
+msgid "Closing Balance"
+msgstr "期末残高"
+
+#. module: seisei_bank_statement_ocr
+#: model:ir.model.fields,field_description:seisei_bank_statement_ocr.field_seisei_bank_statement_ocr__ocr_pages
+msgid "Pages"
+msgstr "ページ数"
+
+#. module: seisei_bank_statement_ocr
+#: model:ir.model.fields,field_description:seisei_bank_statement_ocr.field_seisei_bank_statement_ocr__ocr_error_message
+msgid "Error"
+msgstr "エラー"
+
+#. module: seisei_bank_statement_ocr
+#: model:ir.model.fields,field_description:seisei_bank_statement_ocr.field_seisei_bank_statement_ocr__ocr_processed_at
+msgid "Processed At"
+msgstr "OCR処理日時"
+
+#. module: seisei_bank_statement_ocr
+#: model:ir.model.fields,field_description:seisei_bank_statement_ocr.field_seisei_bank_statement_ocr__line_ids
+msgid "Transactions"
+msgstr "取引明細"
+
+#. module: seisei_bank_statement_ocr
+#: model:ir.model.fields,field_description:seisei_bank_statement_ocr.field_seisei_bank_statement_ocr__statement_id
+msgid "Generated Statement"
+msgstr "生成された対账単"
+
+#. module: seisei_bank_statement_ocr
+#: model:ir.model.fields,field_description:seisei_bank_statement_ocr.field_seisei_bank_statement_ocr__balance_check_ok
+msgid "Balance OK"
+msgstr "残高整合"
+
+#. module: seisei_bank_statement_ocr
+#: model:ir.model.fields,field_description:seisei_bank_statement_ocr.field_seisei_bank_statement_ocr__balance_diff
+msgid "Difference"
+msgstr "差額"
+
+#. module: seisei_bank_statement_ocr
+#: model:ir.model.fields,field_description:seisei_bank_statement_ocr.field_seisei_bank_statement_ocr_line__sequence
+msgid "Seq"
+msgstr "順番"
+
+#. module: seisei_bank_statement_ocr
+#: model:ir.model.fields,field_description:seisei_bank_statement_ocr.field_seisei_bank_statement_ocr_line__date
+msgid "Date"
+msgstr "日付"
+
+#. module: seisei_bank_statement_ocr
+#: model:ir.model.fields,field_description:seisei_bank_statement_ocr.field_seisei_bank_statement_ocr_line__description
+msgid "Description"
+msgstr "摘要"
+
+#. module: seisei_bank_statement_ocr
+#: model:ir.model.fields,field_description:seisei_bank_statement_ocr.field_seisei_bank_statement_ocr_line__withdrawal
+msgid "Withdrawal"
+msgstr "出金"
+
+#. module: seisei_bank_statement_ocr
+#: model:ir.model.fields,field_description:seisei_bank_statement_ocr.field_seisei_bank_statement_ocr_line__deposit
+msgid "Deposit"
+msgstr "入金"
+
+#. module: seisei_bank_statement_ocr
+#: model:ir.model.fields,field_description:seisei_bank_statement_ocr.field_seisei_bank_statement_ocr_line__balance
+msgid "Balance"
+msgstr "残高"
+
+#. module: seisei_bank_statement_ocr
+#: model:ir.model.fields,field_description:seisei_bank_statement_ocr.field_seisei_bank_statement_ocr_line__reference
+msgid "Reference"
+msgstr "整理番号"
+
+#. module: seisei_bank_statement_ocr
+#: model:ir.model.fields,field_description:seisei_bank_statement_ocr.field_seisei_bank_statement_ocr_line__partner_id
+msgid "Partner"
+msgstr "パートナー"
+
+#. module: seisei_bank_statement_ocr
+#: model:ir.model.fields,field_description:seisei_bank_statement_ocr.field_seisei_bank_statement_ocr_line__partner_name
+msgid "Counterparty (OCR)"
+msgstr "取引先名"
+
+#. module: seisei_bank_statement_ocr
+#: model:ir.model.fields,field_description:seisei_bank_statement_ocr.field_seisei_bank_statement_ocr_line__amount
+msgid "Amount"
+msgstr "金額"
+
+#. module: seisei_bank_statement_ocr
+#: model:ir.model.fields,field_description:seisei_bank_statement_ocr.field_seisei_bank_statement_ocr_line__balance_warning
+msgid "Balance Warning"
+msgstr "残高不整合"
+
+#. module: seisei_bank_statement_ocr
+#: model_terms:ir.ui.view,arch_db:seisei_bank_statement_ocr.view_bank_statement_ocr_form
+msgid "Balance Mismatch:"
+msgstr "残高不整合:"
+
+#. module: seisei_bank_statement_ocr
+#: model_terms:ir.ui.view,arch_db:seisei_bank_statement_ocr.view_bank_statement_ocr_form
+msgid "OCR Error:"
+msgstr "OCRエラー:"
+
+#. module: seisei_bank_statement_ocr
+#: model_terms:ir.ui.view,arch_db:seisei_bank_statement_ocr.view_bank_statement_ocr_form
+msgid "Bank Info"
+msgstr "銀行情報"
+
+#. module: seisei_bank_statement_ocr
+#: model_terms:ir.ui.view,arch_db:seisei_bank_statement_ocr.view_bank_statement_ocr_form
+msgid "Statement Info"
+msgstr "対账単情報"
+
+#. module: seisei_bank_statement_ocr
+#: model_terms:ir.ui.view,arch_db:seisei_bank_statement_ocr.view_bank_statement_ocr_form
+msgid "Scan Files"
+msgstr "スキャンファイル"
+
+#. module: seisei_bank_statement_ocr
+#: model_terms:ir.ui.view,arch_db:seisei_bank_statement_ocr.view_bank_statement_ocr_form
+msgid "Transactions"
+msgstr "取引明細"
+
+#. module: seisei_bank_statement_ocr
+#: model_terms:ir.ui.view,arch_db:seisei_bank_statement_ocr.view_bank_statement_ocr_form
+msgid "OCR Raw Data"
+msgstr "OCR生データ"
+
+#. module: seisei_bank_statement_ocr
+#: model_terms:ir.ui.view,arch_db:seisei_bank_statement_ocr.view_bank_statement_ocr_upload_form
+msgid "Bank Statement OCR"
+msgstr "銀行取引明細OCR"
+
+#. module: seisei_bank_statement_ocr
+#: model_terms:ir.ui.view,arch_db:seisei_bank_statement_ocr.view_bank_statement_ocr_upload_form
+msgid "Multi-page PDF &amp; images (JPG, PNG) supported."
+msgstr "複数ページPDF・画像（JPG, PNG）に対応しています。"
+
+#. module: seisei_bank_statement_ocr
+#: model:ir.actions.act_window,name:seisei_bank_statement_ocr.action_bank_statement_ocr
+#: model:ir.ui.menu,name:seisei_bank_statement_ocr.menu_bank_statement_ocr
+msgid "OCR Statements"
+msgstr "OCR対账単"
+
+#. module: seisei_bank_statement_ocr
+#: model:ir.actions.act_window,name:seisei_bank_statement_ocr.action_bank_statement_ocr_upload
+msgid "Bank Statement OCR"
+msgstr "銀行取引明細OCR"
+
+#. module: seisei_bank_statement_ocr
+#: model_terms:ir.ui.view,arch_db:seisei_bank_statement_ocr.view_bank_statement_ocr_search
+msgid "Pending Review"
+msgstr "確認待ち"
+
+#. module: seisei_bank_statement_ocr
+#: model_terms:ir.ui.view,arch_db:seisei_bank_statement_ocr.view_bank_statement_ocr_search
+msgid "Imported"
+msgstr "インポート済"
+
+#. module: seisei_bank_statement_ocr
+#: model_terms:ir.ui.view,arch_db:seisei_bank_statement_ocr.view_bank_statement_ocr_search
+msgid "Group By"
+msgstr "グループ"
+
+#. module: seisei_bank_statement_ocr
+#: model_terms:ir.ui.view,arch_db:seisei_bank_statement_ocr.view_bank_statement_ocr_search
+msgid "Bank"
+msgstr "銀行口座"
+
+#. module: seisei_bank_statement_ocr
+#: model_terms:ir.ui.view,arch_db:seisei_bank_statement_ocr.account_journal_dashboard_kanban_view_ocr
+msgid "OCR Upload"
+msgstr "OCRアップロード"
+
+#. module: seisei_bank_statement_ocr
+#: code:addons/seisei_bank_statement_ocr/models/bank_statement_ocr.py:0
+msgid "Please attach files first."
+msgstr "ファイルが添付されていません。"
+
+#. module: seisei_bank_statement_ocr
+#: code:addons/seisei_bank_statement_ocr/models/bank_statement_ocr.py:0
+msgid "Can only import in Review state."
+msgstr "確認待ち状態でのみ取り込み可能です。"
+
+#. module: seisei_bank_statement_ocr
+#: code:addons/seisei_bank_statement_ocr/wizard/bank_statement_ocr_upload.py:0
+msgid "Please select files."
+msgstr "ファイルを選択してください。"
+
+#. module: seisei_bank_statement_ocr
+#: model_terms:ir.ui.view,arch_db:seisei_bank_statement_ocr.view_bank_statement_ocr_form
+msgid "Opening + Deposits - Withdrawals differs from Closing by"
+msgstr "期首残高 + 入金合計 - 出金合計 と 期末残高 に次の差額があります:"
+
+#. module: seisei_bank_statement_ocr
+#: model_terms:ir.ui.view,arch_db:seisei_bank_statement_ocr.view_bank_statement_ocr_form
+msgid "Scan Files"
+msgstr "スキャンファイル"
+
+#. module: seisei_bank_statement_ocr
+#: code:addons/seisei_bank_statement_ocr/models/bank_statement_ocr.py:0
+msgid "OCR completed: %(pages)s pages, %(txns)s transactions extracted."
+msgstr "OCR完了: %(pages)sページ、%(txns)s件の取引を抽出しました。"
+
+#. module: seisei_bank_statement_ocr
+#: code:addons/seisei_bank_statement_ocr/models/bank_statement_ocr.py:0
+msgid "Imported as bank statement <a href=\"#\" data-oe-model=\"account.bank.statement\" data-oe-id=\"%(sid)s\">%(sname)s</a> (%(count)s lines)."
+msgstr "銀行対账単 <a href=\"#\" data-oe-model=\"account.bank.statement\" data-oe-id=\"%(sid)s\">%(sname)s</a> として取り込みました（%(count)s件）。"

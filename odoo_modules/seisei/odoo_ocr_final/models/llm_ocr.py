@@ -285,7 +285,13 @@ def process_bank_statement(file_data: bytes, mimetype: str, tenant_id: str = 'de
 
 
 def _deduplicate_bank_transactions(transactions: list) -> list:
-    """Remove duplicate transactions based on (date, description, withdrawal, deposit)."""
+    """Remove duplicate transactions based on (date, description, withdrawal, deposit, balance).
+
+    Balance is included in the key because different transactions on the same
+    date with the same description and amount (e.g. multiple 振込手数料 495)
+    will have different running balances.  True cross-page duplicates share
+    the same balance.
+    """
     seen = set()
     unique = []
     for txn in transactions:
@@ -294,6 +300,7 @@ def _deduplicate_bank_transactions(transactions: list) -> list:
             txn.get('description', ''),
             txn.get('withdrawal', 0),
             txn.get('deposit', 0),
+            txn.get('balance', 0),
         )
         if key not in seen:
             seen.add(key)

@@ -1,6 +1,6 @@
 {
     'name': '銀行取引明細OCR / Bank Statement OCR',
-    'version': '18.0.1.1.0',
+    'version': '18.0.1.5.0',
     'category': 'Accounting',
     'summary': 'OCR import for scanned bank statements (PDF/Image)',
     'description': """
@@ -17,7 +17,7 @@
     """,
     'author': 'Seisei',
     'website': 'https://seisei.tokyo',
-    'depends': ['base', 'account', 'odoo_ocr_final', 'base_accounting_kit'],
+    'depends': ['base', 'account', 'mail', 'odoo_ocr_final', 'base_accounting_kit'],
     'data': [
         'security/ir.model.access.csv',
         'views/bank_statement_ocr_views.xml',
