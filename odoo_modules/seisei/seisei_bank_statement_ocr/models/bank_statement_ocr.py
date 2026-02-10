@@ -87,7 +87,7 @@ class SeiseiBankStatementOcr(models.Model):
     # ---- OCR processing ----
 
     def action_process_ocr(self):
-        """Trigger OCR processing on attached files."""
+        """Process all attached files as pages, merge into one result."""
         self.ensure_one()
         if not self.attachment_ids:
             raise UserError(
@@ -103,27 +103,59 @@ class SeiseiBankStatementOcr(models.Model):
             import base64 as b64
             from odoo.addons.odoo_ocr_final.models.llm_ocr import process_bank_statement
 
-            attachment = self.attachment_ids[0]
-            file_data = b64.b64decode(attachment.datas)
-            mimetype = attachment.mimetype or 'application/pdf'
+            all_transactions = []
+            first_header = {}
+            last_header = {}
+            total_pages = 0
+            errors = []
 
-            result = process_bank_statement(
-                file_data, mimetype, tenant_id=self.env.cr.dbname,
-            )
+            for attachment in self.attachment_ids:
+                file_data = b64.b64decode(attachment.datas)
+                mimetype = attachment.mimetype or 'application/pdf'
 
-            if result.get('success'):
-                extracted = result['extracted']
-                self.ocr_pages = result.get('pages', 1)
-                self.ocr_processed_at = fields.Datetime.now()
-                self._apply_ocr_result(extracted)
-                self.state = 'review'
-            else:
-                self.ocr_error_message = result.get('error', 'Unknown error')
+                result = process_bank_statement(
+                    file_data, mimetype, tenant_id=self.env.cr.dbname,
+                )
+
+                if result.get('success'):
+                    extracted = result['extracted']
+                    pages = result.get('pages', 1)
+                    total_pages += pages
+                    txns = extracted.get('transactions', [])
+                    all_transactions.extend(txns)
+                    if not first_header:
+                        first_header = extracted
+                    last_header = extracted
+                else:
+                    errors.append(f'{attachment.name}: {result.get("error", "unknown")}')
+
+            if not all_transactions and errors:
+                self.ocr_error_message = '; '.join(errors)
                 self.state = 'failed'
+                return True
+
+            # Merge: header from first file, balance_end from last file
+            merged = {
+                'bank_name': first_header.get('bank_name', ''),
+                'branch_name': first_header.get('branch_name', ''),
+                'account_number': first_header.get('account_number', ''),
+                'account_holder': first_header.get('account_holder', ''),
+                'statement_period': first_header.get('statement_period', ''),
+                'balance_start': first_header.get('balance_start', 0),
+                'balance_end': last_header.get('balance_end', 0),
+                'transactions': all_transactions,
+            }
+
+            self.ocr_pages = total_pages
+            self.ocr_processed_at = fields.Datetime.now()
+            if errors:
+                self.ocr_error_message = '; '.join(errors)
+            self._apply_ocr_result(merged)
+            self.state = 'review'
 
             OcrUsage = self.env['ocr.usage'].sudo()
             if hasattr(OcrUsage, 'increment_usage'):
-                OcrUsage.increment_usage(pages=self.ocr_pages or 1)
+                OcrUsage.increment_usage(pages=total_pages or 1)
 
         except ImportError:
             self.ocr_error_message = 'odoo_ocr_final module not found.'
@@ -149,6 +181,8 @@ class SeiseiBankStatementOcr(models.Model):
         transactions = self._deduplicate_transactions(
             extracted.get('transactions', [])
         )
+        # Sort by date for multi-page merge
+        transactions.sort(key=lambda t: t.get('date', ''))
 
         OcrLine = self.env['seisei.bank.statement.ocr.line']
         for i, txn in enumerate(transactions):
