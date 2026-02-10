@@ -324,6 +324,46 @@ sale 類：
 5. 税率缺失时根据单据类型默认（服务类10%，商品类8%）。
 6. 只输出JSON，不要markdown，不要解释。'''
 
+# BANK STATEMENT PROMPT - For bank passbook / statement OCR
+PROMPT_BANK_STATEMENT = '''あなたは日本の銀行取引明細書（通帳記入・取引明細表）の読み取り専門AIです。
+画像から以下の情報をJSON形式で正確に抽出してください。
+
+出力フォーマット（JSON only, no markdown）:
+{
+  "bank_name": "銀行名（例：三菱UFJ銀行）",
+  "branch_name": "支店名（例：新宿支店）",
+  "account_type": "普通 or 当座",
+  "account_number": "口座番号",
+  "account_holder": "口座名義人",
+  "statement_period": "対象期間（例：2024/01/01〜2024/01/31）",
+  "balance_start": 期首残高（数値、カンマなし）,
+  "balance_end": 期末残高（数値、カンマなし）,
+  "transactions": [
+    {
+      "date": "YYYY-MM-DD",
+      "description": "摘要/適要（振込人名、引落先など原文のまま）",
+      "withdrawal": 出金額（数値、0なら0）,
+      "deposit": 入金額（数値、0なら0）,
+      "balance": 取引後残高（数値、あれば）,
+      "reference": "取引番号/整理番号（あれば、なければ空文字）"
+    }
+  ]
+}
+
+注意事項：
+- 和暦（令和/平成）は西暦に変換してYYYY-MM-DD形式で返す
+- 金額のカンマ（,）は除去して数値で返す
+- 摘要は原文のまま（略称もそのまま）
+- 入金はdeposit、出金はwithdrawal（両方0はありえない）
+- 残高(balance)は可能な限り抽出、不明ならnull
+- referenceが読み取れない場合は空文字
+- balance_startは最初の取引前の残高、balance_endは最後の取引後の残高
+- 全ての取引を時系列順に出力
+- 記号の意味: D=入金(deposit), W=出金(withdrawal), C=小切手等の入金
+- *マーク付き残高も数値として抽出
+
+JSONのみを返す（説明文不要）'''
+
 
 # ============== LIFESPAN ==============
 
@@ -402,15 +442,19 @@ class OCRRequest(BaseModel):
     image_data: str  # Base64 encoded
     mime_type: str = 'image/jpeg'
     prompt_version: Optional[Literal['fast', 'full']] = None  # Legacy parameter
-    output_level: Optional[Literal['summary', 'accounting']] = None  # New parameter (preferred)
+    output_level: Optional[Literal['summary', 'accounting', 'bank_statement']] = None
     template_fields: List[str] = []
     tenant_id: str = 'default'
 
     def get_prompt_mode(self) -> str:
         """Get normalized prompt mode with priority: output_level > prompt_version > default"""
         if self.output_level:
-            # Map new parameter values to internal prompt modes
-            return 'full' if self.output_level == 'accounting' else 'fast'
+            mapping = {
+                'summary': 'fast',
+                'accounting': 'full',
+                'bank_statement': 'bank_statement',
+            }
+            return mapping[self.output_level]
         elif self.prompt_version:
             # Use legacy parameter directly
             return self.prompt_version
@@ -486,7 +530,7 @@ async def call_gemini_api(
     mime_type: str,
     prompt_version: str = 'fast'
 ) -> Dict[str, Any]:
-    """Call Gemini API with fast or full prompt"""
+    """Call Gemini API with fast, full, or bank_statement prompt"""
     if not GEMINI_API_KEY:
         logger.error("GEMINI_API_KEY not configured")
         return {'success': False, 'error_code': 'service_error'}
@@ -498,16 +542,24 @@ async def call_gemini_api(
         prompt = PROMPT_FAST
         config = {
             'temperature': 0,
-            'maxOutputTokens': 2048,  # Increased for line_items
-            'responseMimeType': 'application/json',  # JSON mode
+            'maxOutputTokens': 2048,
+            'responseMimeType': 'application/json',
         }
         timeout = 30
+    elif prompt_version == 'bank_statement':
+        prompt = PROMPT_BANK_STATEMENT
+        config = {
+            'temperature': 0,
+            'maxOutputTokens': 4096,
+            'responseMimeType': 'application/json',
+        }
+        timeout = 90
     else:
         prompt = PROMPT_FULL
         config = {
-            'temperature': 0,  # Deterministic for accounting accuracy
+            'temperature': 0,
             'maxOutputTokens': 4096,
-            'responseMimeType': 'application/json',  # JSON mode for reliable parsing
+            'responseMimeType': 'application/json',
         }
         timeout = 90
 
@@ -639,14 +691,15 @@ async def update_usage(
 async def health_check():
     return {
         "status": "healthy",
-        "version": "1.4.1",
-        "prompts": ["fast", "full"],
+        "version": "1.5.0",
+        "prompts": ["fast", "full", "bank_statement"],
         "parameters": {
             "legacy": ["prompt_version"],
             "current": ["output_level"],
             "mapping": {
                 "output_level=summary": "prompt_version=fast",
-                "output_level=accounting": "prompt_version=full"
+                "output_level=accounting": "prompt_version=full",
+                "output_level=bank_statement": "bank_statement"
             }
         },
         "timestamp": datetime.now().isoformat()
