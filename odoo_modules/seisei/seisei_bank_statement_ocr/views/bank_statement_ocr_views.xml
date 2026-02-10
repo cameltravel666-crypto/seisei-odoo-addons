@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <!-- ========== Form View ========== -->
+    <record id="view_bank_statement_ocr_form" model="ir.ui.view">
+        <field name="name">seisei.bank.statement.ocr.form</field>
+        <field name="model">seisei.bank.statement.ocr</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_process_ocr" type="object"
+                            string="OCR開始" class="btn-primary"
+                            invisible="state != 'draft'"/>
+                    <button name="action_confirm_import" type="object"
+                            string="対账単として取り込む" class="btn-primary"
+                            invisible="state != 'review'"/>
+                    <button name="action_process_ocr" type="object"
+                            string="OCR再実行" class="btn-secondary"
+                            invisible="state not in ('review', 'failed')"/>
+                    <button name="action_reset_to_draft" type="object"
+                            string="リセット" class="btn-secondary"
+                            invisible="state in ('draft', 'done')"/>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="draft,processing,review,done"/>
+                </header>
+                <sheet>
+                    <!-- Balance warning banner -->
+                    <div class="alert alert-warning" role="alert"
+                         invisible="balance_check_ok or state not in ('review',)">
+                        <strong>残高不整合:</strong>
+                        期首残高 + 入金合計 - 出金合計 と 期末残高 に
+                        <field name="balance_diff" class="oe_inline"/> 円の差があります。
+                        取引明細を確認してください。
+                    </div>
+                    <!-- Error message -->
+                    <div class="alert alert-danger" role="alert"
+                         invisible="state != 'failed'">
+                        <strong>OCRエラー:</strong>
+                        <field name="ocr_error_message"/>
+                    </div>
+                    <group>
+                        <group string="銀行情報">
+                            <field name="journal_id"
+                                   readonly="state != 'draft'"/>
+                            <field name="bank_name"/>
+                            <field name="branch_name"/>
+                            <field name="account_number"/>
+                            <field name="account_holder"/>
+                        </group>
+                        <group string="対账単情報">
+                            <field name="statement_period"/>
+                            <field name="statement_date"/>
+                            <field name="balance_start"/>
+                            <field name="balance_end"/>
+                            <field name="balance_check_ok" invisible="1"/>
+                            <field name="ocr_pages" readonly="1"/>
+                        </group>
+                    </group>
+                    <group string="スキャンファイル" invisible="state not in ('draft', 'failed')">
+                        <field name="attachment_ids" widget="many2many_binary"/>
+                    </group>
+                    <notebook>
+                        <page string="取引明細" name="lines">
+                            <field name="line_ids" nolabel="1">
+                                <list editable="bottom">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="date"/>
+                                    <field name="description"/>
+                                    <field name="withdrawal"/>
+                                    <field name="deposit"/>
+                                    <field name="amount" readonly="1"/>
+                                    <field name="balance"
+                                           decoration-warning="balance_warning"/>
+                                    <field name="balance_warning" column_invisible="1"/>
+                                    <field name="partner_id"/>
+                                    <field name="partner_name" optional="hide"/>
+                                    <field name="reference" optional="hide"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="OCR生データ" name="raw"
+                              invisible="not ocr_raw_data">
+                            <field name="ocr_raw_data" readonly="1"/>
+                        </page>
+                    </notebook>
+                    <!-- Link to imported statement -->
+                    <group invisible="state != 'done'">
+                        <field name="statement_id"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ========== Tree View ========== -->
+    <record id="view_bank_statement_ocr_tree" model="ir.ui.view">
+        <field name="name">seisei.bank.statement.ocr.tree</field>
+        <field name="model">seisei.bank.statement.ocr</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+                <field name="journal_id"/>
+                <field name="bank_name"/>
+                <field name="statement_period"/>
+                <field name="balance_start"/>
+                <field name="balance_end"/>
+                <field name="balance_check_ok" widget="boolean"/>
+                <field name="ocr_pages"/>
+                <field name="state" widget="badge"
+                       decoration-info="state == 'draft'"
+                       decoration-warning="state == 'processing'"
+                       decoration-success="state in ('review', 'done')"
+                       decoration-danger="state == 'failed'"/>
+                <field name="create_date"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- ========== Search View ========== -->
+    <record id="view_bank_statement_ocr_search" model="ir.ui.view">
+        <field name="name">seisei.bank.statement.ocr.search</field>
+        <field name="model">seisei.bank.statement.ocr</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="bank_name"/>
+                <field name="journal_id"/>
+                <filter name="filter_review" string="確認待ち"
+                        domain="[('state', '=', 'review')]"/>
+                <filter name="filter_done" string="インポート済み"
+                        domain="[('state', '=', 'done')]"/>
+                <filter name="filter_failed" string="エラー"
+                        domain="[('state', '=', 'failed')]"/>
+                <group expand="0" string="グループ">
+                    <filter name="group_state" string="状態" context="{'group_by': 'state'}"/>
+                    <filter name="group_journal" string="銀行口座" context="{'group_by': 'journal_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- ========== Action ========== -->
+    <record id="action_bank_statement_ocr" model="ir.actions.act_window">
+        <field name="name">OCR対账単</field>
+        <field name="res_model">seisei.bank.statement.ocr</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_bank_statement_ocr_search"/>
+        <field name="context">{'search_default_filter_review': 1}</field>
+    </record>
+
+    <!-- ========== Menu (under Accounting) ========== -->
+    <menuitem id="menu_bank_statement_ocr"
+              name="OCR対账単"
+              parent="account.menu_finance_bank_and_cash"
+              action="action_bank_statement_ocr"
+              sequence="20"/>
+</odoo>

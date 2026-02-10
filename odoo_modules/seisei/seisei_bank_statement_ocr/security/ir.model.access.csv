@@ -1,0 +1,7 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_bank_statement_ocr_user,seisei.bank.statement.ocr.user,model_seisei_bank_statement_ocr,account.group_account_invoice,1,1,1,0
+access_bank_statement_ocr_manager,seisei.bank.statement.ocr.manager,model_seisei_bank_statement_ocr,account.group_account_manager,1,1,1,1
+access_bank_statement_ocr_line_user,seisei.bank.statement.ocr.line.user,model_seisei_bank_statement_ocr_line,account.group_account_invoice,1,1,1,0
+access_bank_statement_ocr_line_manager,seisei.bank.statement.ocr.line.manager,model_seisei_bank_statement_ocr_line,account.group_account_manager,1,1,1,1
+access_bank_statement_ocr_upload_user,seisei.bank.statement.ocr.upload.user,model_seisei_bank_statement_ocr_upload,account.group_account_invoice,1,1,1,0
+access_bank_statement_ocr_upload_line_user,seisei.bank.statement.ocr.upload.line.user,model_seisei_bank_statement_ocr_upload_line,account.group_account_invoice,1,1,1,0
