@@ -18,6 +18,7 @@ export class AccountReportController {
         this.display = {};
         this.loadMoreLimit = 80;
         this.multiPeriod = false;
+        this.comparisonFilter = "no_comparison";
 
         this.isLoading = false;
         this.cachedFilterOptions = {};
@@ -62,6 +63,7 @@ export class AccountReportController {
             this.filters = result.filters || {};
             this.display = result.display || {};
             this.multiPeriod = result.multi_period || false;
+            this.comparisonFilter = result.options?.comparison?.filter || "no_comparison";
             this.cachedFilterOptions = { ...this.options };
         } finally {
             this.isLoading = false;

@@ -230,6 +230,8 @@ class AccountReportEngine(models.Model):
             options['column_groups'] = OrderedDict({
                 'default': {'date': options['date']},
             })
+        elif comparison_filter == 'monthly':
+            options['column_groups'] = self._get_monthly_periods(options)
         elif comparison_filter == 'quarterly':
             options['column_groups'] = self._get_quarterly_periods(options)
         elif comparison_filter == 'semi_annual':
@@ -242,6 +244,28 @@ class AccountReportEngine(models.Model):
             options['column_groups'] = OrderedDict({
                 'default': {'date': options['date']},
             })
+
+    def _get_monthly_periods(self, options):
+        """Generate Jan-Dec periods for the year of the current date range."""
+        date_to = fields.Date.from_string(options['date']['date_to'])
+        year = date_to.year
+        groups = OrderedDict()
+        for m in range(1, 13):
+            d_from = datetime.date(year, m, 1)
+            if m == 12:
+                d_to = datetime.date(year, 12, 31)
+            else:
+                d_to = datetime.date(year, m + 1, 1) - datetime.timedelta(days=1)
+            key = f'M{m:02d}_{year}'
+            groups[key] = {
+                'date': {
+                    'date_from': fields.Date.to_string(d_from),
+                    'date_to': fields.Date.to_string(d_to),
+                    'string': f'{d_from:%b} {year}',
+                    'mode': 'range',
+                },
+            }
+        return groups
 
     def _get_quarterly_periods(self, options):
         """Generate Q1-Q4 periods for the year of the current date range."""
