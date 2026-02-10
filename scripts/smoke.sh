@@ -58,7 +58,19 @@ fi
 log_info "Test 3: Checking domain accessibility..."
 DOMAIN=$(get_stack_domain "$STACK")
 if [ -n "$DOMAIN" ]; then
-    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$DOMAIN" || echo "000")
+    MAX_RETRIES=3
+    RETRY_INTERVAL=5
+    HTTP_CODE="000"
+    for attempt in $(seq 1 $MAX_RETRIES); do
+        HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$DOMAIN" || echo "000")
+        log_info "  Domain check $attempt/$MAX_RETRIES: HTTP $HTTP_CODE"
+        if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "301" ] || [ "$HTTP_CODE" = "302" ] || [ "$HTTP_CODE" = "303" ]; then
+            break
+        fi
+        if [ $attempt -lt $MAX_RETRIES ]; then
+            sleep $RETRY_INTERVAL
+        fi
+    done
     if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "301" ] || [ "$HTTP_CODE" = "302" ] || [ "$HTTP_CODE" = "303" ]; then
         log_success "Domain accessible: $DOMAIN (HTTP $HTTP_CODE)"
         ((TESTS_PASSED+=1))

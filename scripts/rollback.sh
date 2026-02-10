@@ -187,7 +187,10 @@ else
     log_info "Searching deployment history for $STEPS_BACK steps back..."
 
     if [ ! -f "$HISTORY_FILE" ]; then
-        fail "Deployment history not found: $HISTORY_FILE"
+        log_error "No deployment history found: $HISTORY_FILE"
+        log_error "This appears to be the first deployment — no previous release to roll back to."
+        log_error "Manual intervention required: restore from backup or redeploy known-good version."
+        exit 1
     fi
 
     # Extract all successful deployments for this stack/env, newest first
@@ -330,8 +333,9 @@ while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
     log_success "Containers recreated"
 
     # Wait for stabilization
-    log_info "Waiting 15 seconds for services to stabilize..."
-    sleep 15
+    if ! wait_for_healthy "$SYMLINK_TARGET" 180 "web"; then
+        log_warn "Container not healthy after rollback, proceeding to smoke test..."
+    fi
 
     # Smoke tests
     if [ -f "$SCRIPT_DIR/smoke.sh" ]; then
