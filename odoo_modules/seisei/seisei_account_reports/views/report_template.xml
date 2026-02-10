@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="report_financial_pdf">
+        <div class="container-fluid">
+            <div class="row mb-3">
+                <div class="col-12">
+                    <h2 t-esc="report_name"/>
+                    <p class="text-muted">
+                        <span t-esc="company_name"/> - <span t-esc="date_string"/>
+                    </p>
+                </div>
+            </div>
+
+            <table class="table table-sm table-bordered">
+                <thead>
+                    <t t-if="multi_period and period_headers">
+                        <tr>
+                            <th t-att-rowspan="2" style="width: 30%; vertical-align: middle;">Name</th>
+                            <t t-foreach="period_headers" t-as="period" t-key="period_index">
+                                <th class="text-center"
+                                    style="background-color: #f8f9fa; font-size: 0.8rem;"
+                                    t-att-colspan="period.get('colspan', 1)"
+                                    t-esc="period.get('name', '')"/>
+                            </t>
+                        </tr>
+                        <tr>
+                            <t t-foreach="column_headers" t-as="col" t-key="col_index">
+                                <th class="text-end" t-esc="col.get('name', '')"/>
+                            </t>
+                        </tr>
+                    </t>
+                    <t t-else="">
+                        <tr>
+                            <th style="width: 40%;">Name</th>
+                            <t t-foreach="column_headers" t-as="col" t-key="col_index">
+                                <th class="text-end" t-esc="col.get('name', '')"/>
+                            </t>
+                        </tr>
+                    </t>
+                </thead>
+                <tbody>
+                    <t t-foreach="lines" t-as="line" t-key="line_index">
+                        <tr t-att-style="'font-weight: bold;' if line.get('level', 0) == 0 else ('font-weight: 600;' if line.get('level', 0) == 1 else '')">
+                            <td>
+                                <span t-att-style="'padding-left: %dpx;' % (line.get('level', 0) * 20)"
+                                      t-esc="line.get('name', '')"/>
+                            </td>
+                            <t t-foreach="line.get('columns', [])" t-as="col" t-key="col_index">
+                                <td class="text-end" t-esc="col.get('name', '')"/>
+                            </t>
+                        </tr>
+                    </t>
+                </tbody>
+            </table>
+        </div>
+    </template>
+</odoo>

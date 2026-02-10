@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<templates>
+    <t t-name="seisei_account_reports.AccountReportLineCell">
+        <span t-if="isAuditable"
+              class="o_account_report_cell_value"
+              t-on-click="onClickCell"
+              t-esc="props.column.name"/>
+        <span t-else=""
+              t-esc="props.column.name"/>
+    </t>
+</templates>

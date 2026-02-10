@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<templates>
+    <t t-name="seisei_account_reports.AccountReportHeader">
+        <!-- Multi-period: two header rows -->
+        <t t-if="isMultiPeriod">
+            <tr class="o_account_report_period_header_row">
+                <th t-att-rowspan="2" class="o_account_report_name_header" style="vertical-align: middle;">Name</th>
+                <t t-foreach="periodHeaders" t-as="period" t-key="period_index">
+                    <th class="o_account_report_period_header"
+                        t-att-colspan="period.colspan || 1"
+                        t-esc="period.name"/>
+                </t>
+            </tr>
+            <tr>
+                <t t-foreach="columns" t-as="column" t-key="column_index">
+                    <th class="o_account_report_column_header" t-esc="column.name"/>
+                </t>
+            </tr>
+        </t>
+        <!-- Single period: one header row -->
+        <t t-else="">
+            <tr>
+                <th class="o_account_report_name_header">Name</th>
+                <t t-foreach="columns" t-as="column" t-key="column_index">
+                    <th class="o_account_report_column_header" t-esc="column.name"/>
+                </t>
+            </tr>
+        </t>
+    </t>
+</templates>
