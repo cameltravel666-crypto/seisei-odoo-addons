@@ -7,7 +7,7 @@
             <field name="name">General Ledger</field>
             <field name="filter_date_range" eval="True"/>
             <field name="filter_show_draft" eval="True"/>
-            <field name="filter_hide_0_lines" eval="True"/>
+            <field name="filter_hide_0_lines">by_default</field>
             <field name="filter_unfold_all" eval="False"/>
             <field name="filter_journals" eval="True"/>
             <field name="default_opening_date_filter">this_year</field>

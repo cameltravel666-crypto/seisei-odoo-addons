@@ -241,8 +241,10 @@ class AccountReportEngine(models.Model):
 
     def _init_options_hide_0_lines(self, options, previous_options):
         """Initialize hide zero lines option."""
+        # filter_hide_0_lines is a Selection field: 'by_default', 'optional', 'never'
+        hide_by_default = self.filter_hide_0_lines == 'by_default'
         options['hide_0_lines'] = previous_options.get(
-            'hide_0_lines', self.filter_hide_0_lines
+            'hide_0_lines', hide_by_default
         )
 
     def _init_options_unfold(self, options, previous_options):
@@ -391,7 +393,7 @@ class AccountReportEngine(models.Model):
                 'show_date': True,
                 'show_draft': self.filter_show_draft,
                 'show_journals': self.filter_journals,
-                'show_hide_0': self.filter_hide_0_lines,
+                'show_hide_0': self.filter_hide_0_lines != 'never',
             },
             'display': self._get_display_config(),
         }
