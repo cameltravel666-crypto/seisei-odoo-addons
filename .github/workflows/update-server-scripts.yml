@@ -48,7 +48,9 @@ jobs:
           chmod +x scripts/*.sh
 
           # Sync repo directly (deploy user has group write via ubuntu group)
-          rsync -rlz --no-perms --no-owner --no-group --no-times \
+          # --ignore-errors: continue past permission-denied files (e.g. root-owned odoo_ocr_final)
+          # Exit code 23 (partial transfer) is acceptable — verify step confirms critical files landed
+          rsync -rlz --no-perms --no-owner --no-group --no-times --ignore-errors \
             --exclude='.git/' \
             --exclude='.github/' \
             --exclude='node_modules/' \
@@ -60,7 +62,15 @@ jobs:
             --exclude='tsconfig.json' \
             --exclude='next.config.*' \
             -e "$SSH_CMD" \
-            ./ $REMOTE:${{ env.REPO_PATH }}/
+            ./ $REMOTE:${{ env.REPO_PATH }}/ || {
+              RC=$?
+              if [ $RC -eq 23 ]; then
+                echo "::warning::rsync partial transfer (exit 23) — some files skipped due to permissions"
+              else
+                echo "::error::rsync failed with exit code $RC"
+                exit $RC
+              fi
+            }
 
           echo "::endgroup::"
 
