@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<templates>
+    <t t-name="seisei_account_reports.AccountReportLine">
+        <tr t-att-class="cssClass">
+            <!-- Name cell -->
+            <td class="o_account_report_name_cell">
+                <AccountReportLineName line="props.line"/>
+            </td>
+
+            <!-- Value cells -->
+            <t t-foreach="props.line.columns || []" t-as="column" t-key="column_index">
+                <td t-att-class="'o_account_report_column_cell' + (column.is_zero ? ' o_account_report_cell_zero' : '')">
+                    <AccountReportLineCell line="props.line" column="column" columnIndex="column_index"/>
+                </td>
+            </t>
+        </tr>
+    </t>
+</templates>

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- Top-level Reports menu under Accounting -->
+        <menuitem
+            id="menu_seisei_reports"
+            name="Reports"
+            parent="account.menu_finance"
+            sequence="50"
+            groups="account.group_account_readonly"
+        />
+
+        <!-- Financial Statements submenu -->
+        <menuitem
+            id="menu_seisei_financial_statements"
+            name="Financial Statements"
+            parent="menu_seisei_reports"
+            sequence="10"
+        />
+
+        <menuitem
+            id="menu_action_account_report_pl"
+            name="Profit and Loss"
+            action="action_account_report_pl"
+            parent="menu_seisei_financial_statements"
+            sequence="10"
+            groups="account.group_account_readonly"
+        />
+
+        <menuitem
+            id="menu_action_account_report_bs"
+            name="Balance Sheet"
+            action="action_account_report_bs"
+            parent="menu_seisei_financial_statements"
+            sequence="20"
+            groups="account.group_account_readonly"
+        />
+
+        <!-- Ledgers submenu -->
+        <menuitem
+            id="menu_seisei_ledgers"
+            name="Ledgers"
+            parent="menu_seisei_reports"
+            sequence="20"
+        />
+
+        <menuitem
+            id="menu_action_account_report_general_ledger"
+            name="General Ledger"
+            action="action_account_report_general_ledger"
+            parent="menu_seisei_ledgers"
+            sequence="10"
+            groups="account.group_account_readonly"
+        />
+
+    </data>
+</odoo>

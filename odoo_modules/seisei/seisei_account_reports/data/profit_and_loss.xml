@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+
+        <!-- ===== Profit and Loss Report ===== -->
+        <record id="profit_and_loss" model="account.report">
+            <field name="name">Profit and Loss</field>
+            <field name="filter_date_range" eval="True"/>
+            <field name="filter_show_draft" eval="True"/>
+            <field name="filter_hide_0_lines" eval="True"/>
+            <field name="filter_unfold_all" eval="False"/>
+            <field name="default_opening_date_filter">this_year</field>
+            <field name="sequence">1</field>
+        </record>
+
+        <record id="profit_and_loss_column_balance" model="account.report.column">
+            <field name="name">Balance</field>
+            <field name="expression_label">balance</field>
+            <field name="figure_type">monetary</field>
+            <field name="report_id" ref="profit_and_loss"/>
+            <field name="sequence">10</field>
+        </record>
+
+        <!-- ===== Income ===== -->
+        <record id="pl_income" model="account.report.line">
+            <field name="name">Income</field>
+            <field name="code">INC</field>
+            <field name="report_id" ref="profit_and_loss"/>
+            <field name="sequence">10</field>
+            <field name="hierarchy_level">0</field>
+            <field name="foldable" eval="True"/>
+        </record>
+
+        <!-- Revenue -->
+        <record id="pl_revenue" model="account.report.line">
+            <field name="name">Revenue</field>
+            <field name="code">REV</field>
+            <field name="report_id" ref="profit_and_loss"/>
+            <field name="parent_id" ref="pl_income"/>
+            <field name="sequence">10</field>
+            <field name="hierarchy_level">1</field>
+            <field name="groupby">account_id</field>
+            <field name="foldable" eval="True"/>
+            <field name="hide_if_zero" eval="True"/>
+        </record>
+
+        <record id="pl_revenue_balance" model="account.report.expression">
+            <field name="label">balance</field>
+            <field name="engine">domain</field>
+            <field name="formula">[('account_id.account_type', '=', 'income')]</field>
+            <field name="subformula">-sum</field>
+            <field name="date_scope">strict_range</field>
+            <field name="report_line_id" ref="pl_revenue"/>
+        </record>
+
+        <!-- Other Income -->
+        <record id="pl_other_income" model="account.report.line">
+            <field name="name">Other Income</field>
+            <field name="code">OIN</field>
+            <field name="report_id" ref="profit_and_loss"/>
+            <field name="parent_id" ref="pl_income"/>
+            <field name="sequence">20</field>
+            <field name="hierarchy_level">1</field>
+            <field name="groupby">account_id</field>
+            <field name="foldable" eval="True"/>
+            <field name="hide_if_zero" eval="True"/>
+        </record>
+
+        <record id="pl_other_income_balance" model="account.report.expression">
+            <field name="label">balance</field>
+            <field name="engine">domain</field>
+            <field name="formula">[('account_id.account_type', '=', 'income_other')]</field>
+            <field name="subformula">-sum</field>
+            <field name="date_scope">strict_range</field>
+            <field name="report_line_id" ref="pl_other_income"/>
+        </record>
+
+        <!-- Total Income (aggregation) -->
+        <record id="pl_income_balance" model="account.report.expression">
+            <field name="label">balance</field>
+            <field name="engine">aggregation</field>
+            <field name="formula">REV.balance + OIN.balance</field>
+            <field name="report_line_id" ref="pl_income"/>
+        </record>
+
+        <!-- ===== Expenses ===== -->
+        <record id="pl_expenses" model="account.report.line">
+            <field name="name">Expenses</field>
+            <field name="code">EXP</field>
+            <field name="report_id" ref="profit_and_loss"/>
+            <field name="sequence">20</field>
+            <field name="hierarchy_level">0</field>
+            <field name="foldable" eval="True"/>
+        </record>
+
+        <!-- Cost of Sales -->
+        <record id="pl_cost_of_sales" model="account.report.line">
+            <field name="name">Cost of Revenue</field>
+            <field name="code">COS</field>
+            <field name="report_id" ref="profit_and_loss"/>
+            <field name="parent_id" ref="pl_expenses"/>
+            <field name="sequence">10</field>
+            <field name="hierarchy_level">1</field>
+            <field name="groupby">account_id</field>
+            <field name="foldable" eval="True"/>
+            <field name="hide_if_zero" eval="True"/>
+        </record>
+
+        <record id="pl_cost_of_sales_balance" model="account.report.expression">
+            <field name="label">balance</field>
+            <field name="engine">domain</field>
+            <field name="formula">[('account_id.account_type', '=', 'expense_direct_cost')]</field>
+            <field name="subformula">sum</field>
+            <field name="date_scope">strict_range</field>
+            <field name="report_line_id" ref="pl_cost_of_sales"/>
+        </record>
+
+        <!-- Operating Expenses -->
+        <record id="pl_operating_expenses" model="account.report.line">
+            <field name="name">Operating Expenses</field>
+            <field name="code">OPEX</field>
+            <field name="report_id" ref="profit_and_loss"/>
+            <field name="parent_id" ref="pl_expenses"/>
+            <field name="sequence">20</field>
+            <field name="hierarchy_level">1</field>
+            <field name="groupby">account_id</field>
+            <field name="foldable" eval="True"/>
+            <field name="hide_if_zero" eval="True"/>
+        </record>
+
+        <record id="pl_operating_expenses_balance" model="account.report.expression">
+            <field name="label">balance</field>
+            <field name="engine">domain</field>
+            <field name="formula">[('account_id.account_type', '=', 'expense')]</field>
+            <field name="subformula">sum</field>
+            <field name="date_scope">strict_range</field>
+            <field name="report_line_id" ref="pl_operating_expenses"/>
+        </record>
+
+        <!-- Depreciation -->
+        <record id="pl_depreciation" model="account.report.line">
+            <field name="name">Depreciation</field>
+            <field name="code">DEP</field>
+            <field name="report_id" ref="profit_and_loss"/>
+            <field name="parent_id" ref="pl_expenses"/>
+            <field name="sequence">30</field>
+            <field name="hierarchy_level">1</field>
+            <field name="groupby">account_id</field>
+            <field name="foldable" eval="True"/>
+            <field name="hide_if_zero" eval="True"/>
+        </record>
+
+        <record id="pl_depreciation_balance" model="account.report.expression">
+            <field name="label">balance</field>
+            <field name="engine">domain</field>
+            <field name="formula">[('account_id.account_type', '=', 'expense_depreciation')]</field>
+            <field name="subformula">sum</field>
+            <field name="date_scope">strict_range</field>
+            <field name="report_line_id" ref="pl_depreciation"/>
+        </record>
+
+        <!-- Total Expenses (aggregation) -->
+        <record id="pl_expenses_balance" model="account.report.expression">
+            <field name="label">balance</field>
+            <field name="engine">aggregation</field>
+            <field name="formula">COS.balance + OPEX.balance + DEP.balance</field>
+            <field name="report_line_id" ref="pl_expenses"/>
+        </record>
+
+        <!-- ===== Net Profit ===== -->
+        <record id="pl_net_profit" model="account.report.line">
+            <field name="name">Net Profit</field>
+            <field name="code">NP</field>
+            <field name="report_id" ref="profit_and_loss"/>
+            <field name="sequence">30</field>
+            <field name="hierarchy_level">0</field>
+        </record>
+
+        <record id="pl_net_profit_balance" model="account.report.expression">
+            <field name="label">balance</field>
+            <field name="engine">aggregation</field>
+            <field name="formula">INC.balance - EXP.balance</field>
+            <field name="report_line_id" ref="pl_net_profit"/>
+        </record>
+
+    </data>
+</odoo>
