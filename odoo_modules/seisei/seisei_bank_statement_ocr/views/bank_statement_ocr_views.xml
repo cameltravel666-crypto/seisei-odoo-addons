@@ -150,7 +150,7 @@
     <!-- ========== Menu (under Accounting) ========== -->
     <menuitem id="menu_bank_statement_ocr"
               name="OCR対账単"
-              parent="account.menu_finance_bank_and_cash"
+              parent="account.menu_finance_entries"
               action="action_bank_statement_ocr"
               sequence="20"/>
 </odoo>
