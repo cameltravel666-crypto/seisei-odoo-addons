@@ -103,6 +103,57 @@ INVOICE_OCR_PROMPT = '''あなたは請求書・納品書・レシートのOCR�
 
 JSONのみを返す（説明文不要）'''
 
+# Template fields for bank statement OCR extraction
+BANK_STATEMENT_TEMPLATE_FIELDS = [
+    'bank_name/銀行名',
+    'branch_name/支店名',
+    'account_type/口座種類',
+    'account_number/口座番号',
+    'account_holder/口座名義',
+    'statement_period/対象期間',
+    'balance_start/期首残高',
+    'balance_end/期末残高',
+    'transactions/取引明細',
+]
+
+# OCR Prompt for bank statements (通帳/取引明細書)
+BANK_STATEMENT_OCR_PROMPT = '''あなたは日本の銀行取引明細書（通帳記入・取引明細表）の読み取り専門AIです。
+画像から以下の情報をJSON形式で正確に抽出してください。
+
+出力フォーマット（JSON only, no markdown）:
+{
+  "bank_name": "銀行名（例：三菱UFJ銀行）",
+  "branch_name": "支店名（例：新宿支店）",
+  "account_type": "普通 or 当座",
+  "account_number": "口座番号",
+  "account_holder": "口座名義人",
+  "statement_period": "対象期間（例：2024/01/01〜2024/01/31）",
+  "balance_start": 期首残高（数値、カンマなし）,
+  "balance_end": 期末残高（数値、カンマなし）,
+  "transactions": [
+    {
+      "date": "YYYY-MM-DD",
+      "description": "摘要/適要（振込人名、引落先など原文のまま）",
+      "withdrawal": 出金額（数値、0なら0）,
+      "deposit": 入金額（数値、0なら0）,
+      "balance": 取引後残高（数値、あれば）,
+      "reference": "取引番号/整理番号（あれば、なければ空文字）"
+    }
+  ]
+}
+
+注意事項：
+- 和暦（令和/平成）は西暦に変換してYYYY-MM-DD形式で返す
+- 金額のカンマ（,）は除去して数値で返す
+- 摘要は原文のまま（略称もそのまま）
+- 入金はdeposit、出金はwithdrawal（両方0はありえない）
+- 残高(balance)は可能な限り抽出、不明ならnull
+- referenceが読み取れない場合は空文字
+- balance_startは最初の取引前の残高、balance_endは最後の取引後の残高
+- 全ての取引を時系列順に出力
+
+JSONのみを返す（説明文不要）'''
+
 # OCR Prompt for expense receipts
 EXPENSE_OCR_PROMPT = '''あなたはレシート・領収書のOCR専門家です。
 この画像から以下の情報を抽出してJSON形式で返してください：
@@ -160,6 +211,143 @@ def process_document(file_data: bytes, mimetype: str, tenant_id: str = 'default'
 def process_expense_document(file_data: bytes, mimetype: str, tenant_id: str = 'default') -> Dict[str, Any]:
     """Process expense/receipt document (image or PDF)"""
     return _process_with_template(file_data, mimetype, tenant_id, 'expense')
+
+
+def process_bank_statement(file_data: bytes, mimetype: str, tenant_id: str = 'default') -> Dict[str, Any]:
+    """Process bank statement document (image or multi-page PDF).
+
+    For multi-page PDFs: each page is OCR'd separately, results are merged,
+    and duplicate transactions are removed.
+
+    Returns:
+        Dict with keys: success, extracted (bank_name, transactions[], etc.), pages
+    """
+    config = _get_ocr_config()
+    if not config['url']:
+        return {'success': False, 'error': 'OCRサービスが利用できません。'}
+
+    # Convert PDF to images if needed
+    is_pdf = mimetype == 'application/pdf' or (
+        isinstance(file_data, bytes) and file_data[:5] == b'%PDF-'
+    )
+
+    if is_pdf:
+        try:
+            page_images = pdf_to_images(file_data)
+        except Exception as e:
+            _logger.exception(f'[OCR-BankStmt] PDF conversion failed: {e}')
+            return {'success': False, 'error': f'PDF変換エラー: {e}'}
+    else:
+        page_images = [file_data]
+
+    all_transactions = []
+    first_page_header = {}
+    last_page_header = {}
+    errors = []
+
+    for i, img_data in enumerate(page_images):
+        _logger.info(f'[OCR-BankStmt] Processing page {i + 1}/{len(page_images)}')
+        result = _call_ocr_service_raw(
+            img_data, 'image/jpeg' if is_pdf else mimetype,
+            tenant_id, BANK_STATEMENT_TEMPLATE_FIELDS, 'bank_statement',
+        )
+        if result.get('success'):
+            extracted = result.get('extracted', {})
+            txns = extracted.get('transactions', [])
+            all_transactions.extend(txns)
+            if i == 0:
+                first_page_header = extracted
+            last_page_header = extracted
+        else:
+            errors.append(f'Page {i + 1}: {result.get("error", "unknown")}')
+
+    if not all_transactions and errors:
+        return {'success': False, 'error': '; '.join(errors)}
+
+    # Merge: header from first page, balance_end from last page
+    merged = {
+        'bank_name': first_page_header.get('bank_name', ''),
+        'branch_name': first_page_header.get('branch_name', ''),
+        'account_type': first_page_header.get('account_type', ''),
+        'account_number': first_page_header.get('account_number', ''),
+        'account_holder': first_page_header.get('account_holder', ''),
+        'statement_period': first_page_header.get('statement_period', ''),
+        'balance_start': first_page_header.get('balance_start', 0),
+        'balance_end': last_page_header.get('balance_end', 0),
+        'transactions': _deduplicate_bank_transactions(all_transactions),
+    }
+
+    return {
+        'success': True,
+        'extracted': merged,
+        'pages': len(page_images),
+    }
+
+
+def _deduplicate_bank_transactions(transactions: list) -> list:
+    """Remove duplicate transactions based on (date, description, withdrawal, deposit)."""
+    seen = set()
+    unique = []
+    for txn in transactions:
+        key = (
+            txn.get('date', ''),
+            txn.get('description', ''),
+            txn.get('withdrawal', 0),
+            txn.get('deposit', 0),
+        )
+        if key not in seen:
+            seen.add(key)
+            unique.append(txn)
+    return unique
+
+
+def _call_ocr_service_raw(file_data: bytes, mimetype: str, tenant_id: str,
+                          template_fields: List[str], output_level: str = 'accounting') -> Dict[str, Any]:
+    """Call OCR service and return raw extracted data without invoice-specific normalization."""
+    try:
+        config = _get_ocr_config()
+        ocr_url = config['url']
+        ocr_key = config['key']
+
+        b64_data = base64.standard_b64encode(file_data).decode('utf-8')
+
+        headers = {'Content-Type': 'application/json'}
+        if ocr_key:
+            headers['X-Service-Key'] = ocr_key
+
+        payload = {
+            'image_data': b64_data,
+            'mime_type': mimetype,
+            'template_fields': template_fields,
+            'tenant_id': tenant_id,
+            'output_level': output_level,
+        }
+
+        response = requests.post(
+            f'{ocr_url}/ocr/process',
+            json=payload,
+            headers=headers,
+            timeout=120,
+        )
+
+        if response.status_code != 200:
+            return {'success': False, 'error': f'OCR service error: {response.status_code}'}
+
+        result = response.json()
+        if result.get('success'):
+            return {
+                'success': True,
+                'extracted': result.get('extracted', {}),
+                'raw_response': result.get('raw_response', ''),
+            }
+        else:
+            return {'success': False, 'error': result.get('error_code', 'Unknown error')}
+
+    except requests.exceptions.Timeout:
+        return {'success': False, 'error': 'OCR service timeout'}
+    except Exception as e:
+        _logger.exception(f'[OCR-BankStmt] Service call error: {e}')
+        return {'success': False, 'error': str(e)}
 
 
 def _process_with_template(file_data: bytes, mimetype: str, tenant_id: str, doc_type: str, output_level: str = 'accounting') -> Dict[str, Any]:

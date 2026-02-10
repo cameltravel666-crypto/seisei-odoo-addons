@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <!-- Add "上传" (OCR Upload) button to bank journal card on accounting dashboard -->
+    <record id="account_journal_dashboard_kanban_view_ocr" model="ir.ui.view">
+        <field name="name">account.journal.kanban.ocr.bank.statement</field>
+        <field name="model">account.journal</field>
+        <field name="inherit_id" ref="base_accounting_kit.account_journal_dashboard_kanban_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//a[@name='action_import_wizard']" position="before">
+                <a name="action_ocr_bank_statement_upload" type="object"
+                   class="oe_inline" style="margin-right: 8px;"
+                   groups="account.group_account_invoice">
+                    上传
+                </a>
+            </xpath>
+        </field>
+    </record>
+</odoo>

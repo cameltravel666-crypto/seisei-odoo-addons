@@ -1,0 +1,47 @@
+{
+  "success": true,
+  "extracted": {
+    "bank_name": "三菱UFJ銀行",
+    "branch_name": "新宿支店",
+    "account_type": "普通",
+    "account_number": "1234567",
+    "account_holder": "カブシキガイシャ セイセイ",
+    "statement_period": "2024/01/01〜2024/01/31",
+    "balance_start": 1000000,
+    "balance_end": 1250000,
+    "transactions": [
+      {
+        "date": "2024-01-05",
+        "description": "振込 ヤマダタロウ",
+        "withdrawal": 0,
+        "deposit": 50000,
+        "balance": 1050000,
+        "reference": "001"
+      },
+      {
+        "date": "2024-01-10",
+        "description": "カード引落し VISA",
+        "withdrawal": 30000,
+        "deposit": 0,
+        "balance": 1020000,
+        "reference": "002"
+      },
+      {
+        "date": "2024-01-15",
+        "description": "振込 カブシキガイシャABC",
+        "withdrawal": 0,
+        "deposit": 300000,
+        "balance": 1320000,
+        "reference": "003"
+      },
+      {
+        "date": "2024-01-20",
+        "description": "ATM引出し",
+        "withdrawal": 70000,
+        "deposit": 0,
+        "balance": 1250000,
+        "reference": "004"
+      }
+    ]
+  }
+}
