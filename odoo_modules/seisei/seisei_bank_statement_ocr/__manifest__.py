@@ -1,6 +1,6 @@
 {
     'name': '銀行取引明細OCR / Bank Statement OCR',
-    'version': '18.0.1.3.0',
+    'version': '18.0.1.4.0',
     'category': 'Accounting',
     'summary': 'OCR import for scanned bank statements (PDF/Image)',
     'description': """

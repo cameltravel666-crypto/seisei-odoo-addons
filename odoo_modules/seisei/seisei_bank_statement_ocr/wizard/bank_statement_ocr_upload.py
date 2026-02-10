@@ -1,6 +1,6 @@
 import logging
 
-from odoo import models, fields
+from odoo import models, fields, _
 from odoo.exceptions import UserError
 
 _logger = logging.getLogger(__name__)
@@ -12,24 +12,20 @@ class BankStatementOcrUpload(models.TransientModel):
 
     journal_id = fields.Many2one(
         'account.journal',
-        '銀行口座 / 银行账户 / Bank Account',
+        'Bank Account',
         required=True,
         domain=[('type', '=', 'bank')],
     )
     attachment_ids = fields.Many2many(
         'ir.attachment',
-        string='ファイル / 文件 / Files',
+        string='Files',
     )
 
     def action_upload_and_ocr(self):
         """Create ONE OCR record with all uploaded files and trigger OCR."""
         self.ensure_one()
         if not self.attachment_ids:
-            raise UserError(
-                'ファイルを選択してください。\n'
-                '请选择文件。\n'
-                'Please select files.'
-            )
+            raise UserError(_('Please select files.'))
 
         record = self.env['seisei.bank.statement.ocr'].create({
             'journal_id': self.journal_id.id,

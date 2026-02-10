@@ -1,7 +1,7 @@
 import json
 import logging
 
-from odoo import models, fields, api
+from odoo import models, fields, api, _
 from odoo.exceptions import UserError
 
 _logger = logging.getLogger(__name__)
@@ -13,59 +13,59 @@ class SeiseiBankStatementOcr(models.Model):
     _order = 'create_date desc'
 
     name = fields.Char(
-        '名称 / 名称 / Name', compute='_compute_name', store=True,
+        'Name', compute='_compute_name', store=True,
     )
     journal_id = fields.Many2one(
-        'account.journal', '銀行口座 / 银行账户 / Bank Account', required=True,
+        'account.journal', 'Bank Account', required=True,
         domain=[('type', '=', 'bank')],
     )
     attachment_ids = fields.Many2many(
-        'ir.attachment', string='スキャン画像/PDF / 扫描文件 / Scan Files',
+        'ir.attachment', string='Scan Files',
     )
 
     state = fields.Selection([
-        ('draft', '下書き / 草稿 / Draft'),
-        ('processing', 'OCR処理中 / OCR处理中 / Processing'),
-        ('review', '確認待ち / 待确认 / Review'),
-        ('done', 'インポート済 / 已导入 / Done'),
-        ('failed', 'エラー / 错误 / Error'),
-    ], default='draft', string='状態 / 状态 / State')
+        ('draft', 'Draft'),
+        ('processing', 'Processing'),
+        ('review', 'Review'),
+        ('done', 'Done'),
+        ('failed', 'Error'),
+    ], default='draft', string='State')
 
     # OCR extracted header (all editable)
-    bank_name = fields.Char('銀行名 / 银行名 / Bank Name')
-    branch_name = fields.Char('支店名 / 支行名 / Branch')
-    account_number = fields.Char('口座番号 / 账号 / Account No.')
-    account_holder = fields.Char('口座名義 / 户名 / Holder')
-    statement_date = fields.Date('対账単日付 / 对账单日期 / Statement Date')
-    statement_period = fields.Char('対象期間 / 期间 / Period')
-    balance_start = fields.Float('期首残高 / 期初余额 / Opening', digits=(16, 0))
-    balance_end = fields.Float('期末残高 / 期末余额 / Closing', digits=(16, 0))
+    bank_name = fields.Char('Bank Name')
+    branch_name = fields.Char('Branch')
+    account_number = fields.Char('Account No.')
+    account_holder = fields.Char('Holder')
+    statement_date = fields.Date('Statement Date')
+    statement_period = fields.Char('Period')
+    balance_start = fields.Float('Opening Balance', digits=(16, 0))
+    balance_end = fields.Float('Closing Balance', digits=(16, 0))
 
     # OCR raw data
     ocr_raw_data = fields.Text('OCR Raw JSON')
-    ocr_pages = fields.Integer('ページ数 / 页数 / Pages')
-    ocr_error_message = fields.Text('エラー / 错误 / Error')
-    ocr_processed_at = fields.Datetime('OCR処理日時 / OCR处理时间 / Processed At')
+    ocr_pages = fields.Integer('Pages')
+    ocr_error_message = fields.Text('Error')
+    ocr_processed_at = fields.Datetime('Processed At')
 
     # Transaction lines
     line_ids = fields.One2many(
         'seisei.bank.statement.ocr.line', 'ocr_id',
-        '取引明細 / 交易明细 / Transactions',
+        'Transactions',
     )
 
     # Import result
     statement_id = fields.Many2one(
-        'account.bank.statement', '生成された対账単 / 已生成对账单 / Generated Statement',
+        'account.bank.statement', 'Generated Statement',
         readonly=True,
     )
 
     # Balance integrity check
     balance_check_ok = fields.Boolean(
-        '残高整合 / 余额一致 / Balance OK',
+        'Balance OK',
         compute='_compute_balance_check', store=True,
     )
     balance_diff = fields.Float(
-        '差額 / 差额 / Diff',
+        'Difference',
         compute='_compute_balance_check', store=True, digits=(16, 0),
     )
 
@@ -90,11 +90,7 @@ class SeiseiBankStatementOcr(models.Model):
         """Process all attached files as pages, merge into one result."""
         self.ensure_one()
         if not self.attachment_ids:
-            raise UserError(
-                'ファイルが添付されていません。\n'
-                '请先上传文件。\n'
-                'Please attach files first.'
-            )
+            raise UserError(_('Please attach files first.'))
 
         self.state = 'processing'
         self.line_ids.unlink()
@@ -252,11 +248,7 @@ class SeiseiBankStatementOcr(models.Model):
         """Create official account.bank.statement from reviewed OCR data."""
         self.ensure_one()
         if self.state != 'review':
-            raise UserError(
-                '確認待ち状態でのみ取り込み可能です。\n'
-                '仅在待确认状态下可导入。\n'
-                'Can only import in Review state.'
-            )
+            raise UserError(_('Can only import in Review state.'))
 
         stmt_vals = {
             'name': f"OCR {self.bank_name or ''} {self.statement_period or ''}".strip(),
@@ -268,14 +260,12 @@ class SeiseiBankStatementOcr(models.Model):
         }
 
         for line in self.line_ids.sorted('date'):
-            unique_id = f"OCR-{self.id}-{line.id}-{line.date}-{line.amount}"
             stmt_vals['line_ids'].append((0, 0, {
                 'date': line.date,
                 'payment_ref': line.description,
                 'amount': line.amount,
                 'partner_id': line.partner_id.id if line.partner_id else False,
                 'partner_name': line.partner_name or line.description,
-                'unique_import_id': unique_id,
             }))
 
         statement = self.env['account.bank.statement'].create(stmt_vals)
