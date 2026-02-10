@@ -350,6 +350,65 @@ for cmd in docker jq; do
     require_cmd "$cmd"
 done
 
+# =============================================================================
+# Health Check Functions
+# =============================================================================
+
+# Wait for a docker compose service to become healthy
+# Usage: wait_for_healthy <compose_dir> [max_seconds] [service_name]
+# Returns: 0 if healthy, 1 if unhealthy/timeout/no-healthcheck-fallback
+wait_for_healthy() {
+    local compose_dir="$1"
+    local max_wait="${2:-180}"
+    local service="${3:-web}"
+    local interval=10
+    local waited=0
+
+    cd "$compose_dir" || return 1
+
+    # Get container ID for the service
+    local container_id
+    container_id=$(docker compose ps -q "$service" 2>/dev/null)
+    if [ -z "$container_id" ]; then
+        log_warn "Service '$service' not found, falling back to 15s sleep"
+        sleep 15
+        return 0
+    fi
+
+    # Check if container has healthcheck defined
+    local has_hc
+    has_hc=$(docker inspect "$container_id" \
+        --format='{{if .State.Health}}true{{else}}false{{end}}' 2>/dev/null || echo "false")
+
+    if [ "$has_hc" != "true" ]; then
+        log_info "No healthcheck for '$service', waiting 15s..."
+        sleep 15
+        return 0
+    fi
+
+    log_info "Waiting for '$service' healthy (max ${max_wait}s)..."
+    while [ $waited -lt $max_wait ]; do
+        local health
+        health=$(docker inspect "$container_id" \
+            --format='{{.State.Health.Status}}' 2>/dev/null || echo "unknown")
+        log_info "  Health: $health (${waited}s/${max_wait}s)"
+
+        if [ "$health" = "healthy" ]; then
+            log_success "'$service' healthy after ${waited}s"
+            return 0
+        elif [ "$health" = "unhealthy" ]; then
+            log_warn "'$service' unhealthy after ${waited}s"
+            return 1
+        fi
+
+        sleep $interval
+        waited=$((waited + interval))
+    done
+
+    log_warn "'$service' health check timeout (${max_wait}s)"
+    return 1
+}
+
 # Export functions for use in scripts
 export -f log_info log_success log_warn log_error log_step fail
 export -f timestamp require_cmd require_root
@@ -359,3 +418,4 @@ export -f mark_verified get_verified check_verified
 export -f get_current_image extract_tag extract_digest
 export -f validate_compose check_no_build check_no_latest
 export -f check_network_exists check_disk_space
+export -f wait_for_healthy

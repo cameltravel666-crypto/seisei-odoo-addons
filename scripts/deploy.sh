@@ -251,6 +251,15 @@ trigger_rollback() {
         echo "$(date -u +"%Y-%m-%dT%H:%M:%SZ") $STACK $ENV $IMAGE_TAG deploy failed actor=$ACTOR run_id=$RUN_ID trigger=$REASON rollback_target=$ROLLBACK_TAG" >> "$HISTORY_FILE"
     fi
 
+    # Pre-check: is there a previous deployment to roll back to?
+    local PREV_MANIFEST="$CURRENT_DIR/${STACK}.json"
+    if [ ! -f "$PREV_MANIFEST" ]; then
+        log_error "[ROLLBACK] No previous deployment found (first deploy?)"
+        log_error "[ROLLBACK] Cannot auto-rollback. Manual intervention required."
+        log_error "[ROLLBACK] Status: skipped (no rollback target)"
+        return
+    fi
+
     if [ -f "$SCRIPT_DIR/rollback.sh" ]; then
         if "$SCRIPT_DIR/rollback.sh" "$STACK" "$ENV" --steps 1; then
             log_error "[ROLLBACK] Status: success"
@@ -645,8 +654,10 @@ echo ""
 # =============================================================================
 log_step "Step 8: Health Check and Smoke Tests"
 
-log_info "Waiting 15 seconds for services to stabilize..."
-sleep 15
+STACK_DIR=$(resolve_stack_dir "$STACK")
+if ! wait_for_healthy "$STACK_DIR" 180 "web"; then
+    log_warn "Container not healthy, proceeding to smoke test for final verdict..."
+fi
 
 if is_erp_stack; then
     # ERP stacks: use explicit health gate

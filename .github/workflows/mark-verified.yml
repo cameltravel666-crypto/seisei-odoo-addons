@@ -22,7 +22,8 @@ env:
 jobs:
   mark-verified:
     runs-on: ubuntu-latest
-    
+    environment: production
+
     steps:
       - name: Setup SSH key
         run: |
