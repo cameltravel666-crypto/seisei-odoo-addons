@@ -249,7 +249,8 @@ def process_bank_statement(file_data: bytes, mimetype: str, tenant_id: str = 'de
         _logger.info(f'[OCR-BankStmt] Processing page {i + 1}/{len(page_images)}')
         result = _call_ocr_service_raw(
             img_data, 'image/jpeg' if is_pdf else mimetype,
-            tenant_id, BANK_STATEMENT_TEMPLATE_FIELDS, 'bank_statement',
+            tenant_id, BANK_STATEMENT_TEMPLATE_FIELDS, 'accounting',
+            custom_prompt=BANK_STATEMENT_OCR_PROMPT,
         )
         if result.get('success'):
             extracted = result.get('extracted', {})
@@ -302,7 +303,8 @@ def _deduplicate_bank_transactions(transactions: list) -> list:
 
 
 def _call_ocr_service_raw(file_data: bytes, mimetype: str, tenant_id: str,
-                          template_fields: List[str], output_level: str = 'accounting') -> Dict[str, Any]:
+                          template_fields: List[str], output_level: str = 'accounting',
+                          custom_prompt: str = None) -> Dict[str, Any]:
     """Call OCR service and return raw extracted data without invoice-specific normalization."""
     try:
         config = _get_ocr_config()
@@ -322,6 +324,8 @@ def _call_ocr_service_raw(file_data: bytes, mimetype: str, tenant_id: str,
             'tenant_id': tenant_id,
             'output_level': output_level,
         }
+        if custom_prompt:
+            payload['custom_prompt'] = custom_prompt
 
         response = requests.post(
             f'{ocr_url}/ocr/process',

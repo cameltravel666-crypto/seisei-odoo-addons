@@ -403,11 +403,14 @@ class OCRRequest(BaseModel):
     mime_type: str = 'image/jpeg'
     prompt_version: Optional[Literal['fast', 'full']] = None  # Legacy parameter
     output_level: Optional[Literal['summary', 'accounting']] = None  # New parameter (preferred)
+    custom_prompt: Optional[str] = None  # Override built-in prompts with a custom prompt
     template_fields: List[str] = []
     tenant_id: str = 'default'
 
     def get_prompt_mode(self) -> str:
-        """Get normalized prompt mode with priority: output_level > prompt_version > default"""
+        """Get normalized prompt mode with priority: custom_prompt > output_level > prompt_version > default"""
+        if self.custom_prompt:
+            return 'custom'
         if self.output_level:
             # Map new parameter values to internal prompt modes
             return 'full' if self.output_level == 'accounting' else 'fast'
@@ -484,9 +487,10 @@ def extract_json_from_text(text: str) -> dict:
 async def call_gemini_api(
     image_data: str,
     mime_type: str,
-    prompt_version: str = 'fast'
+    prompt_version: str = 'fast',
+    custom_prompt: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Call Gemini API with fast or full prompt"""
+    """Call Gemini API with fast, full, or custom prompt"""
     if not GEMINI_API_KEY:
         logger.error("GEMINI_API_KEY not configured")
         return {'success': False, 'error_code': 'service_error'}
@@ -494,7 +498,15 @@ async def call_gemini_api(
     url = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}'
 
     # Select prompt and config based on version
-    if prompt_version == 'fast':
+    if custom_prompt:
+        prompt = custom_prompt
+        config = {
+            'temperature': 0,
+            'maxOutputTokens': 4096,
+            'responseMimeType': 'application/json',
+        }
+        timeout = 90
+    elif prompt_version == 'fast':
         prompt = PROMPT_FAST
         config = {
             'temperature': 0,
@@ -665,12 +677,13 @@ async def process_ocr(
     # Get normalized prompt mode (handles both output_level and prompt_version)
     prompt_mode = request.get_prompt_mode()
 
-    logger.info(f"OCR request from {request.tenant_id}, output_level={request.output_level}, prompt_version={request.prompt_version}, resolved_mode={prompt_mode}")
+    logger.info(f"OCR request from {request.tenant_id}, output_level={request.output_level}, prompt_version={request.prompt_version}, resolved_mode={prompt_mode}, custom_prompt={'yes' if request.custom_prompt else 'no'}")
 
     result = await call_gemini_api(
         request.image_data,
         request.mime_type,
-        prompt_mode
+        prompt_mode,
+        custom_prompt=request.custom_prompt,
     )
 
     processing_time_ms = int((time.time() - start_time) * 1000)
