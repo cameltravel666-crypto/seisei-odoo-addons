@@ -123,3 +123,6 @@ desktop.ini
 *.swn
 .#*
 \#*#
+
+# generated frontend assets (do not commit)
+odoo_modules/community/abichinger_kitchen_screen/static/app/assets/
