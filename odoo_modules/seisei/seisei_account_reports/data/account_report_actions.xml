@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="action_account_report_pl" model="ir.actions.client">
+            <field name="name">Profit and Loss</field>
+            <field name="tag">seisei_account_report</field>
+            <field name="context" eval="{'report_id': ref('seisei_account_reports.profit_and_loss')}"/>
+        </record>
+
+        <record id="action_account_report_bs" model="ir.actions.client">
+            <field name="name">Balance Sheet</field>
+            <field name="tag">seisei_account_report</field>
+            <field name="context" eval="{'report_id': ref('seisei_account_reports.balance_sheet')}"/>
+        </record>
+
+        <record id="action_account_report_general_ledger" model="ir.actions.client">
+            <field name="name">General Ledger</field>
+            <field name="tag">seisei_account_report</field>
+            <field name="context" eval="{'report_id': ref('seisei_account_reports.general_ledger_report')}"/>
+        </record>
+
+    </data>
+</odoo>

@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<templates>
+    <t t-name="seisei_account_reports.AccountReportFilters">
+        <div class="o_account_report_filters">
+            <!-- Date filter -->
+            <div class="o_account_report_filter_date">
+                <input t-if="isRangeMode"
+                       type="date"
+                       class="form-control form-control-sm"
+                       t-att-value="dateFrom"
+                       t-on-change="onDateFromChange"/>
+                <span t-if="isRangeMode" class="mx-1">-</span>
+                <input type="date"
+                       class="form-control form-control-sm"
+                       t-att-value="dateTo"
+                       t-on-change="onDateToChange"/>
+            </div>
+
+            <!-- Draft filter -->
+            <div t-if="showDraftFilter" class="form-check form-switch ms-2">
+                <input type="checkbox"
+                       class="form-check-input"
+                       id="filter_draft"
+                       t-att-checked="isDraftIncluded"
+                       t-on-change="onToggleDraft"/>
+                <label class="form-check-label small" for="filter_draft">Draft</label>
+            </div>
+
+            <!-- Journal filter -->
+            <div t-if="showJournalFilter" class="dropdown ms-2">
+                <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                        type="button"
+                        t-on-click="toggleJournalDropdown">
+                    <t t-esc="journalGroupName"/>
+                </button>
+                <div t-att-class="'dropdown-menu' + (state.showJournals ? ' show' : '')"
+                     style="max-height: 300px; overflow-y: auto;">
+                    <t t-foreach="journals" t-as="journal" t-key="journal.id">
+                        <t t-if="journal.model === 'account.journal'">
+                            <a class="dropdown-item small"
+                               href="#"
+                               t-on-click="(ev) => this.onToggleJournal(ev, journal.id)">
+                                <i t-att-class="journal.selected ? 'fa fa-check-square-o me-1' : 'fa fa-square-o me-1'"/>
+                                <t t-esc="journal.name"/>
+                            </a>
+                        </t>
+                    </t>
+                </div>
+            </div>
+
+            <!-- Hide zero lines -->
+            <div class="form-check form-switch ms-2">
+                <input type="checkbox"
+                       class="form-check-input"
+                       id="filter_hide_zero"
+                       t-att-checked="hideZeroLines"
+                       t-on-change="onToggleHideZero"/>
+                <label class="form-check-label small" for="filter_hide_zero">Hide 0</label>
+            </div>
+        </div>
+    </t>
+</templates>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<templates>
+    <t t-name="seisei_account_reports.AccountReportLineName">
+        <div t-att-class="indentClass" class="d-flex align-items-center">
+            <!-- Fold/Unfold button -->
+            <button t-if="showUnfoldButton"
+                    class="o_account_report_unfold_button"
+                    t-on-click="toggleFold"
+                    t-att-title="isUnfolded ? 'Fold' : 'Unfold'">
+                <i t-att-class="isUnfolded ? 'fa fa-caret-down' : 'fa fa-caret-right'"/>
+            </button>
+            <span t-elif="!props.line.load_more" style="width: 20px; margin-right: 4px; display: inline-block;"/>
+
+            <!-- Line name -->
+            <span t-if="props.line.load_more"
+                  class="o_account_report_load_more"
+                  t-on-click="onClickName"
+                  t-esc="props.line.name"/>
+            <span t-elif="props.line.action_id"
+                  class="o_account_report_line_name_action"
+                  style="cursor: pointer; color: #017e84;"
+                  t-on-click="onClickName"
+                  t-esc="props.line.name"/>
+            <span t-else=""
+                  t-esc="props.line.name"/>
+        </div>
+    </t>
+</templates>
