@@ -331,7 +331,9 @@ def _call_ocr_service_raw(file_data: bytes, mimetype: str, tenant_id: str,
         )
 
         if response.status_code != 200:
-            return {'success': False, 'error': f'OCR service error: {response.status_code}'}
+            body = response.text[:500] if response.text else 'no body'
+            _logger.error(f'[OCR] HTTP {response.status_code}: {body}')
+            return {'success': False, 'error': f'OCR service error {response.status_code}: {body}'}
 
         result = response.json()
         if result.get('success'):
@@ -449,7 +451,9 @@ def _call_ocr_service(file_data: bytes, mimetype: str, tenant_id: str,
         )
 
         if response.status_code != 200:
-            return {'success': False, 'error': f'OCR service error: {response.status_code}'}
+            body = response.text[:500] if response.text else 'no body'
+            _logger.error(f'[OCR] HTTP {response.status_code}: {body}')
+            return {'success': False, 'error': f'OCR service error {response.status_code}: {body}'}
 
         result = response.json()
 
