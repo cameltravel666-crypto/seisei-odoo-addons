@@ -668,7 +668,11 @@ echo ""
 log_step "Step 8: Health Check and Smoke Tests"
 
 STACK_DIR=$(resolve_stack_dir "$STACK")
-if ! wait_for_healthy "$STACK_DIR" 300 "web"; then
+HEALTH_TIMEOUT=300
+if [ "$STACK" = "odoo18-prod" ]; then
+    HEALTH_TIMEOUT=600  # Odoo prod has 19 DBs, needs more startup time
+fi
+if ! wait_for_healthy "$STACK_DIR" "$HEALTH_TIMEOUT" "web"; then
     log_warn "Container not healthy, proceeding to smoke test for final verdict..."
 fi
 
