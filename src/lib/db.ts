@@ -1,5 +1,4 @@
 import { PrismaClient } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 
 const connectionString = process.env.DATABASE_URL;
@@ -16,15 +15,9 @@ function createPrismaClient() {
   }
 
   try {
-    const pool = globalForPrisma.pool ?? new Pool({ connectionString });
-    const adapter = new PrismaPg(pool);
-
-    if (process.env.NODE_ENV !== 'production') {
-      globalForPrisma.pool = pool;
-    }
-
+    // Prisma 7: 直接使用 PrismaClient，DATABASE_URL 从环境变量读取
     const client = new PrismaClient({
-      adapter,
+      datasourceUrl: connectionString,
       log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
     });
 
