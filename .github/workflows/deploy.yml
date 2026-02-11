@@ -283,7 +283,7 @@ jobs:
           # Scripts are already executable (set during server preparation)
           # NO git pull - code in /opt is for scripts only
           # Runtime state is managed through /srv/releases/stacks
-          $DEPLOY_CMD 2>&1 | tee /tmp/deploy.log
+          $DEPLOY_CMD 2>&1 | tee /var/tmp/deploy.log
 
           # Check exit status
           EXIT_CODE=\${PIPESTATUS[0]}
