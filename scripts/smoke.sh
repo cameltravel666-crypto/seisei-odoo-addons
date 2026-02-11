@@ -58,8 +58,8 @@ fi
 log_info "Test 3: Checking domain accessibility..."
 DOMAIN=$(get_stack_domain "$STACK")
 if [ -n "$DOMAIN" ]; then
-    MAX_RETRIES=3
-    RETRY_INTERVAL=5
+    MAX_RETRIES=6
+    RETRY_INTERVAL=10
     HTTP_CODE="000"
     for attempt in $(seq 1 $MAX_RETRIES); do
         HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$DOMAIN" || echo "000")
