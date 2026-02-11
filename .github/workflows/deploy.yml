@@ -41,6 +41,11 @@ on:
         description: '[Required with break_glass] Emergency reason'
         required: false
         type: string
+      modules_to_upgrade:
+        description: '[OPTIONAL] Comma-separated Odoo modules to upgrade after deploy'
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -245,6 +250,11 @@ jobs:
             --digest-file /var/tmp/image-digests.json \
             --actor \"$ACTOR\" \
             --run-id \"$RUN_ID\""
+
+          MODULES="${{ inputs.modules_to_upgrade }}"
+          if [ -n "$MODULES" ]; then
+            DEPLOY_CMD="$DEPLOY_CMD --modules \"$MODULES\""
+          fi
 
           echo "[DEBUG] Full deploy command: $DEPLOY_CMD"
 
