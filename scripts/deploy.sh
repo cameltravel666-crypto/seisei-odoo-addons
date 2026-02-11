@@ -15,6 +15,7 @@
 #   --reason "text"      Required reason when using --break-glass
 #   --actor "name"       GitHub actor (for audit trail)
 #   --run-id "id"        GitHub run ID (for audit trail)
+#   --modules "list"     Comma-separated Odoo modules to upgrade after deploy
 #
 # Examples:
 #   ./deploy.sh odoo18-staging staging sha-abc123 \
@@ -65,6 +66,7 @@ Optional:
   --reason "TEXT"      Required reason when using --break-glass (non-empty)
   --actor "NAME"       GitHub actor or user email for audit trail
   --run-id "ID"        GitHub run ID or manual identifier
+  --modules "LIST"     Comma-separated Odoo modules to upgrade (odoo18 stacks only)
 
 Examples:
   # Staging deployment
@@ -103,6 +105,7 @@ BREAK_GLASS=false
 BREAK_GLASS_REASON=""
 ACTOR="unknown"
 RUN_ID="unknown"
+MODULES_TO_UPGRADE=""
 
 # Validate required positional arguments
 [ -z "$STACK" ] && fail "Missing required argument: <stack>"
@@ -143,6 +146,11 @@ while [[ $# -gt 0 ]]; do
             ;;
         --run-id)
             RUN_ID="${2:-unknown}"
+            shift 2
+            ;;
+        --modules)
+            MODULES_TO_UPGRADE="${2:-}"
+            [ -z "$MODULES_TO_UPGRADE" ] && fail "--modules requires a comma-separated module list"
             shift 2
             ;;
         *)
@@ -741,6 +749,86 @@ fi
 echo ""
 
 # =============================================================================
+# Step 8.5: Module Upgrade (odoo18 stacks with --modules only)
+# =============================================================================
+MODULE_UPGRADE_STATUS="skipped"
+
+if [[ "$STACK" =~ ^odoo18- ]] && [ -n "$MODULES_TO_UPGRADE" ]; then
+    log_step "Step 8.5: Module Upgrade"
+
+    # Extract DB connection info from odoo.conf in release directory
+    ODOO_CONF="$RELEASE_DIR/config/odoo.conf"
+    if [ ! -f "$ODOO_CONF" ]; then
+        fail "odoo.conf not found at $ODOO_CONF"
+    fi
+
+    DB_HOST=$(grep "^db_host" "$ODOO_CONF" | sed 's/^db_host *= *//')
+    DB_USER=$(grep "^db_user" "$ODOO_CONF" | sed 's/^db_user *= *//')
+    DB_FILTER=$(grep "^dbfilter" "$ODOO_CONF" | sed 's/^dbfilter *= *//')
+
+    log_info "DB Host: $DB_HOST, DB User: $DB_USER, DB Filter: $DB_FILTER"
+
+    # Discover tenant databases via psql inside the web container
+    if [[ "$DB_FILTER" == "^ten_.*\$" ]] || [[ "$DB_FILTER" == "^ten_.*$" ]]; then
+        SQL="SELECT datname FROM pg_database WHERE datname ~ '^ten_' AND datistemplate=false ORDER BY datname"
+    else
+        SQL="SELECT datname FROM pg_database WHERE datistemplate=false AND datname NOT IN ('postgres','template0','template1') ORDER BY datname"
+    fi
+
+    TENANT_DBS=$(docker compose exec -T web psql -h "$DB_HOST" -U "$DB_USER" -t -A -c "$SQL" 2>/dev/null) || {
+        log_error "Failed to query tenant databases"
+        fail "Cannot discover tenant databases for module upgrade"
+    }
+
+    if [ -z "$TENANT_DBS" ]; then
+        log_warn "No tenant databases found, skipping module upgrade"
+        MODULE_UPGRADE_STATUS="skipped_no_dbs"
+    else
+        DB_COUNT=$(echo "$TENANT_DBS" | wc -l | tr -d ' ')
+        log_info "Found $DB_COUNT database(s), upgrading modules: $MODULES_TO_UPGRADE"
+
+        # Stop web container to avoid cron worker conflicts during upgrade
+        docker compose stop web
+        UPGRADE_FAILED=false
+
+        for DB in $TENANT_DBS; do
+            log_info "  Upgrading on $DB ..."
+            if timeout 300 docker compose run --rm -T web \
+                odoo -c /etc/odoo/odoo.conf -d "$DB" \
+                -u "$MODULES_TO_UPGRADE" --stop-after-init --no-http 2>&1; then
+                log_success "  ✓ $DB"
+            else
+                log_error "  ✗ $DB FAILED"
+                UPGRADE_FAILED=true
+                break
+            fi
+        done
+
+        # Restart web container
+        docker compose up -d web
+        wait_for_healthy "$SYMLINK_TARGET" 300 "web"
+
+        if [ "$UPGRADE_FAILED" = true ]; then
+            MODULE_UPGRADE_STATUS="failed"
+            # Record history before failing (no rollback — DB schema partially changed)
+            NOTES="image_ref=$IMAGE_REF digest=$IMAGE_DIGEST module_upgrade=failed modules=$MODULES_TO_UPGRADE"
+            if declare -f write_history &>/dev/null; then
+                write_history "$STACK" "$ENV" "$IMAGE_TAG" "deploy" "failed" "$NOTES"
+            else
+                mkdir -p "$(dirname "$HISTORY_FILE")"
+                echo "$(date -u +"%Y-%m-%dT%H:%M:%SZ") $STACK $ENV $IMAGE_TAG deploy failed actor=$ACTOR run_id=$RUN_ID $NOTES" >> "$HISTORY_FILE"
+            fi
+            fail "Module upgrade failed. DO NOT rollback — DB schema partially changed. Fix forward."
+        else
+            MODULE_UPGRADE_STATUS="success"
+            log_success "Module upgrade completed on $DB_COUNT database(s)"
+        fi
+    fi
+fi
+
+echo ""
+
+# =============================================================================
 # Step 9: Write Current Manifest
 # =============================================================================
 log_step "Step 9: Write Current Manifest"
@@ -786,6 +874,9 @@ if is_erp_stack; then
         NOTES="$NOTES migration=skipped"
     fi
     NOTES="$NOTES health_gate=passed"
+fi
+if [ -n "$MODULES_TO_UPGRADE" ]; then
+    NOTES="$NOTES module_upgrade=$MODULE_UPGRADE_STATUS modules=$MODULES_TO_UPGRADE"
 fi
 
 # Write to history (use lib.sh function if available)

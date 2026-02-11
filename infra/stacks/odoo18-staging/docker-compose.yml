@@ -63,8 +63,6 @@ services:
       - odoo18-staging-data:/var/lib/odoo
       # Config file - environment-specific settings
       - ./config/odoo.conf:/etc/odoo/odoo.conf:ro
-      # Addons path parity with production
-      - /opt/seisei-odoo-addons/odoo_modules:/mnt/extra-addons:ro
     networks:
       - seisei-odoo-network
       - odoo18-staging-internal
