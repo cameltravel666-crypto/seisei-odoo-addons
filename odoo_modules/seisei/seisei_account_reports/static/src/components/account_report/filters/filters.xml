@@ -23,7 +23,7 @@
                        id="filter_draft"
                        t-att-checked="isDraftIncluded"
                        t-on-change="onToggleDraft"/>
-                <label class="form-check-label small" for="filter_draft">Draft</label>
+                <label class="form-check-label small" for="filter_draft" t-esc="draftLabel"/>
             </div>
 
             <!-- Journal filter -->
@@ -54,12 +54,9 @@
                         style="width: auto; font-size: 0.85rem;"
                         t-att-value="comparisonFilter"
                         t-on-change="onComparisonChange">
-                    <option value="no_comparison">No Comparison</option>
-                    <option value="monthly">Monthly</option>
-                    <option value="quarterly">Quarterly</option>
-                    <option value="semi_annual">Semi-Annual</option>
-                    <option value="previous_period">Previous Period</option>
-                    <option value="same_last_year">Same Last Year</option>
+                    <t t-foreach="comparisonOptions" t-as="opt" t-key="opt.value">
+                        <option t-att-value="opt.value" t-esc="opt.label"/>
+                    </t>
                 </select>
                 <input t-if="isPreviousPeriod"
                        type="number"
@@ -77,7 +74,7 @@
                        id="filter_hide_zero"
                        t-att-checked="hideZeroLines"
                        t-on-change="onToggleHideZero"/>
-                <label class="form-check-label small" for="filter_hide_zero">Hide 0</label>
+                <label class="form-check-label small" for="filter_hide_zero" t-esc="hideZeroLabel"/>
             </div>
         </div>
     </t>
