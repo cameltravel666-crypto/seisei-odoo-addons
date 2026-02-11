@@ -11,9 +11,15 @@ on:
           - staging
           - production
       stack:
-        description: 'Stack to deploy (odoo18-staging, odoo18-prod, erp-seisei, etc.)'
+        description: 'Stack to deploy'
         required: true
-        type: string
+        type: choice
+        options:
+          - odoo18-prod
+          - odoo18-staging
+          - erp-seisei
+          - erp-seisei-staging
+          - ocr
       image_tag:
         description: 'Image tag (must be sha-xxxxxxx format, e.g., sha-abc123)'
         required: true
@@ -311,7 +317,7 @@ jobs:
           fi
 
       - name: Capture deployment results
-        if: always()
+        if: always() && steps.deploy.outcome != 'skipped'
         run: |
           STACK="${{ inputs.stack }}"
           ENV="${{ inputs.environment }}"
