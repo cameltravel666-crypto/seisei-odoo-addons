@@ -3,9 +3,6 @@
     min-height: 100%;
 
     .o_account_report_control_panel {
-        position: sticky;
-        top: 0;
-        z-index: 10;
         background: white !important;
     }
 
@@ -18,9 +15,6 @@
         margin-bottom: 0;
 
         thead {
-            position: sticky;
-            top: var(--cp-height, 50px);
-            z-index: 5;
             background: white;
 
             th {
@@ -146,8 +140,6 @@
     // Multi-period table adjustments
     .o_account_report_multi_period {
         thead {
-            position: static;
-
             .o_account_report_period_header_row {
                 th.o_account_report_period_header {
                     text-align: right;
