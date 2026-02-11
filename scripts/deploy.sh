@@ -497,7 +497,35 @@ if [ -n "${DEPLOY_S3_ACCESS_KEY:-}" ] && [ -n "${DEPLOY_S3_SECRET_KEY:-}" ]; the
 
     log_success "✅ S3 credentials injected into .env"
 else
-    log_info "No deployment S3 credentials provided (using .env defaults)"
+    # No deployment S3 credentials provided — inherit from current running stack
+    # This prevents ***REDACTED*** placeholders in git-tracked .env from overwriting real credentials
+    CURRENT_ENV="$SYMLINK_TARGET/.env"
+    if [ -f "$CURRENT_ENV" ]; then
+        CURRENT_S3_KEY=$(grep "^SEISEI_S3_ACCESS_KEY=" "$CURRENT_ENV" 2>/dev/null | cut -d'=' -f2-)
+        if [ -n "$CURRENT_S3_KEY" ] && [ "$CURRENT_S3_KEY" != '***REDACTED***' ]; then
+            NEW_S3_KEY=$(grep "^SEISEI_S3_ACCESS_KEY=" "$ENV_FILE" 2>/dev/null | cut -d'=' -f2-)
+            if [ "$NEW_S3_KEY" = '***REDACTED***' ] || [ -z "$NEW_S3_KEY" ]; then
+                log_info "Inheriting S3 credentials from current running stack ..."
+                for KEY in SEISEI_S3_ACCESS_KEY SEISEI_S3_SECRET_KEY SEISEI_S3_BUCKET SEISEI_S3_REGION; do
+                    VALUE=$(grep "^${KEY}=" "$CURRENT_ENV" 2>/dev/null | cut -d'=' -f2-)
+                    if [ -n "$VALUE" ]; then
+                        if grep -q "^${KEY}=" "$ENV_FILE"; then
+                            sed -i "s|^${KEY}=.*|${KEY}=${VALUE}|" "$ENV_FILE"
+                        else
+                            echo "${KEY}=${VALUE}" >> "$ENV_FILE"
+                        fi
+                    fi
+                done
+                log_success "✅ S3 credentials inherited from current stack"
+            else
+                log_info "Release .env already has valid S3 credentials"
+            fi
+        else
+            log_info "No valid S3 credentials in current stack to inherit"
+        fi
+    else
+        log_info "No current stack .env found (first deploy?)"
+    fi
 fi
 
 # Also update COMPOSE_PROJECT_NAME if not present (for isolation)
