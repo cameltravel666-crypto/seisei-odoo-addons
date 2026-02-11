@@ -35,7 +35,7 @@
                         <!-- Empty state -->
                         <tr t-if="!controller.lines.length">
                             <td colspan="99" class="text-center text-muted p-4">
-                                No data available for the selected period.
+                                <t t-esc="emptyStateMessage"/>
                             </td>
                         </tr>
                     </tbody>

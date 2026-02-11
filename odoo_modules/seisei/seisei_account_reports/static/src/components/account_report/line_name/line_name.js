@@ -1,6 +1,7 @@
 /** @odoo-module **/
 
 import { Component, useState } from "@odoo/owl";
+import { _t } from "@web/core/l10n/translation";
 
 export class AccountReportLineName extends Component {
     static template = "seisei_account_reports.AccountReportLineName";
@@ -23,6 +24,10 @@ export class AccountReportLineName extends Component {
 
     get isUnfolded() {
         return this.props.line.unfolded;
+    }
+
+    get foldUnfoldTitle() {
+        return this.isUnfolded ? _t("Fold") : _t("Unfold");
     }
 
     async onClickName(ev) {
