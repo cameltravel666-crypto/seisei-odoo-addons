@@ -6,7 +6,7 @@
             <button t-if="showUnfoldButton"
                     class="o_account_report_unfold_button"
                     t-on-click="toggleFold"
-                    t-att-title="isUnfolded ? 'Fold' : 'Unfold'">
+                    t-att-title="foldUnfoldTitle">
                 <i t-att-class="isUnfolded ? 'fa fa-caret-down' : 'fa fa-caret-right'"/>
             </button>
             <span t-elif="!props.line.load_more" style="width: 20px; margin-right: 4px; display: inline-block;"/>

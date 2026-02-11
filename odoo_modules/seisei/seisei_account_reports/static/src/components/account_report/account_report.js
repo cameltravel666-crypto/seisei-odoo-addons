@@ -3,6 +3,7 @@
 import { Component, useState, onWillStart, onMounted, onPatched, useRef, useSubEnv } from "@odoo/owl";
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
+import { _t } from "@web/core/l10n/translation";
 import { AccountReportController } from "./controller";
 import { AccountReportHeader } from "./header/header";
 import { AccountReportLine } from "./line/line";
@@ -40,6 +41,10 @@ export class AccountReport extends Component {
 
         onMounted(() => this._updateCpHeight());
         onPatched(() => this._updateCpHeight());
+    }
+
+    get emptyStateMessage() {
+        return _t("No data available for the selected period.");
     }
 
     _updateCpHeight() {

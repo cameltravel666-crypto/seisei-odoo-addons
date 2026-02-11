@@ -15,7 +15,7 @@
         <!-- Single period: one header row -->
         <t t-else="">
             <tr>
-                <th class="o_account_report_name_header">Name</th>
+                <th/>
                 <t t-foreach="columns" t-as="column" t-key="column_index">
                     <th class="o_account_report_column_header" t-esc="column.name"/>
                 </t>

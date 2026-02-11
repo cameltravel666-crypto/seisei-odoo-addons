@@ -1,6 +1,6 @@
 {
     'name': '財務報表 / Financial Reports',
-    'version': '18.0.1.1.0',
+    'version': '18.0.1.2.0',
     'category': 'Accounting',
     'summary': 'Interactive financial reports: P&L, Balance Sheet, General Ledger',
     'description': """
