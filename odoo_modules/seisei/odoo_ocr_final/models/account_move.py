@@ -576,11 +576,12 @@ class AccountMove(models.Model):
 
     def _get_default_ocr_account(self, is_purchase, extracted):
         Account = self.env['account.account']
+        company = self.company_id or self.env.company
         suggested = extracted.get('suggested_account') if extracted else None
         if suggested:
             account = Account.search([
                 ('name', 'ilike', suggested),
-                ('company_ids', 'in', [self.company_id.id]),
+                ('company_ids', 'in', [company.id]),
             ], limit=1)
             if account:
                 return account
@@ -659,20 +660,22 @@ class AccountMove(models.Model):
         searches only in current user language by default.
         """
         Account = self.env['account.account']
+        company = self.company_id or self.env.company
+        company_domain = [('company_ids', 'in', [company.id])]
         # 1. Try current user language
-        account = Account.search([('name', '=', name)], limit=1)
+        account = Account.search([('name', '=', name)] + company_domain, limit=1)
         if account:
             return account
         # 2. Try Japanese (OCR returns Japanese names)
-        account = Account.with_context(lang='ja_JP').search([('name', '=', name)], limit=1)
+        account = Account.with_context(lang='ja_JP').search([('name', '=', name)] + company_domain, limit=1)
         if account:
             return account
         # 3. Fuzzy match in current language
-        account = Account.search([('name', 'ilike', name)], limit=1)
+        account = Account.search([('name', 'ilike', name)] + company_domain, limit=1)
         if account:
             return account
         # 4. Fuzzy match in Japanese
-        account = Account.with_context(lang='ja_JP').search([('name', 'ilike', name)], limit=1)
+        account = Account.with_context(lang='ja_JP').search([('name', 'ilike', name)] + company_domain, limit=1)
         return account or False
 
     def _infer_account_from_keywords(self, text_sources):
@@ -1148,6 +1151,7 @@ class AccountMove(models.Model):
 
     def _get_default_expense_account(self):
         """Get default expense account (仕入高/経費) for purchases."""
+        company = self.company_id or self.env.company
         # Try to get from default product category (Odoo 18: ir.property removed)
         default_categ = self.env.ref('product.product_category_all', raise_if_not_found=False)
         account = default_categ and default_categ.property_account_expense_categ_id
@@ -1159,6 +1163,7 @@ class AccountMove(models.Model):
         # Try Japanese: 仕入高
         account = Account.search([
             ('code', '=like', '510%'),  # Common code for 仕入高
+            ('company_ids', 'in', [company.id]),
         ], limit=1)
         if account:
             return account
@@ -1166,11 +1171,13 @@ class AccountMove(models.Model):
         # Try more generic expense account
         account = Account.search([
             ('account_type', '=', 'expense'),
+            ('company_ids', 'in', [company.id]),
         ], limit=1)
         return account
 
     def _get_default_income_account(self):
         """Get default income account (売上高) for sales."""
+        company = self.company_id or self.env.company
         # Try to get from default product category (Odoo 18: ir.property removed)
         default_categ = self.env.ref('product.product_category_all', raise_if_not_found=False)
         account = default_categ and default_categ.property_account_income_categ_id
@@ -1182,7 +1189,7 @@ class AccountMove(models.Model):
         # Try Japanese: 売上高
         account = Account.search([
             ('code', '=like', '410%'),  # Common code for 売上高
-            ('company_ids', 'in', [self.company_id.id])
+            ('company_ids', 'in', [company.id]),
         ], limit=1)
         if account:
             return account
@@ -1190,7 +1197,7 @@ class AccountMove(models.Model):
         # Try more generic income account
         account = Account.search([
             ('account_type', '=', 'income'),
-            ('company_ids', 'in', [self.company_id.id])
+            ('company_ids', 'in', [company.id]),
         ], limit=1)
         return account
 
@@ -1206,6 +1213,8 @@ class AccountMove(models.Model):
         """
         _logger.info(f'[OCR] _get_tax_account called: tax_type={tax_type}, rate={rate}')
         Account = self.env['account.account']
+        company = self.company_id or self.env.company
+        company_domain = [('company_ids', 'in', [company.id])]
 
         # For purchase: 仮払消費税 (prepaid consumption tax)
         # For sale: 仮受消費税 (consumption tax payable)
@@ -1214,7 +1223,7 @@ class AccountMove(models.Model):
             # Common codes: 145x for 仮払消費税
             account = Account.search([
                 ('code', '=like', '145%'),
-            ], limit=1)
+            ] + company_domain, limit=1)
             _logger.info(f'[OCR] Search 145% result: {account.code if account else "Not found"} - {account.name if account else "N/A"}')
             if account:
                 return account
@@ -1223,14 +1232,14 @@ class AccountMove(models.Model):
             account = Account.search([
                 ('account_type', '=', 'asset_current'),
                 ('name', 'ilike', '消費税'),
-            ], limit=1)
+            ] + company_domain, limit=1)
             _logger.info(f'[OCR] Fallback asset_current search result: {account.code if account else "Not found"} - {account.name if account else "N/A"}')
         else:
             # Search for tax payable account
             # Common codes: 255x for 仮受消費税
             account = Account.search([
                 ('code', '=like', '255%'),
-            ], limit=1)
+            ] + company_domain, limit=1)
             _logger.info(f'[OCR] Search 255% result: {account.code if account else "Not found"} - {account.name if account else "N/A"}')
             if account:
                 return account
@@ -1239,7 +1248,7 @@ class AccountMove(models.Model):
             account = Account.search([
                 ('account_type', '=', 'liability_current'),
                 ('name', 'ilike', '消費税'),
-            ], limit=1)
+            ] + company_domain, limit=1)
             _logger.info(f'[OCR] Fallback liability_current search result: {account.code if account else "Not found"} - {account.name if account else "N/A"}')
 
         final_result = account if account else False

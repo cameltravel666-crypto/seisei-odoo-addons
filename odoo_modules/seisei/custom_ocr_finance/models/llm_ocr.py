@@ -431,6 +431,11 @@ def _normalize_fast_format(extracted: dict) -> dict:
     net = extracted.get('net') or 0
     tax = extracted.get('tax') or 0
 
+    # When net=0 but gross>0, calculate net from gross-tax
+    if net == 0 and gross > 0:
+        net = gross - tax
+        _logger.info(f'[OCR] net=0, calculated from gross-tax: {gross}-{tax}={net}')
+
     # Validation: net + tax should equal gross (±2 yen tolerance)
     if abs((net + tax) - gross) > 2:
         _logger.warning(f'[OCR] Amount mismatch: net={net} + tax={tax} != gross={gross}, diff={abs((net+tax)-gross)}')
