@@ -194,7 +194,21 @@ export class Odoo19Client {
       );
 
       return result as T;
-    } catch (error) {
+    } catch (error: any) {
+      // Session expired → re-authenticate and retry once
+      if (error.message?.includes('Session expired')) {
+        console.log('[Odoo19] Session expired, re-authenticating...');
+        this.authenticated = false;
+        this.sessionId = null;
+        await this.authenticate();
+        const { result } = await jsonRpc19(
+          this.config.baseUrl,
+          '/web/dataset/call_kw',
+          { model, method, args, kwargs },
+          this.sessionId!
+        );
+        return result as T;
+      }
       console.error(`[Odoo19] Error calling ${model}.${method}:`, error);
       throw error;
     }
