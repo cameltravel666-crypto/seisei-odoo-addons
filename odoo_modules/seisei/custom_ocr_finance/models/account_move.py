@@ -803,6 +803,11 @@ class AccountMove(models.Model):
 
         _logger.info(f'[OCR] Japanese entries: subtotal={subtotal}, tax_8={tax_8_amount}, tax_10={tax_10_amount}, total={total}')
 
+        # When subtotal=0 but total>0, calculate subtotal from total
+        if subtotal <= 0 and total > 0:
+            subtotal = total - tax_8_amount - tax_10_amount
+            _logger.info(f'[OCR] subtotal=0, calculated from total: {total}-{tax_8_amount}-{tax_10_amount}={subtotal}')
+
         if subtotal <= 0:
             _logger.warning('[OCR] No subtotal found, cannot create accounting entries')
             return 0
@@ -813,14 +818,24 @@ class AccountMove(models.Model):
         if is_purchase:
             # Vendor bill - expense account (仕入高/経費)
             expense_account = self._get_default_expense_account()
-            tax_account_8 = self._get_tax_account('purchase', 8)
-            tax_account_10 = self._get_tax_account('purchase', 10)
+            try:
+                tax_account_8 = self._get_tax_account('purchase', 8)
+                tax_account_10 = self._get_tax_account('purchase', 10)
+            except Exception as e:
+                _logger.warning(f'[OCR] Could not find tax accounts: {e}')
+                tax_account_8 = False
+                tax_account_10 = False
             account_label = '仕入高/経費'
         else:
             # Customer invoice - income account (売上高)
             expense_account = self._get_default_income_account()
-            tax_account_8 = self._get_tax_account('sale', 8)
-            tax_account_10 = self._get_tax_account('sale', 10)
+            try:
+                tax_account_8 = self._get_tax_account('sale', 8)
+                tax_account_10 = self._get_tax_account('sale', 10)
+            except Exception as e:
+                _logger.warning(f'[OCR] Could not find tax accounts: {e}')
+                tax_account_8 = False
+                tax_account_10 = False
             account_label = '売上高'
 
         if not expense_account:
