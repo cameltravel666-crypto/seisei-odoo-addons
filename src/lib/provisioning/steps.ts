@@ -724,7 +724,7 @@ export async function step3bOdoo18SetupApiKey(ctx: ProvisioningContext): Promise
     if (data.error) {
       const errorMsg = data.error.data?.message || data.error.message || '';
       // Check if the seisei.api.key model doesn't exist - this is expected if addon not installed
-      if (errorMsg.includes('seisei.api.key') || errorMsg.includes('does not exist') || errorMsg.includes('Model not found')) {
+      if (errorMsg.includes('seisei.api.key') || errorMsg.includes('does not exist') || errorMsg.includes('Model not found') || errorMsg.includes('404')) {
         logger.success('Skipping API key setup (seisei.api.key model not installed)');
         return { success: true };
       }
@@ -742,7 +742,7 @@ export async function step3bOdoo18SetupApiKey(ctx: ProvisioningContext): Promise
   } catch (error) {
     const errorMsg = sanitizeError(error);
     // Handle model not found errors gracefully - this means the addon is not installed
-    if (errorMsg.includes('seisei.api.key') || errorMsg.includes('does not exist') || errorMsg.includes('Model not found') || errorMsg.includes('object has no attribute')) {
+    if (errorMsg.includes('seisei.api.key') || errorMsg.includes('does not exist') || errorMsg.includes('Model not found') || errorMsg.includes('object has no attribute') || errorMsg.includes('404')) {
       logger.success('Skipping API key setup (seisei.api.key model not installed)');
       return { success: true };
     }

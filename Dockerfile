@@ -55,6 +55,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
+# valibot is required by @prisma/dev at runtime (Prisma 7 CLI dependency)
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/valibot ./node_modules/valibot
 # Copy package.json for npx to work properly
 COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
 # Copy scripts directory for admin tasks
@@ -83,4 +85,6 @@ EXPOSE 9527
 ENV PORT=9527
 ENV HOSTNAME="0.0.0.0"
 
-CMD ["node", "server.js"]
+# Run prisma db push on startup to ensure schema is in sync, then start the app.
+# Errors are logged but non-fatal (app can still start if DB is already in sync).
+CMD sh -c 'echo "Running prisma db push..." && node node_modules/prisma/build/index.js db push --accept-data-loss --url="$DATABASE_URL" 2>&1 || echo "WARNING: prisma db push failed (see above). Continuing startup..."; exec node server.js'
