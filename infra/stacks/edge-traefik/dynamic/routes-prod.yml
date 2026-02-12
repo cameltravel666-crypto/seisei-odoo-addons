@@ -29,7 +29,7 @@ http:
 
     # Odoo Production - ERP domains only
     odoo-prod:
-      rule: "Host(`odoo.seisei.tokyo`) || Host(`erp.seisei.tokyo`)"
+      rule: "Host(`odoo.seisei.tokyo`)"
       service: odoo-prod
       entryPoints:
         - websecure
@@ -64,7 +64,7 @@ http:
 
     # BizNexus Production
     biznexus-prod:
-      rule: "Host(`biznexus.seisei.tokyo`)"
+      rule: "Host(`erp.seisei.tokyo`) || Host(`biznexus.seisei.tokyo`)"
       service: biznexus-prod
       entryPoints:
         - websecure
