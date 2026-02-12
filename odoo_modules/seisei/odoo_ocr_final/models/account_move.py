@@ -580,7 +580,7 @@ class AccountMove(models.Model):
         if suggested:
             account = Account.search([
                 ('name', 'ilike', suggested),
-                ('company_id', '=', self.company_id.id),
+                ('company_ids', 'in', [self.company_id.id]),
             ], limit=1)
             if account:
                 return account
@@ -1182,7 +1182,7 @@ class AccountMove(models.Model):
         # Try Japanese: 売上高
         account = Account.search([
             ('code', '=like', '410%'),  # Common code for 売上高
-            ('company_id', '=', self.company_id.id)
+            ('company_ids', 'in', [self.company_id.id])
         ], limit=1)
         if account:
             return account
@@ -1190,7 +1190,7 @@ class AccountMove(models.Model):
         # Try more generic income account
         account = Account.search([
             ('account_type', '=', 'income'),
-            ('company_id', '=', self.company_id.id)
+            ('company_ids', 'in', [self.company_id.id])
         ], limit=1)
         return account
 
