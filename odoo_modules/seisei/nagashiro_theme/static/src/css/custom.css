@@ -1,12 +1,5 @@
 /* Nagashiro Theme - Custom CSS */
 
-/* Hide Odoo Branding */
-.o_menu_brand,
-.o_main_navbar .o_menu_brand,
-.navbar-brand {
-    /* Custom logo will be shown instead */
-}
-
 /* Remove "Powered by Odoo" footer */
 .o_footer,
 .o_footer_copyright {
@@ -15,8 +8,7 @@
 
 /* Hide "Powered by Odoo" / "由Odoo提供支持" on login page */
 .card-body .text-center.small.mt-4.pt-3.border-top,
-.card-body a[href*="odoo.com"][href*="utm_source"],
-.card-body a:has(span:contains("Odoo")) {
+.card-body a[href*="odoo.com"][href*="utm_source"] {
     display: none !important;
     visibility: hidden !important;
 }
@@ -180,11 +172,11 @@ a:hover {
     content: "";
 }
 
-/* 
+/*
     POS Navbar Logo Styling - Nagashiro Brand
     ==========================================
     Style the Nagashiro logo in POS navbar header center area
-    Using flex layout (方案 1) for stable visual centering
+    Using flex layout for stable visual centering
 */
 
 /* Logo container - already exists in template as .pos-centerheader */
@@ -204,20 +196,20 @@ a:hover {
     width: auto !important;
     max-width: 140px !important;
     max-height: 22px !important;
-    
+
     /* Visual properties */
     object-fit: contain !important;
     display: block !important;
-    
+
     /* No borders, transparent background */
     border: none !important;
     background: transparent !important;
     padding: 0 !important;
     margin: 0 !important;
-    
+
     /* Prevent layout shifts */
     flex-shrink: 0 !important;
-    
+
     /* Smooth transitions */
     transition: opacity 0.2s ease !important;
 }
@@ -269,38 +261,13 @@ img.pos-logo[src*="nagashiro_theme"]:not(.nagashiro-brand-logo) {
     }
 }
 
-/* Hide POS screensaver logo (the large "odoo" logo on screensaver) */
-/* Method: Use CSS to hide all text elements that might contain "odoo" */
-/* Since CSS cannot select by text content, we'll hide common patterns */
-
-/* Hide screensaver container entirely if it contains "odoo" text */
-.pos .screensaver,
-.pos-screensaver,
-[class*="screensaver"],
-div[class*="Screensaver"],
-/* Target common screensaver wrapper classes */
-.pos > div:not([class*="screen"]):not([class*="order"]):not([class*="product"]) {
-    /* We'll use a more specific approach below */
-}
-
-/* Hide all direct children of screensaver that might be the logo */
-.pos .screensaver > *,
-.pos-screensaver > *,
-/* Hide centered text elements (common for logo) */
-.pos div[style*="text-align: center"]:not([class*="order"]):not([class*="product"]):not([class*="button"]),
-.pos span[style*="text-align: center"]:not([class*="order"]):not([class*="product"]):not([class*="button"]) {
-    /* Too broad, we need JavaScript */
-}
-
-/* Hide screensaver logo by targeting common patterns */
+/* Hide POS screensaver logo by targeting common patterns */
 .pos .screensaver [class*="logo"],
 .pos .screensaver [class*="brand"],
 .pos-screensaver [class*="logo"],
 .pos-screensaver [class*="brand"],
-/* Hide any element with "odoo" in class name within screensaver */
 .pos .screensaver [class*="odoo"],
 .pos-screensaver [class*="odoo"],
-/* Hide large text elements in screensaver (likely the logo) */
 .pos .screensaver div[style*="font-size"]:not([class*="time"]):not([class*="date"]),
 .pos-screensaver div[style*="font-size"]:not([class*="time"]):not([class*="date"]) {
     display: none !important;
@@ -318,19 +285,15 @@ div[class*="Screensaver"],
     opacity: 0 !important;
 }
 
-/* More aggressive: Hide any element containing only "odoo" text */
-/* This requires JavaScript, but we can hide common parent containers */
+/* Hide screensaver single-child container (likely the logo) */
 .pos .screensaver > div:only-child,
 .pos-screensaver > div:only-child {
-    /* Hide if it's the only child (likely the logo container) */
     display: none !important;
     visibility: hidden !important;
     opacity: 0 !important;
 }
 
-
-/* Hide "关于" (About) page content - QR codes and copyright information */
-/* Hide QR codes (Google Play and Apple App Store) */
+/* Hide "About" page content - QR codes and copyright information */
 img[src*="qr"],
 img[alt*="QR"],
 img[alt*="qr code"],
@@ -341,19 +304,11 @@ img[alt*="qr code"],
     visibility: hidden !important;
 }
 
-/* Hide QR code containers */
+/* Hide QR code containers (CSS :has() is supported in modern browsers) */
 .col-md-6:has(img[src*="qr"]),
 .col-sm-6:has(img[src*="qr"]),
 div:has(img[src*="qr"]):not(:has(>div)) {
     display: none !important;
-}
-
-/* Hide Odoo version and copyright text */
-/* Target text containing "Odoo 18.0" or "版权所有" or "Copyright" */
-.text-muted,
-.small,
-[class*="text-muted"] {
-    /* Use a more specific approach - hide parent containers */
 }
 
 /* Hide links to Odoo.com */
@@ -370,17 +325,10 @@ a[href*="odoo.com/buy"] {
     display: none !important;
 }
 
-/* Alternative: Hide all images in about page context */
+/* Hide all images in about page context */
 [class*="about"] img,
 .modal[class*="about"] img {
     display: none !important;
-}
-
-/* Hide "文档" (Documentation) and "支持" (Support) menu items from user menu */
-/* Using data attribute set by JavaScript as a reliable selector */
-[data-nagashiro-hidden="true"] {
-    display: none !important;
-    visibility: hidden !important;
 }
 
 /* Hide menu items by href patterns (if URLs contain these keywords) */
@@ -391,66 +339,13 @@ a[href*="odoo.com/buy"] {
     visibility: hidden !important;
 }
 
-/* Hide "由 Odoo 提供支持" / "Powered by Odoo" text in POS receipt */
-/* Target receipt print/preview areas */
-.receipt,
-.pos-receipt,
-[class*="receipt"],
-.print-receipt,
-/* Target text containing "由 Odoo 提供支持" or "Powered by Odoo" */
-div:contains("由 Odoo 提供支持"),
-div:contains("Powered by Odoo"),
-p:contains("由 Odoo 提供支持"),
-p:contains("Powered by Odoo"),
-span:contains("由 Odoo 提供支持"),
-span:contains("Powered by Odoo") {
-    /* CSS cannot use :contains() selector, so we'll target by common patterns */
-}
-
 /* Hide receipt footer containing Odoo branding */
 .receipt-footer,
 .pos-receipt-footer,
 [class*="receipt"][class*="footer"],
-/* More specific: hide elements in receipt that might contain the text */
-div[style*="text-align: center"]:has-text("由 Odoo 提供支持"),
-div[style*="text-align: center"]:has-text("Powered by Odoo") {
-    display: none !important;
-    visibility: hidden !important;
-}
-
-/* Hide "由 Odoo 提供支持" / "Powered by Odoo" in POS receipt using CSS */
-/* Since POS receipts are rendered in JavaScript, we target common patterns */
-
-/* Target receipt containers and hide footer text */
-.pos .receipt-screen .order-receipt,
-.pos-receipt,
-.receipt-screen .receipt,
-/* Target elements that typically contain the footer text */
-.receipt-screen .receipt > div:last-child,
-.order-receipt > div:last-child {
-    /* We'll use a more specific approach below */
-}
-
-/* Hide text containing "由 Odoo 提供支持" using CSS */
-/* Note: CSS cannot directly select by text content, so we target by position/structure */
-.receipt-screen .order-receipt > div:last-child,
-.order-receipt > div:last-child > div:last-child {
-    /* This targets the footer area, but we need JavaScript to filter by text */
-}
-
-/* Better approach: Use CSS to hide specific classes or IDs if they exist */
-.receipt-footer,
-.pos-receipt-footer,
-[class*="receipt-footer"],
 [class*="powered-by"] {
     display: none !important;
     visibility: hidden !important;
-}
-
-/* Hide the last centered text div in receipt (common pattern for footer) */
-.order-receipt div[style*="text-align: center"]:last-of-type,
-.receipt-screen div[style*="text-align: center"]:last-of-type {
-    /* This is too broad, we need JavaScript help */
 }
 
 /* Custom scrollbar */
@@ -471,4 +366,3 @@ div[style*="text-align: center"]:has-text("Powered by Odoo") {
 ::-webkit-scrollbar-thumb:hover {
     background: #2980b9;
 }
-
