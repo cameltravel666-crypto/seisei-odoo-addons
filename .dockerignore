@@ -1,0 +1,22 @@
+# =============================================================================
+# Docker build context exclusions
+# =============================================================================
+# Build context = repo root (for infra/stacks/odoo18-prod/Dockerfile)
+# Only odoo_modules/ and infra/stacks/*/config/ are needed in the image
+
+# --- Modules not ready for production ---
+odoo_modules/seisei/ai_companion
+
+# --- Not needed in Odoo image ---
+.git
+.github
+node_modules
+src
+prisma
+apps
+services
+scripts
+docs
+SNAPSHOT
+*.md
+!odoo_modules/**/*.md

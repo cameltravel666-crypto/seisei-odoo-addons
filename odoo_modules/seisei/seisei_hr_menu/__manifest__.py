@@ -24,6 +24,8 @@ Features:
     'depends': [
         'hr',
         'hr_contract',
+        'bi_hr_payroll',
+        'bi_hr_payroll_jp',
     ],
     'data': [
         'security/security.xml',

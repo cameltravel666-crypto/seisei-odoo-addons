@@ -1,9 +1,9 @@
 #!/bin/bash
 # =============================================================================
-# Create TPL-FULL Template Database
+# Create B2B Template Database (ten_tpl_b2b_v1)
 # =============================================================================
-# Template for OCR demo database (TEN-OCR-DEMO) and full-featured tenants
-# Installs all addons including OCR, entitlements, etc.
+# Unified B2B template for all industry tenants.
+# Includes: Accounting (JP CoA), OCR, POS, HR/Payroll, nagashiro_theme
 #
 # Usage: ./create_template_full.sh
 #
@@ -13,6 +13,10 @@
 #   PG_USER     - PostgreSQL user (default: odoo)
 #   PG_PASSWORD - PostgreSQL password (required)
 #   ODOO_URL    - Odoo URL (default: http://localhost:8069)
+#
+# NOTE: This script creates an EMPTY database and prints instructions.
+#       The actual module installation must be done via Odoo CLI or XML-RPC.
+#       Alternatively, clone from an existing working database.
 # =============================================================================
 
 set -e
@@ -23,49 +27,57 @@ PG_PORT="${PG_PORT:-5432}"
 PG_USER="${PG_USER:-odoo}"
 PG_PASSWORD="${PG_PASSWORD:?PG_PASSWORD is required}"
 ODOO_URL="${ODOO_URL:-http://localhost:8069}"
-TEMPLATE_NAME="TPL-FULL"
+TEMPLATE_NAME="ten_tpl_b2b_v1"
 
-# Full addon list for OCR demo and full-featured tenants
-FULL_ADDONS=(
+# Module list matching the production B2B template
+# Excluded: ai_companion (not production-ready)
+#           account_accountant (Odoo Enterprise, not available)
+#           seisei_theme (conflicts with nagashiro_theme)
+#           seisei_admin_gate (per-tenant config, not for template)
+#           seisei_hr_menu (needs seisei_hr_menu fix deployed first)
+B2B_ADDONS=(
     # Core
-    "base"
-    "web"
-    "mail"
-    
-    # Accounting
-    "account"
-    "account_accountant"
-    
+    "base" "web" "mail"
+
+    # Accounting & Japan localization
+    "account" "l10n_jp" "l10n_jp_seisei"
+    "account_financial_report" "report_xlsx" "date_range"
+
     # Purchase/Sales
-    "purchase"
-    "sale"
-    "sale_management"
-    
-    # OCR related
-    "odoo_ocr_final"
-    "custom_ocr_finance"
-    "ocr_file"
-    "invoice_ocr"
-    
-    # Entitlements
-    "seisei_entitlements"
-    
-    # Other Seisei modules
-    "seisei_s3_attachment"
-    "seisei_admin_gate"
-    
-    # POS (for QR if needed)
-    "point_of_sale"
-    
+    "purchase" "sale" "sale_management"
+
+    # OCR
+    "odoo_ocr_final" "custom_ocr_finance" "ocr_file"
+
+    # Entitlements & Infrastructure
+    "seisei_entitlements" "seisei_s3_attachment"
+    "seisei_db_router" "seisei_chartjs_loader" "seisei_mutex_toggle"
+
+    # POS
+    "point_of_sale" "seisei_pos_printer"
+
     # Google integration
     "seisei_gdoc_import"
-    
-    # Accounting extras
-    "base_accounting_kit"
-    "accounting_report_xlsx"
+
+    # Theme
+    "nagashiro_theme"
+
+    # Accounting & Reports
+    "seisei_account_reports" "seisei_ar_ap_netting"
+    "seisei_bank_statement_ocr"
+
+    # Contact & HR/Payroll
+    "seisei_contact_api"
+    "bi_hr_payroll" "bi_hr_payroll_jp"
+
+    # Communication & Print
+    "seisei_multilang_send" "seisei_print_manager"
+
+    # Utilities
+    "product_image_clipboard" "report_lang_api" "web_patch"
 )
 
-echo "=== Creating TPL-FULL Template Database ==="
+echo "=== Creating B2B Template Database ==="
 echo "Host: $PG_HOST:$PG_PORT"
 echo "User: $PG_USER"
 echo "Template: $TEMPLATE_NAME"
@@ -81,23 +93,24 @@ fi
 echo "Creating database $TEMPLATE_NAME..."
 PGPASSWORD="$PG_PASSWORD" psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -c "CREATE DATABASE \"$TEMPLATE_NAME\";"
 
-# Initialize Odoo database with base
-echo "Initializing Odoo database..."
-# Note: This requires Odoo CLI access. If running in Docker:
-# docker exec seisei-project-web odoo -d TPL-FULL -i base --stop-after-init
-
 # Build addon list for installation
-ADDON_LIST=$(IFS=,; echo "${FULL_ADDONS[*]}")
-
-echo "Installing addons: $ADDON_LIST"
-echo ""
-echo "IMPORTANT: Run the following command to install addons:"
-echo "docker exec seisei-project-web odoo -d $TEMPLATE_NAME -i $ADDON_LIST --stop-after-init"
-echo ""
-echo "Or via Odoo web interface:"
-echo "1. Login to $ODOO_URL"
-echo "2. Create database: $TEMPLATE_NAME"
-echo "3. Install modules: ${FULL_ADDONS[*]}"
+ADDON_LIST=$(IFS=,; echo "${B2B_ADDONS[*]}")
 
 echo ""
-echo "=== TPL-FULL Template Setup Instructions Complete ==="
+echo "Database created. Install modules with one of these methods:"
+echo ""
+echo "Method 1 - Docker CLI (requires stopping web first):"
+echo "  docker compose stop web"
+echo "  docker compose run --rm web odoo -d $TEMPLATE_NAME -i $ADDON_LIST --stop-after-init"
+echo "  docker compose up -d web"
+echo ""
+echo "Method 2 - XML-RPC to running Odoo (no downtime):"
+echo "  Use the Odoo XML-RPC API to install modules one by one"
+echo ""
+echo "Post-install steps:"
+echo "  1. Set company country=JP, currency=JPY"
+echo "  2. Apply chart of accounts: res.config.settings chart_template='jp'"
+echo "  3. Reset admin password"
+echo "  4. Clear web.base.url"
+echo ""
+echo "=== B2B Template Setup Instructions Complete ==="

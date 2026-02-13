@@ -22,9 +22,7 @@
 #   BASE_DOMAIN - Base domain (default: erp.seisei.tokyo)
 #
 # Templates:
-#   ten_tpl_food_v1    - Restaurant/Food service template
-#   ten_tpl_trade_v1   - Trading/Retail template
-#   ten_tpl_service_v1 - General service template
+#   ten_tpl_b2b_v1     - Unified B2B template (JP CoA, OCR, POS, HR, nagashiro_theme)
 # =============================================================================
 
 set -euo pipefail
@@ -54,10 +52,12 @@ PG_PASSWORD="${PG_PASSWORD:-}"
 BASE_DOMAIN="${BASE_DOMAIN:-erp.seisei.tokyo}"
 
 # Template mapping
+# All industries currently use the unified B2B template (ten_tpl_b2b_v1)
+# which includes: accounting (JP CoA), OCR, POS, HR/Payroll, nagashiro_theme
 declare -A TEMPLATES=(
-    ["food"]="ten_tpl_food_v1"
-    ["trade"]="ten_tpl_trade_v1"
-    ["service"]="ten_tpl_service_v1"
+    ["food"]="ten_tpl_b2b_v1"
+    ["trade"]="ten_tpl_b2b_v1"
+    ["service"]="ten_tpl_b2b_v1"
 )
 
 # Validate arguments

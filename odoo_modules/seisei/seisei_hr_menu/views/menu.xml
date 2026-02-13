@@ -85,28 +85,28 @@
     <menuitem id="menu_seisei_insurance_prefecture"
         name="Insurance Prefectures"
         parent="menu_seisei_japan_social_tax"
-        action="bi_hr_payroll.hr_insurance_prefecture_action"
+        action="bi_hr_payroll_jp.hr_insurance_prefecture_action"
         sequence="20"
         groups="group_seisei_hr_admin"/>
 
     <menuitem id="menu_seisei_insurance_rate"
         name="Insurance Rates"
         parent="menu_seisei_japan_social_tax"
-        action="bi_hr_payroll.hr_insurance_rate_action"
+        action="bi_hr_payroll_jp.hr_insurance_rate_action"
         sequence="30"
         groups="group_seisei_hr_admin"/>
 
     <menuitem id="menu_seisei_insurance_grade"
         name="Insurance Grades"
         parent="menu_seisei_japan_social_tax"
-        action="bi_hr_payroll.hr_insurance_grade_action"
+        action="bi_hr_payroll_jp.hr_insurance_grade_action"
         sequence="40"
         groups="group_seisei_hr_admin"/>
 
     <menuitem id="menu_seisei_withholding_tax"
         name="Withholding Tax"
         parent="menu_seisei_japan_social_tax"
-        action="bi_hr_payroll.hr_withholding_tax_action"
+        action="bi_hr_payroll_jp.hr_withholding_tax_action"
         sequence="50"
         groups="group_seisei_hr_admin"/>
 
