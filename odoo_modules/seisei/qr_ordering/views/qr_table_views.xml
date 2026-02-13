@@ -7,6 +7,9 @@
         <field name="model">qr.table</field>
         <field name="arch" type="xml">
             <list string="QR Tables">
+                <header>
+                    <button name="action_print_all_qr_codes" string="批量打印 QR" type="object" class="btn-secondary"/>
+                </header>
                 <field name="sequence" widget="handle"/>
                 <field name="name"/>
                 <field name="short_code"/>

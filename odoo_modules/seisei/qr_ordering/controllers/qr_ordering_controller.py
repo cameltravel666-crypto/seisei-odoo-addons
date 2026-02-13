@@ -239,6 +239,50 @@ class QrOrderingController(http.Controller):
             'barcode_url': barcode_url,
         })
 
+    @http.route('/qr/print/batch', type='http', auth='user')
+    def print_qr_codes_batch(self, ids=None, **kwargs):
+        """批量打印二维码页面"""
+        if not ids:
+            return request.not_found()
+
+        table_ids = [int(x) for x in ids.split(',') if x.strip().isdigit()]
+        if not table_ids:
+            return request.not_found()
+
+        tables = request.env['qr.table'].sudo().browse(table_ids).exists()
+        if not tables:
+            return request.not_found()
+
+        # 按 sequence, name 排序
+        tables = tables.sorted(key=lambda t: (t.sequence, t.name))
+
+        # 构建公开域名
+        config = request.env['ir.config_parameter'].sudo()
+        qr_base_url = (
+            config.get_param('qr_ordering.base_url')
+            or config.get_param('web.base.url')
+            or request.httprequest.host_url
+        )
+        qr_base_url = (qr_base_url or '').rstrip('/')
+        db_name = request.env.cr.dbname
+
+        from urllib.parse import quote
+
+        tables_data = []
+        for table in tables:
+            qr_content_url = f"{qr_base_url}/qr/order/{table.qr_token}?db={db_name}"
+            qr_url_encoded = quote(qr_content_url, safe='')
+            barcode_url = f"/report/barcode/QR/{qr_url_encoded}?width=300&height=300"
+            tables_data.append({
+                'table': table,
+                'qr_content_url': qr_content_url,
+                'barcode_url': barcode_url,
+            })
+
+        return request.render('qr_ordering.print_qr_batch_page', {
+            'tables_data': tables_data,
+        })
+
     # ==================== 公开图片访问 ====================
 
     @http.route('/qr/image/product/<int:product_id>', type='http', auth='public', cors='*')
