@@ -8,6 +8,8 @@ import json
 import logging
 import os
 import re
+from datetime import date
+
 import requests
 from typing import Dict, Any, List
 
@@ -132,7 +134,7 @@ BANK_STATEMENT_OCR_PROMPT = '''あなたは日本の銀行取引明細書（通�
   "balance_end": 期末残高（数値、カンマなし）,
   "transactions": [
     {
-      "date": "YYYY-MM-DD",
+      "date": "通帳に印字されたまま（例: 7-12-8, 2025-12-08）",
       "description": "摘要/適要（振込人名、引落先など原文のまま）",
       "withdrawal": 出金額（数値、0なら0）,
       "deposit": 入金額（数値、0なら0）,
@@ -143,7 +145,9 @@ BANK_STATEMENT_OCR_PROMPT = '''あなたは日本の銀行取引明細書（通�
 }
 
 注意事項：
-- 和暦（令和/平成）は西暦に変換してYYYY-MM-DD形式で返す
+- ⚠️ 日付は通帳に印字された形式のまま出力すること（自分で西暦変換しない）
+  例: 通帳に「7-12-8」と印字 → "date": "7-12-8"（そのまま出力）
+  ※ 令和→西暦の変換はシステム側で自動処理するため、AIが変換する必要はありません
 - 金額のカンマ（,）は除去して数値で返す
 - 摘要は原文のまま（略称もそのまま）
 - 入金はdeposit、出金はwithdrawal（両方0はありえない）
@@ -213,6 +217,38 @@ def process_expense_document(file_data: bytes, mimetype: str, tenant_id: str = '
     return _process_with_template(file_data, mimetype, tenant_id, 'expense')
 
 
+REIWA_OFFSET = 2018  # 令和元年 = 2019 = 1 + 2018
+
+
+def _normalize_reiwa_date(date_str: str) -> str:
+    """Normalize Japanese era dates to YYYY-MM-DD.
+
+    Rule: if year < 100, treat as Reiwa era (year + 2018).
+    Examples: 7-11-28 → 2025-11-28, 0007-11-28 → 2025-11-28
+    """
+    if not date_str:
+        return date_str
+    m = re.match(r'^(\d{1,4})[/-](\d{1,2})[/-](\d{1,2})$', date_str.strip())
+    if not m:
+        return date_str
+    year, month, day = int(m.group(1)), int(m.group(2)), int(m.group(3))
+    if year < 100:
+        year = year + REIWA_OFFSET
+    try:
+        date(year, month, day)
+    except ValueError:
+        return date_str
+    return f'{year:04d}-{month:02d}-{day:02d}'
+
+
+def _normalize_bank_transactions(transactions: list) -> list:
+    """Normalize dates in all bank transactions."""
+    for txn in transactions:
+        if txn.get('date'):
+            txn['date'] = _normalize_reiwa_date(txn['date'])
+    return transactions
+
+
 def process_bank_statement(file_data: bytes, mimetype: str, tenant_id: str = 'default') -> Dict[str, Any]:
     """Process bank statement document (image or multi-page PDF).
 
@@ -274,7 +310,9 @@ def process_bank_statement(file_data: bytes, mimetype: str, tenant_id: str = 'de
         'statement_period': first_page_header.get('statement_period', ''),
         'balance_start': first_page_header.get('balance_start', 0),
         'balance_end': last_page_header.get('balance_end', 0),
-        'transactions': _deduplicate_bank_transactions(all_transactions),
+        'transactions': _normalize_bank_transactions(
+            _deduplicate_bank_transactions(all_transactions)
+        ),
     }
 
     return {
