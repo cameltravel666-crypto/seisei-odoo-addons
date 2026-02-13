@@ -19,6 +19,14 @@
                     <button name="action_reset_to_draft" type="object"
                             string="Reset" class="btn-secondary"
                             invisible="state in ('draft', 'done')"/>
+                    <button name="action_export_xlsx" type="object"
+                            string="Export XLSX" class="btn-secondary"
+                            invisible="state not in ('review', 'done')"
+                            icon="fa-file-excel-o"/>
+                    <button name="action_export_csv" type="object"
+                            string="Export CSV" class="btn-secondary"
+                            invisible="state not in ('review', 'done')"
+                            icon="fa-file-text-o"/>
                     <field name="state" widget="statusbar"
                            statusbar_visible="draft,processing,review,done"/>
                 </header>
