@@ -1,3 +1,6 @@
+import base64
+import csv
+import io
 import json
 import logging
 
@@ -331,3 +334,154 @@ class SeiseiBankStatementOcr(models.Model):
             'balance_end': 0,
             'statement_period': False,
         })
+
+    # ---- Export ----
+
+    def _get_export_filename(self, extension):
+        """Generate export filename: {bank_name}_{period}.{ext}"""
+        parts = [p for p in [self.bank_name, self.statement_period] if p]
+        name = '_'.join(parts) if parts else f'bank_statement_{self.id}'
+        # Sanitize for filesystem
+        name = name.replace('/', '-').replace('\\', '-')
+        return f'{name}.{extension}'
+
+    def action_export_xlsx(self):
+        """Export statement to XLSX with formatted header and data rows."""
+        self.ensure_one()
+
+        try:
+            import xlsxwriter
+        except ImportError:
+            raise UserError(_('xlsxwriter is not installed.'))
+
+        output = io.BytesIO()
+        workbook = xlsxwriter.Workbook(output, {'in_memory': True})
+        sheet = workbook.add_worksheet('Statement')
+
+        # --- Styles ---
+        title_fmt = workbook.add_format({
+            'bold': True, 'font_size': 14,
+        })
+        info_fmt = workbook.add_format({'font_size': 10})
+        header_fmt = workbook.add_format({
+            'bold': True, 'font_size': 10, 'bottom': 1,
+            'bg_color': '#f0f0f0',
+        })
+        header_right_fmt = workbook.add_format({
+            'bold': True, 'font_size': 10, 'bottom': 1,
+            'bg_color': '#f0f0f0', 'align': 'right',
+        })
+        text_fmt = workbook.add_format({'font_size': 10})
+        date_fmt = workbook.add_format({
+            'font_size': 10, 'num_format': 'yyyy-mm-dd',
+        })
+        num_fmt = workbook.add_format({
+            'font_size': 10, 'num_format': '#,##0', 'align': 'right',
+        })
+
+        # --- Column widths ---
+        sheet.set_column(0, 0, 12)   # Date
+        sheet.set_column(1, 1, 30)   # Description
+        sheet.set_column(2, 4, 15)   # Withdrawal / Deposit / Balance
+        sheet.set_column(5, 5, 12)   # Reference
+
+        # --- Header rows ---
+        row = 0
+        bank_title = ' '.join(
+            p for p in [self.bank_name, self.branch_name] if p
+        )
+        sheet.write(row, 0, bank_title or 'Bank Statement', title_fmt)
+
+        row = 1
+        if self.account_number:
+            parts = [f'口座番号: {self.account_number}']
+            if self.account_holder:
+                parts.append(f'名義: {self.account_holder}')
+            sheet.write(row, 0, '  '.join(parts), info_fmt)
+
+        row = 2
+        if self.statement_period:
+            sheet.write(row, 0, f'期間: {self.statement_period}', info_fmt)
+
+        row = 3
+        balance_info = f'期首残高: {self.balance_start:,.0f}  期末残高: {self.balance_end:,.0f}'
+        sheet.write(row, 0, balance_info, info_fmt)
+
+        # Row 4 = empty
+        row = 5
+        headers = ['日付', '摘要', '出金', '入金', '残高', '備考']
+        for col, h in enumerate(headers):
+            fmt = header_right_fmt if col in (2, 3, 4) else header_fmt
+            sheet.write(row, col, h, fmt)
+
+        # --- Data rows ---
+        for line in self.line_ids.sorted('sequence'):
+            row += 1
+            sheet.write_datetime(
+                row, 0,
+                fields.Date.to_date(line.date) if isinstance(line.date, str) else line.date,
+                date_fmt,
+            )
+            sheet.write(row, 1, line.description or '', text_fmt)
+            sheet.write(row, 2, int(line.withdrawal), num_fmt)
+            sheet.write(row, 3, int(line.deposit), num_fmt)
+            sheet.write(row, 4, int(line.balance), num_fmt)
+            sheet.write(row, 5, line.reference or '', text_fmt)
+
+        workbook.close()
+
+        filename = self._get_export_filename('xlsx')
+        attachment = self.env['ir.attachment'].create({
+            'name': filename,
+            'type': 'binary',
+            'datas': base64.b64encode(output.getvalue()),
+            'res_model': self._name,
+            'res_id': self.id,
+            'mimetype': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        })
+
+        return {
+            'type': 'ir.actions.act_url',
+            'url': f'/web/content/{attachment.id}?download=true',
+            'target': 'self',
+        }
+
+    def action_export_csv(self):
+        """Export statement to CSV with UTF-8 BOM for Excel compatibility."""
+        self.ensure_one()
+
+        output = io.BytesIO()
+        output.write(b'\xef\xbb\xbf')  # UTF-8 BOM
+        wrapper = io.TextIOWrapper(output, encoding='utf-8', newline='')
+        writer = csv.writer(wrapper)
+
+        writer.writerow(['日付', '摘要', '出金', '入金', '残高', '備考'])
+
+        for line in self.line_ids.sorted('sequence'):
+            writer.writerow([
+                str(line.date) if line.date else '',
+                line.description or '',
+                int(line.withdrawal),
+                int(line.deposit),
+                int(line.balance),
+                line.reference or '',
+            ])
+
+        wrapper.flush()
+        wrapper.detach()  # Detach so closing BytesIO doesn't close wrapper
+
+        filename = self._get_export_filename('csv')
+        attachment = self.env['ir.attachment'].create({
+            'name': filename,
+            'type': 'binary',
+            'datas': base64.b64encode(output.getvalue()),
+            'res_model': self._name,
+            'res_id': self.id,
+            'mimetype': 'text/csv',
+        })
+
+        return {
+            'type': 'ir.actions.act_url',
+            'url': f'/web/content/{attachment.id}?download=true',
+            'target': 'self',
+        }
