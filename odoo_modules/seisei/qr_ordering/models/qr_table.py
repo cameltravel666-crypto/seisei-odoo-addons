@@ -291,3 +291,12 @@ class QrTable(models.Model):
             'url': f'/qr/print/{self.qr_token}',
             'target': 'new',
         }
+
+    def action_print_all_qr_codes(self):
+        """批量打印二维码"""
+        ids_str = ','.join(str(id) for id in self.ids)
+        return {
+            'type': 'ir.actions.act_url',
+            'url': f'/qr/print/batch?ids={ids_str}',
+            'target': 'new',
+        }
