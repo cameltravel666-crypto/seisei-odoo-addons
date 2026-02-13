@@ -29,8 +29,19 @@ class TestNormalizeReiwaDate(unittest.TestCase):
     def test_western_year_passthrough(self):
         self.assertEqual(_normalize_reiwa_date('2025-11-28'), '2025-11-28')
 
-    def test_western_year_2007_passthrough(self):
-        self.assertEqual(_normalize_reiwa_date('2007-11-28'), '2007-11-28')
+    def test_gemini_prepended_20_to_reiwa_7(self):
+        """Gemini outputs 2007 instead of 7 for Reiwa 7."""
+        self.assertEqual(_normalize_reiwa_date('2007-11-28'), '2025-11-28')
+
+    def test_gemini_prepended_20_to_reiwa_6(self):
+        self.assertEqual(_normalize_reiwa_date('2006-03-15'), '2024-03-15')
+
+    def test_gemini_prepended_20_to_reiwa_1(self):
+        self.assertEqual(_normalize_reiwa_date('2001-05-01'), '2019-05-01')
+
+    def test_western_2019_passthrough(self):
+        """2019+ are valid western years, should not be converted."""
+        self.assertEqual(_normalize_reiwa_date('2019-01-15'), '2019-01-15')
 
     def test_empty_string(self):
         self.assertEqual(_normalize_reiwa_date(''), '')
