@@ -134,7 +134,7 @@ BANK_STATEMENT_OCR_PROMPT = '''あなたは日本の銀行取引明細書（通�
   "balance_end": 期末残高（数値、カンマなし）,
   "transactions": [
     {
-      "date": "YYYY-MM-DD",
+      "date": "通帳に印字されたまま（例: 7-12-8, 2025-12-08）",
       "description": "摘要/適要（振込人名、引落先など原文のまま）",
       "withdrawal": 出金額（数値、0なら0）,
       "deposit": 入金額（数値、0なら0）,
