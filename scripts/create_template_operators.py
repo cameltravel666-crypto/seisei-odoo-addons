@@ -26,7 +26,7 @@ import xmlrpc.client
 
 ODOO_URL = os.environ.get("ODOO_URL", "http://54.65.127.141:8069")
 MASTER_USER = os.environ.get("MASTER_USER", "admin@seisei.tokyo")
-MASTER_PASSWORD = os.environ.get("MASTER_PASSWORD", "Seisei@2026")
+MASTER_PASSWORD = os.environ.get("MASTER_PASSWORD", "admin")
 
 # Template databases (from tenant_create.sh + other known templates)
 TEMPLATE_DATABASES = [
@@ -53,6 +53,8 @@ OPERATORS = [
 EXCLUDED_GROUPS = [
     ("base", "group_system"),       # Settings menu
     ("base", "group_erp_manager"),  # Access Rights management
+    ("base", "group_portal"),       # Portal user type (mutually exclusive with Internal)
+    ("base", "group_public"),       # Public user type (mutually exclusive with Internal)
 ]
 
 
