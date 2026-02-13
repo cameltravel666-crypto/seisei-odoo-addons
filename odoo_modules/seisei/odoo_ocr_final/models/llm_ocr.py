@@ -223,8 +223,12 @@ REIWA_OFFSET = 2018  # 令和元年 = 2019 = 1 + 2018
 def _normalize_reiwa_date(date_str: str) -> str:
     """Normalize Japanese era dates to YYYY-MM-DD.
 
-    Rule: if year < 100, treat as Reiwa era (year + 2018).
-    Examples: 7-11-28 → 2025-11-28, 0007-11-28 → 2025-11-28
+    Rules:
+    - year < 100: treat as Reiwa era (year + 2018).
+      Examples: 7-11-28 → 2025-11-28, 0007-11-28 → 2025-11-28
+    - year 2001-2018: Gemini may prepend "20" to a Reiwa year (7 → 2007).
+      Since Reiwa started in 2019, these can't be valid; strip the "20" prefix.
+      Examples: 2007-11-28 → 2025-11-28, 2006-03-15 → 2024-03-15
     """
     if not date_str:
         return date_str
@@ -234,6 +238,9 @@ def _normalize_reiwa_date(date_str: str) -> str:
     year, month, day = int(m.group(1)), int(m.group(2)), int(m.group(3))
     if year < 100:
         year = year + REIWA_OFFSET
+    elif 2001 <= year <= 2018:
+        # Gemini prepended "20" to Reiwa year (e.g., 7 → 2007)
+        year = (year - 2000) + REIWA_OFFSET
     try:
         date(year, month, day)
     except ValueError:
