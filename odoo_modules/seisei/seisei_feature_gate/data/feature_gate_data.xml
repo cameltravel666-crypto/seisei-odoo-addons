@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- Trial period in days (default 30). install_date is set by post_init_hook. -->
+        <record model="ir.config_parameter" id="config_trial_days">
+            <field name="key">seisei_feature_gate.trial_days</field>
+            <field name="value">30</field>
+        </record>
+    </data>
+</odoo>
