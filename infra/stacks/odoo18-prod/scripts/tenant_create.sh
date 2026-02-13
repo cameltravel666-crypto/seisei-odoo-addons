@@ -233,6 +233,13 @@ main() {
 
     log_success "Database created: $db_name"
 
+    # Reset feature gate trial start to now (template carries its own install_date)
+    log_info "Resetting feature gate trial start date..."
+    PGPASSWORD="$PG_PASSWORD" psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$db_name" -c \
+        "UPDATE ir_config_parameter SET value = NOW()::text WHERE key = 'seisei_feature_gate.install_date';" \
+        2>/dev/null && log_success "Trial start date reset to now" \
+        || log_warn "Feature gate not installed in template — skipped"
+
     print_tenant_info "$TENANT_CODE" "$db_name" "$subdomain" "$template"
     print_rollback "$db_name"
 
