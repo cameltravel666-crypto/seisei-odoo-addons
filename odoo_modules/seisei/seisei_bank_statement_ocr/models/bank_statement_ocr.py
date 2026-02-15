@@ -3,11 +3,96 @@ import csv
 import io
 import json
 import logging
+import re
+from datetime import date as pydate
 
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
 
 _logger = logging.getLogger(__name__)
+
+
+def _era_to_western(era_year):
+    """Convert Japanese era short year to Western year.
+
+    Default: Reiwa (令和). Falls back to Heisei if result is in the future.
+    Reiwa 1 = 2019, so western = era_year + 2018
+    Heisei 1 = 1989, so western = era_year + 1988
+    """
+    reiwa = era_year + 2018
+    if reiwa <= pydate.today().year + 1:
+        return reiwa
+    # Too far in future → probably Heisei
+    return era_year + 1988
+
+
+def _parse_passbook_date(raw_date, fallback=None):
+    """Parse Japanese bank passbook date formats into YYYY-MM-DD.
+
+    Japanese passbooks use era year (令和/平成). E.g.:
+      - "07-1225"  → 令和7年12月25日 → 2025-12-25
+      - "08-1-5"   → 令和8年1月5日   → 2026-01-05
+      - "08-113"   → 令和8年1月13日  → 2026-01-13
+      - "0.8-1-19" → OCR artifact    → 2026-01-19
+      - "2025-12-08" → ISO standard  → pass through
+    """
+    if not raw_date:
+        return fallback or pydate.today().isoformat()
+
+    s = str(raw_date).strip()
+
+    # Already valid ISO date
+    if re.match(r'^\d{4}-\d{2}-\d{2}$', s):
+        return s
+
+    # Clean OCR artifacts: dots in numbers (e.g. "0.8" -> "08")
+    s = re.sub(r'(\d)\.(\d)', r'\1\2', s)
+
+    # Format: YY-MMDD (compact, 4 digits after dash) e.g. "07-1225"
+    m = re.match(r'^(\d{1,2})-(\d{4})$', s)
+    if m:
+        y = _era_to_western(int(m.group(1)))
+        rest = m.group(2)
+        mo, d = int(rest[:2]), int(rest[2:])
+        try:
+            return pydate(y, mo, d).isoformat()
+        except ValueError:
+            pass
+
+    # Format: YY-MDD (compact, 3 digits after dash) e.g. "08-113" → month=1, day=13
+    m = re.match(r'^(\d{1,2})-(\d{3})$', s)
+    if m:
+        y = _era_to_western(int(m.group(1)))
+        rest = m.group(2)
+        mo, d = int(rest[0]), int(rest[1:])
+        try:
+            return pydate(y, mo, d).isoformat()
+        except ValueError:
+            pass
+
+    # Format: YY-M-D or YY-MM-DD (dashed) e.g. "08-1-5", "07-12-29"
+    m = re.match(r'^(\d{1,4})[/-](\d{1,2})[/-](\d{1,2})$', s)
+    if m:
+        y, mo, d = int(m.group(1)), int(m.group(2)), int(m.group(3))
+        if y < 100:
+            y = _era_to_western(y)
+        try:
+            return pydate(y, mo, d).isoformat()
+        except ValueError:
+            pass
+
+    # Compact format like "071225" (YYMMDD)
+    m = re.match(r'^(\d{2})(\d{2})(\d{2})$', s)
+    if m:
+        y = _era_to_western(int(m.group(1)))
+        mo, d = int(m.group(2)), int(m.group(3))
+        try:
+            return pydate(y, mo, d).isoformat()
+        except ValueError:
+            pass
+
+    _logger.warning(f'[BankStmtOCR] Could not parse date: {raw_date!r}, using fallback')
+    return fallback or pydate.today().isoformat()
 
 
 class SeiseiBankStatementOcr(models.Model):
@@ -98,79 +183,81 @@ class SeiseiBankStatementOcr(models.Model):
 
         self.state = 'processing'
         self.line_ids.unlink()
+        self.env.flush_all()
 
         try:
-            import base64 as b64
-            from odoo.addons.odoo_ocr_final.models.llm_ocr import process_bank_statement
+            with self.env.cr.savepoint():
+                import base64 as b64
+                from odoo.addons.odoo_ocr_final.models.llm_ocr import process_bank_statement
 
-            all_transactions = []
-            first_header = {}
-            last_header = {}
-            total_pages = 0
-            errors = []
+                all_transactions = []
+                first_header = {}
+                last_header = {}
+                total_pages = 0
+                errors = []
 
-            for attachment in self.attachment_ids:
-                file_data = b64.b64decode(attachment.datas)
-                mimetype = attachment.mimetype or 'application/pdf'
+                for attachment in self.attachment_ids:
+                    file_data = b64.b64decode(attachment.datas)
+                    mimetype = attachment.mimetype or 'application/pdf'
 
-                result = process_bank_statement(
-                    file_data, mimetype, tenant_id=self.env.cr.dbname,
+                    result = process_bank_statement(
+                        file_data, mimetype, tenant_id=self.env.cr.dbname,
+                    )
+
+                    if result.get('success'):
+                        extracted = result['extracted']
+                        pages = result.get('pages', 1)
+                        total_pages += pages
+                        txns = extracted.get('transactions', [])
+                        all_transactions.extend(txns)
+                        if not first_header:
+                            first_header = extracted
+                        last_header = extracted
+                    else:
+                        errors.append(f'{attachment.name}: {result.get("error", "unknown")}')
+
+                if not all_transactions and errors:
+                    self.ocr_error_message = '; '.join(errors)
+                    self.state = 'failed'
+                    return True
+
+                # Merge: header from first file, balance_end from last file
+                merged = {
+                    'bank_name': first_header.get('bank_name', ''),
+                    'branch_name': first_header.get('branch_name', ''),
+                    'account_number': first_header.get('account_number', ''),
+                    'account_holder': first_header.get('account_holder', ''),
+                    'statement_period': first_header.get('statement_period', ''),
+                    'balance_start': first_header.get('balance_start', 0),
+                    'balance_end': last_header.get('balance_end', 0),
+                    'transactions': all_transactions,
+                }
+
+                self.ocr_pages = total_pages
+                self.ocr_processed_at = fields.Datetime.now()
+                if errors:
+                    self.ocr_error_message = '; '.join(errors)
+                self._apply_ocr_result(merged)
+                self.state = 'review'
+
+                # Link scan attachments to this record so they appear in Chatter
+                self.attachment_ids.write({
+                    'res_model': self._name,
+                    'res_id': self.id,
+                })
+
+                self.message_post(
+                    body=_(
+                        'OCR completed: %(pages)s pages, %(txns)s transactions extracted.',
+                        pages=total_pages,
+                        txns=len(merged['transactions']),
+                    ),
+                    attachment_ids=self.attachment_ids.ids,
                 )
 
-                if result.get('success'):
-                    extracted = result['extracted']
-                    pages = result.get('pages', 1)
-                    total_pages += pages
-                    txns = extracted.get('transactions', [])
-                    all_transactions.extend(txns)
-                    if not first_header:
-                        first_header = extracted
-                    last_header = extracted
-                else:
-                    errors.append(f'{attachment.name}: {result.get("error", "unknown")}')
-
-            if not all_transactions and errors:
-                self.ocr_error_message = '; '.join(errors)
-                self.state = 'failed'
-                return True
-
-            # Merge: header from first file, balance_end from last file
-            merged = {
-                'bank_name': first_header.get('bank_name', ''),
-                'branch_name': first_header.get('branch_name', ''),
-                'account_number': first_header.get('account_number', ''),
-                'account_holder': first_header.get('account_holder', ''),
-                'statement_period': first_header.get('statement_period', ''),
-                'balance_start': first_header.get('balance_start', 0),
-                'balance_end': last_header.get('balance_end', 0),
-                'transactions': all_transactions,
-            }
-
-            self.ocr_pages = total_pages
-            self.ocr_processed_at = fields.Datetime.now()
-            if errors:
-                self.ocr_error_message = '; '.join(errors)
-            self._apply_ocr_result(merged)
-            self.state = 'review'
-
-            # Link scan attachments to this record so they appear in Chatter
-            self.attachment_ids.write({
-                'res_model': self._name,
-                'res_id': self.id,
-            })
-
-            self.message_post(
-                body=_(
-                    'OCR completed: %(pages)s pages, %(txns)s transactions extracted.',
-                    pages=total_pages,
-                    txns=len(merged['transactions']),
-                ),
-                attachment_ids=self.attachment_ids.ids,
-            )
-
-            OcrUsage = self.env['ocr.usage'].sudo()
-            if hasattr(OcrUsage, 'increment_usage'):
-                OcrUsage.increment_usage(pages=total_pages or 1)
+                OcrUsage = self.env['ocr.usage'].sudo()
+                if hasattr(OcrUsage, 'increment_usage'):
+                    OcrUsage.increment_usage(pages=total_pages or 1)
 
         except ImportError:
             self.ocr_error_message = 'odoo_ocr_final module not found.'
@@ -201,16 +288,19 @@ class SeiseiBankStatementOcr(models.Model):
 
         OcrLine = self.env['seisei.bank.statement.ocr.line']
         for i, txn in enumerate(transactions):
+            fallback_date = str(self.statement_date) if self.statement_date else None
+            txn_date = _parse_passbook_date(txn.get('date'), fallback=fallback_date)
+            txn_desc = txn.get('description') or _('(No description)')
             OcrLine.create({
                 'ocr_id': self.id,
                 'sequence': (i + 1) * 10,
-                'date': txn.get('date'),
-                'description': txn.get('description', ''),
+                'date': txn_date,
+                'description': txn_desc,
                 'withdrawal': txn.get('withdrawal', 0),
                 'deposit': txn.get('deposit', 0),
                 'balance': txn.get('balance') or 0,
                 'reference': txn.get('reference', ''),
-                'partner_name': txn.get('description', ''),
+                'partner_name': txn.get('description') or txn_desc,
             })
 
         self._auto_match_partners()
