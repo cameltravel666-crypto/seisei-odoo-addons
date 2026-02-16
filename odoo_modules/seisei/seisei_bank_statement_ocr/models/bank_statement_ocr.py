@@ -307,8 +307,74 @@ class SeiseiBankStatementOcr(models.Model):
                 'partner_name': txn_desc,
             })
 
+        self._fix_transaction_directions()
         self._fill_running_balances()
         self._auto_match_partners()
+
+    def _fix_transaction_directions(self):
+        """Fix deposit/withdrawal direction errors using anchor balances.
+
+        OCR sometimes puts the amount in the wrong column (deposit vs
+        withdrawal).  By comparing the running balance against printed
+        anchor balances, we can detect and correct such errors using a
+        greedy flip algorithm.
+        """
+        lines = self.line_ids.sorted('sequence')
+        if not lines:
+            return
+
+        running = self.balance_start or 0
+        segment_start = running
+        segment_lines = []
+        total_flipped = 0
+
+        for line in lines:
+            segment_lines.append(line)
+
+            if not line.balance:
+                continue
+
+            # Reached an anchor — check if segment is consistent
+            computed = segment_start
+            for sl in segment_lines:
+                computed += (sl.deposit or 0) - (sl.withdrawal or 0)
+
+            error = computed - line.balance
+            if abs(error) <= 1:
+                # Segment matches anchor
+                segment_start = line.balance
+                segment_lines = []
+                continue
+
+            # Mismatch — try greedy flipping to reduce error
+            candidates = [
+                (sl, 2 * ((sl.withdrawal or 0) - (sl.deposit or 0)))
+                for sl in segment_lines
+                if (sl.deposit or 0) != (sl.withdrawal or 0)
+            ]
+            candidates.sort(key=lambda x: abs(x[1]), reverse=True)
+
+            flips = []
+            remaining = error
+            for sl, effect in candidates:
+                if abs(remaining + effect) < abs(remaining):
+                    flips.append(sl)
+                    remaining += effect
+
+            # Accept if flipping reduces error by > 95%
+            if flips and abs(remaining) < abs(error) * 0.05:
+                for sl in flips:
+                    sl.deposit, sl.withdrawal = sl.withdrawal, sl.deposit
+                total_flipped += len(flips)
+
+            segment_start = line.balance
+            segment_lines = []
+
+        if total_flipped:
+            _logger.info(
+                '[BankStmtOCR] Fixed direction of %d transactions using anchor balances',
+                total_flipped,
+            )
 
     def _fill_running_balances(self):
         """Fill missing balances by computing running balance.
