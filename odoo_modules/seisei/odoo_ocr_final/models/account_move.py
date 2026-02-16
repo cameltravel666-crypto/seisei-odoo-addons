@@ -108,7 +108,7 @@ class AccountMove(models.Model):
             if extracted.get('invoice_number'):
                 update_vals['ref'] = extracted['invoice_number']
 
-            # Auto-fill date
+            # Auto-fill date (fallback to today if OCR doesn't extract one)
             if extracted.get('date'):
                 try:
                     date_str = extracted['date']
@@ -116,7 +116,9 @@ class AccountMove(models.Model):
                     date_str = re.sub(r'日', '', date_str)
                     update_vals['invoice_date'] = date_str
                 except Exception:
-                    pass
+                    update_vals['invoice_date'] = fields.Date.context_today(self)
+            else:
+                update_vals['invoice_date'] = fields.Date.context_today(self)
 
             # Store total amount in narration for reference
             total = extracted.get('total')
@@ -138,14 +140,8 @@ class AccountMove(models.Model):
 
             _logger.info(f'[OCR] Invoice {self.id}: {pages} pages, {len(line_items)} items, {matched_count} matched')
 
-            # Reload the form to show updated data
-            return {
-                'type': 'ir.actions.act_window',
-                'res_model': 'account.move',
-                'res_id': self.id,
-                'view_mode': 'form',
-                'target': 'current',
-            }
+            # Return False to stay on the current form and preserve the list pager
+            return False
 
         except UserError:
             raise
@@ -980,7 +976,7 @@ class AccountMove(models.Model):
         if extracted.get('invoice_number'):
             update_vals['ref'] = extracted['invoice_number']
 
-        # Auto-fill date
+        # Auto-fill date (fallback to today if OCR doesn't extract one)
         if extracted.get('date'):
             try:
                 date_str = extracted['date']
@@ -988,7 +984,9 @@ class AccountMove(models.Model):
                 date_str = re.sub(r'日', '', date_str)
                 update_vals['invoice_date'] = date_str
             except Exception:
-                pass
+                update_vals['invoice_date'] = fields.Date.context_today(self)
+        else:
+            update_vals['invoice_date'] = fields.Date.context_today(self)
 
         # Store total
         total = extracted.get('total')
@@ -1287,16 +1285,17 @@ class AccountMove(models.Model):
             side: 'debit' or 'credit'
             rate: tax rate (8, 10, 0)
 
-        For vendor bills:  debit=expense(課税仕入), credit=payable(対象外)
+        For vendor bills:  debit=expense(課対仕入), credit=payable(対象外)
         For customer invoices: debit=receivable(対象外), credit=income(課税売上)
         """
         if rate <= 0:
             return '対象外'
+        reduced = '（軽）' if rate == 8 else ''
         is_purchase = self.move_type in ('in_invoice', 'in_refund')
         if is_purchase:
-            return f'課税仕入内{rate}%' if side == 'debit' else '対象外'
+            return f'課対仕入内{rate}%{reduced}' if side == 'debit' else '対象外'
         else:
-            return '対象外' if side == 'debit' else f'課税売上内{rate}%'
+            return '対象外' if side == 'debit' else f'課税売上内{rate}%{reduced}'
 
     def _get_account_name_ja(self, account):
         """Get Japanese name for an account."""
@@ -1363,6 +1362,32 @@ class AccountMove(models.Model):
             return os.path.splitext(name)[0]
         return self.name or ''
 
+    @staticmethod
+    def _truncate_yayoi(text, max_halfwidth):
+        """Truncate text to fit within max_halfwidth half-width character count.
+
+        CJK / full-width characters count as 2 half-width units.
+        """
+        if not text:
+            return ''
+        width = 0
+        result = []
+        for ch in text:
+            # CJK Unified Ideographs, CJK punctuation, full-width forms, katakana, hiragana
+            cp = ord(ch)
+            cw = 2 if (
+                (0x3000 <= cp <= 0x9FFF)
+                or (0xF900 <= cp <= 0xFAFF)
+                or (0xFF01 <= cp <= 0xFF60)
+                or (0xFFE0 <= cp <= 0xFFE6)
+                or (0x20000 <= cp <= 0x2FA1F)
+            ) else 1
+            if width + cw > max_halfwidth:
+                break
+            width += cw
+            result.append(ch)
+        return ''.join(result)
+
     def _build_yayoi_row(self):
         """Assemble 25-column Yayoi CSV row."""
         self.ensure_one()
@@ -1391,24 +1416,25 @@ class AccountMove(models.Model):
             credit_amount = amount_total
             credit_tax = amount_tax
 
+        t = self._truncate_yayoi
         return [
             2000,               # Col1: fixed
             slip_number,        # Col2: attachment filename (伝票番号)
             '',                 # Col3: empty
             self._format_yayoi_date(self.invoice_date),  # Col4: date
-            debit_acct,         # Col5: debit account
-            debit_sub,          # Col6: debit sub-account
+            t(debit_acct, 24),  # Col5: debit account (max 24)
+            t(debit_sub, 24),   # Col6: debit sub-account (max 24)
             '',                 # Col7: empty
             debit_tax_cat,      # Col8: debit tax category
             debit_amount,       # Col9: debit amount
             debit_tax,          # Col10: debit tax
-            credit_acct,        # Col11: credit account
-            credit_sub,         # Col12: credit sub-account
+            t(credit_acct, 24), # Col11: credit account (max 24)
+            t(credit_sub, 24),  # Col12: credit sub-account (max 24)
             '',                 # Col13: empty
             credit_tax_cat,     # Col14: credit tax category
             credit_amount,      # Col15: credit amount
             credit_tax,         # Col16: credit tax
-            description,        # Col17: description
+            t(description, 64), # Col17: description (max 64)
             '',                 # Col18: empty
             '',                 # Col19: empty
             0,                  # Col20: 0
