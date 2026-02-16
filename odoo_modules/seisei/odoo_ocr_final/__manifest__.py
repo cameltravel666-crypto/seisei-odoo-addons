@@ -1,6 +1,6 @@
 {
     'name': 'Financial OCR Integration',
-    'version': '18.0.13.6.3',
+    'version': '18.0.13.7.0',
     'category': 'Accounting',
     'summary': 'AI-powered OCR for Purchase Orders, Invoices, and Expenses',
     'description': '''
