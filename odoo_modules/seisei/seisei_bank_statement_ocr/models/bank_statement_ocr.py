@@ -209,6 +209,10 @@ class SeiseiBankStatementOcr(models.Model):
                         pages = result.get('pages', 1)
                         total_pages += pages
                         txns = extracted.get('transactions', [])
+                        # Offset seq for multi-attachment merge
+                        offset = len(all_transactions)
+                        for t in txns:
+                            t['seq'] = offset + t.get('seq', 1)
                         all_transactions.extend(txns)
                         if not first_header:
                             first_header = extracted
@@ -293,7 +297,7 @@ class SeiseiBankStatementOcr(models.Model):
             txn_desc = txn.get('description') or _('(No description)')
             OcrLine.create({
                 'ocr_id': self.id,
-                'sequence': txn.get('seq', i + 1),
+                'sequence': i + 1,
                 'date': txn_date,
                 'description': txn_desc,
                 'withdrawal': txn.get('withdrawal', 0),
@@ -303,7 +307,111 @@ class SeiseiBankStatementOcr(models.Model):
                 'partner_name': txn_desc,
             })
 
+        self._fix_transaction_directions()
+        self._fill_running_balances()
         self._auto_match_partners()
+
+    def _fix_transaction_directions(self):
+        """Fix deposit/withdrawal direction errors using anchor balances.
+
+        OCR sometimes puts the amount in the wrong column (deposit vs
+        withdrawal).  By comparing the running balance against printed
+        anchor balances, we can detect and correct such errors using a
+        greedy flip algorithm.
+        """
+        lines = self.line_ids.sorted('sequence')
+        if not lines:
+            return
+
+        running = self.balance_start or 0
+        segment_start = running
+        segment_lines = []
+        total_flipped = 0
+
+        for line in lines:
+            segment_lines.append(line)
+
+            if not line.balance:
+                continue
+
+            # Reached an anchor — check if segment is consistent
+            computed = segment_start
+            for sl in segment_lines:
+                computed += (sl.deposit or 0) - (sl.withdrawal or 0)
+
+            error = computed - line.balance
+            if abs(error) <= 1:
+                # Segment matches anchor
+                segment_start = line.balance
+                segment_lines = []
+                continue
+
+            # Mismatch — try greedy flipping to reduce error
+            candidates = [
+                (sl, 2 * ((sl.withdrawal or 0) - (sl.deposit or 0)))
+                for sl in segment_lines
+                if (sl.deposit or 0) != (sl.withdrawal or 0)
+            ]
+            candidates.sort(key=lambda x: abs(x[1]), reverse=True)
+
+            flips = []
+            remaining = error
+            for sl, effect in candidates:
+                if abs(remaining + effect) < abs(remaining):
+                    flips.append(sl)
+                    remaining += effect
+
+            # Accept if flipping reduces error by > 95%
+            if flips and abs(remaining) < abs(error) * 0.05:
+                for sl in flips:
+                    sl.deposit, sl.withdrawal = sl.withdrawal, sl.deposit
+                total_flipped += len(flips)
+
+            segment_start = line.balance
+            segment_lines = []
+
+        if total_flipped:
+            _logger.info(
+                '[BankStmtOCR] Fixed direction of %d transactions using anchor balances',
+                total_flipped,
+            )
+
+    def _fill_running_balances(self):
+        """Fill missing balances by computing running balance.
+
+        Passbooks only print balance on some lines.  For lines where OCR
+        returned 0 (meaning no printed balance), compute:
+            balance = previous_balance + deposit - withdrawal
+        Lines that already have a non-zero balance are kept as-is and
+        become the new anchor for subsequent calculations.
+        """
+        lines = self.line_ids.sorted('sequence')
+        if not lines:
+            return
+
+        running = self.balance_start or 0
+        filled = 0
+        for line in lines:
+            if line.balance:
+                # OCR provided a printed balance — use it as anchor
+                running = line.balance
+            else:
+                # No printed balance — compute from running
+                running = running + (line.deposit or 0) - (line.withdrawal or 0)
+                line.balance = running
+                filled += 1
+
+        if filled:
+            _logger.info('[BankStmtOCR] Filled %d/%d missing balances', filled, len(lines))
+
+        # Warn if computed final balance doesn't match OCR balance_end
+        if self.balance_end and lines:
+            final = lines[-1].balance
+            if abs(final - self.balance_end) > 0.01:
+                _logger.warning(
+                    '[BankStmtOCR] Balance mismatch for #%s: computed %.2f, expected %.2f',
+                    self.id, final, self.balance_end,
+                )
 
     @staticmethod
     def _deduplicate_transactions(transactions):

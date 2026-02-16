@@ -1,6 +1,9 @@
+import csv
+import io
 import json
 import logging
 import base64
+import os
 import re
 import time
 from odoo import models, fields, api, _
@@ -105,7 +108,7 @@ class AccountMove(models.Model):
             if extracted.get('invoice_number'):
                 update_vals['ref'] = extracted['invoice_number']
 
-            # Auto-fill date
+            # Auto-fill date (fallback to today if OCR doesn't extract one)
             if extracted.get('date'):
                 try:
                     date_str = extracted['date']
@@ -113,7 +116,9 @@ class AccountMove(models.Model):
                     date_str = re.sub(r'日', '', date_str)
                     update_vals['invoice_date'] = date_str
                 except Exception:
-                    pass
+                    update_vals['invoice_date'] = fields.Date.context_today(self)
+            else:
+                update_vals['invoice_date'] = fields.Date.context_today(self)
 
             # Store total amount in narration for reference
             total = extracted.get('total')
@@ -135,14 +140,8 @@ class AccountMove(models.Model):
 
             _logger.info(f'[OCR] Invoice {self.id}: {pages} pages, {len(line_items)} items, {matched_count} matched')
 
-            # Reload the form to show updated data
-            return {
-                'type': 'ir.actions.act_window',
-                'res_model': 'account.move',
-                'res_id': self.id,
-                'view_mode': 'form',
-                'target': 'current',
-            }
+            # Return False to stay on the current form and preserve the list pager
+            return False
 
         except UserError:
             raise
@@ -977,7 +976,7 @@ class AccountMove(models.Model):
         if extracted.get('invoice_number'):
             update_vals['ref'] = extracted['invoice_number']
 
-        # Auto-fill date
+        # Auto-fill date (fallback to today if OCR doesn't extract one)
         if extracted.get('date'):
             try:
                 date_str = extracted['date']
@@ -985,7 +984,9 @@ class AccountMove(models.Model):
                 date_str = re.sub(r'日', '', date_str)
                 update_vals['invoice_date'] = date_str
             except Exception:
-                pass
+                update_vals['invoice_date'] = fields.Date.context_today(self)
+        else:
+            update_vals['invoice_date'] = fields.Date.context_today(self)
 
         # Store total
         total = extracted.get('total')
@@ -1254,3 +1255,255 @@ class AccountMove(models.Model):
         final_result = account if account else False
         _logger.info(f'[OCR] _get_tax_account returning: {final_result}')
         return final_result
+
+    # ==================== Yayoi CSV Export ====================
+
+    def _format_yayoi_date(self, date_val):
+        """Format date as YYYY/M/D (no zero-padding) for Yayoi."""
+        if not date_val:
+            return ''
+        return f'{date_val.year}/{date_val.month}/{date_val.day}'
+
+    def _get_dominant_tax_rate(self):
+        """Return the tax rate with the highest total amount across invoice lines."""
+        self.ensure_one()
+        rate_totals = {}
+        for line in self.invoice_line_ids.filtered(lambda l: not l.display_type):
+            for tax in line.tax_ids:
+                if tax.amount_type != 'percent':
+                    continue
+                rate = int(round(tax.amount))
+                rate_totals[rate] = rate_totals.get(rate, 0) + abs(line.price_subtotal)
+        if not rate_totals:
+            return 0
+        return max(rate_totals, key=rate_totals.get)
+
+    def _get_yayoi_tax_category(self, side, rate):
+        """Return Yayoi tax category string.
+
+        Args:
+            side: 'debit' or 'credit'
+            rate: tax rate (8, 10, 0)
+
+        For vendor bills:  debit=expense(課対仕入), credit=payable(対象外)
+        For customer invoices: debit=receivable(対象外), credit=income(課税売上)
+        """
+        if rate <= 0:
+            return '対象外'
+        reduced = '（軽）' if rate == 8 else ''
+        is_purchase = self.move_type in ('in_invoice', 'in_refund')
+        if is_purchase:
+            return f'課対仕入内{rate}%{reduced}' if side == 'debit' else '対象外'
+        else:
+            return '対象外' if side == 'debit' else f'課税売上内{rate}%{reduced}'
+
+    def _get_account_name_ja(self, account):
+        """Get Japanese name for an account."""
+        if not account:
+            return ''
+        ja_account = account.with_context(lang='ja_JP')
+        return ja_account.name or account.name or ''
+
+    def _get_yayoi_accounts(self):
+        """Determine debit/credit account names by move_type.
+
+        Returns:
+            tuple: (debit_account_name, debit_sub, credit_account_name, credit_sub)
+        """
+        self.ensure_one()
+        partner_name = self.partner_id.name if self.partner_id else ''
+
+        # Find receivable/payable accounts from line_ids
+        receivable_line = self.line_ids.filtered(
+            lambda l: l.account_id.account_type == 'asset_receivable'
+        )
+        payable_line = self.line_ids.filtered(
+            lambda l: l.account_id.account_type == 'liability_payable'
+        )
+
+        # Find primary expense/income account (highest total from invoice_line_ids)
+        primary_account = False
+        max_amount = 0
+        for line in self.invoice_line_ids.filtered(lambda l: not l.display_type):
+            if abs(line.price_subtotal) > max_amount:
+                max_amount = abs(line.price_subtotal)
+                primary_account = line.account_id
+
+        is_purchase = self.move_type in ('in_invoice', 'in_refund')
+        if is_purchase:
+            # Debit: expense account, Credit: payable (買掛金)
+            debit_name = self._get_account_name_ja(primary_account) if primary_account else '仕入高'
+            credit_account = payable_line[0].account_id if payable_line else False
+            credit_name = self._get_account_name_ja(credit_account) if credit_account else '買掛金'
+            return (debit_name, '', credit_name, partner_name)
+        else:
+            # Debit: receivable (売掛金), Credit: income account
+            debit_account = receivable_line[0].account_id if receivable_line else False
+            debit_name = self._get_account_name_ja(debit_account) if debit_account else '売掛金'
+            credit_name = self._get_account_name_ja(primary_account) if primary_account else '売上高'
+            return (debit_name, partner_name, credit_name, '')
+
+    def _build_yayoi_description(self):
+        """Build description column: MM/DD--{ref or partner_name}."""
+        self.ensure_one()
+        date_part = ''
+        if self.invoice_date:
+            date_part = f'{self.invoice_date.month:02d}/{self.invoice_date.day:02d}'
+        detail = self.ref or (self.partner_id.name if self.partner_id else self.name or '')
+        if date_part and detail:
+            return f'{date_part}--{detail}'
+        return date_part or detail or ''
+
+    def _get_yayoi_slip_number(self):
+        """Get attachment filename (without extension) as slip number."""
+        self.ensure_one()
+        if self.message_main_attachment_id and self.message_main_attachment_id.name:
+            name = self.message_main_attachment_id.name
+            return os.path.splitext(name)[0]
+        return self.name or ''
+
+    @staticmethod
+    def _truncate_yayoi(text, max_halfwidth):
+        """Truncate text to fit within max_halfwidth half-width character count.
+
+        CJK / full-width characters count as 2 half-width units.
+        """
+        if not text:
+            return ''
+        width = 0
+        result = []
+        for ch in text:
+            # CJK Unified Ideographs, CJK punctuation, full-width forms, katakana, hiragana
+            cp = ord(ch)
+            cw = 2 if (
+                (0x3000 <= cp <= 0x9FFF)
+                or (0xF900 <= cp <= 0xFAFF)
+                or (0xFF01 <= cp <= 0xFF60)
+                or (0xFFE0 <= cp <= 0xFFE6)
+                or (0x20000 <= cp <= 0x2FA1F)
+            ) else 1
+            if width + cw > max_halfwidth:
+                break
+            width += cw
+            result.append(ch)
+        return ''.join(result)
+
+    def _build_yayoi_row(self):
+        """Assemble 25-column Yayoi CSV row."""
+        self.ensure_one()
+        rate = self._get_dominant_tax_rate()
+        debit_acct, debit_sub, credit_acct, credit_sub = self._get_yayoi_accounts()
+        # Yayoi uses positive amounts for both invoices and refunds;
+        # the journal entry structure (debit/credit accounts) distinguishes them.
+        amount_total = int(abs(self.amount_total))
+        amount_tax = int(abs(self.amount_tax))
+        description = self._build_yayoi_description()
+        slip_number = self._get_yayoi_slip_number()
+
+        is_purchase = self.move_type in ('in_invoice', 'in_refund')
+
+        debit_tax_cat = self._get_yayoi_tax_category('debit', rate)
+        credit_tax_cat = self._get_yayoi_tax_category('credit', rate)
+
+        if is_purchase:
+            debit_amount = amount_total
+            debit_tax = amount_tax
+            credit_amount = amount_total
+            credit_tax = 0
+        else:
+            debit_amount = amount_total
+            debit_tax = 0
+            credit_amount = amount_total
+            credit_tax = amount_tax
+
+        t = self._truncate_yayoi
+        return [
+            2000,               # Col1: fixed
+            slip_number,        # Col2: attachment filename (伝票番号)
+            '',                 # Col3: empty
+            self._format_yayoi_date(self.invoice_date),  # Col4: date
+            t(debit_acct, 24),  # Col5: debit account (max 24)
+            t(debit_sub, 24),   # Col6: debit sub-account (max 24)
+            '',                 # Col7: empty
+            debit_tax_cat,      # Col8: debit tax category
+            debit_amount,       # Col9: debit amount
+            debit_tax,          # Col10: debit tax
+            t(credit_acct, 24), # Col11: credit account (max 24)
+            t(credit_sub, 24),  # Col12: credit sub-account (max 24)
+            '',                 # Col13: empty
+            credit_tax_cat,     # Col14: credit tax category
+            credit_amount,      # Col15: credit amount
+            credit_tax,         # Col16: credit tax
+            t(description, 64), # Col17: description (max 64)
+            '',                 # Col18: empty
+            '',                 # Col19: empty
+            0,                  # Col20: 0
+            '',                 # Col21: empty
+            '',                 # Col22: empty
+            0,                  # Col23: 0
+            0,                  # Col24: 0
+            'no',               # Col25: no
+        ]
+
+    def action_export_yayoi_csv(self):
+        """Export selected invoices/bills to Yayoi Accounting CSV format.
+
+        Called from list view Action menu. Filters to posted records only,
+        builds CSV with UTF-8 BOM, no header, 25 columns per row.
+        """
+        valid_types = ('in_invoice', 'in_refund', 'out_invoice', 'out_refund')
+        to_export = self.filtered(
+            lambda r: r.state == 'posted'
+            and r.move_type in valid_types
+            and r.invoice_date
+        )
+
+        if not to_export:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('弥生CSV出力'),
+                    'message': _('出力対象の記帳済み伝票がありません。記帳済みで日付のある伝票を選択してください。'),
+                    'type': 'warning',
+                    'sticky': False,
+                }
+            }
+
+        skipped = len(self) - len(to_export)
+        if skipped:
+            _logger.info(f'[Yayoi] Skipped {skipped} records (draft/no date)')
+
+        to_export = to_export.sorted(key=lambda r: (r.invoice_date, r.id))
+
+        # Build CSV (UTF-8 BOM, no header)
+        output = io.BytesIO()
+        output.write(b'\xef\xbb\xbf')  # UTF-8 BOM
+        wrapper = io.TextIOWrapper(output, encoding='utf-8', newline='')
+        writer = csv.writer(wrapper)
+
+        for record in to_export:
+            try:
+                row = record._build_yayoi_row()
+                writer.writerow(row)
+            except Exception as e:
+                _logger.warning(f'[Yayoi] Failed to export record {record.id}: {e}')
+
+        wrapper.flush()
+        wrapper.detach()
+
+        filename = f'yayoi_export_{fields.Date.today().strftime("%Y%m%d")}.csv'
+        attachment = self.env['ir.attachment'].create({
+            'name': filename,
+            'type': 'binary',
+            'datas': base64.b64encode(output.getvalue()),
+            'res_model': 'account.move',
+            'res_id': to_export[0].id,
+            'mimetype': 'text/csv',
+        })
+
+        return {
+            'type': 'ir.actions.act_url',
+            'url': f'/web/content/{attachment.id}?download=true',
+            'target': 'self',
+        }
