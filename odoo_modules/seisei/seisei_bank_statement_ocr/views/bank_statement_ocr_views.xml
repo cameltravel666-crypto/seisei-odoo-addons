@@ -65,15 +65,15 @@
                     <notebook>
                         <page string="Transactions" name="lines">
                             <field name="line_ids" nolabel="1" limit="200">
-                                <list editable="bottom">
-                                    <field name="sequence" widget="handle"/>
+                                <list editable="bottom"
+                                      decoration-danger="balance_warning">
+                                    <field name="sequence" string="No." readonly="1"/>
                                     <field name="date"/>
                                     <field name="description"/>
                                     <field name="withdrawal"/>
                                     <field name="deposit"/>
                                     <field name="amount" readonly="1"/>
-                                    <field name="balance"
-                                           decoration-warning="balance_warning"/>
+                                    <field name="balance"/>
                                     <field name="balance_warning" column_invisible="1"/>
                                     <field name="partner_id"/>
                                     <field name="partner_name" optional="hide"/>

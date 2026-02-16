@@ -283,8 +283,8 @@ class SeiseiBankStatementOcr(models.Model):
         transactions = self._deduplicate_transactions(
             extracted.get('transactions', [])
         )
-        # Sort by date for multi-page merge
-        transactions.sort(key=lambda t: t.get('date', ''))
+        # Sort by seq (passbook print order) — do NOT sort by date
+        transactions.sort(key=lambda t: t.get('seq', 9999))
 
         OcrLine = self.env['seisei.bank.statement.ocr.line']
         for i, txn in enumerate(transactions):
@@ -293,14 +293,14 @@ class SeiseiBankStatementOcr(models.Model):
             txn_desc = txn.get('description') or _('(No description)')
             OcrLine.create({
                 'ocr_id': self.id,
-                'sequence': (i + 1) * 10,
+                'sequence': txn.get('seq', i + 1),
                 'date': txn_date,
                 'description': txn_desc,
                 'withdrawal': txn.get('withdrawal', 0),
                 'deposit': txn.get('deposit', 0),
                 'balance': txn.get('balance') or 0,
                 'reference': txn.get('reference', ''),
-                'partner_name': txn.get('description') or txn_desc,
+                'partner_name': txn_desc,
             })
 
         self._auto_match_partners()
