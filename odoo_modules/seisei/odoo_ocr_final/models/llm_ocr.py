@@ -347,6 +347,10 @@ def process_bank_statement(file_data: bytes, mimetype: str, tenant_id: str = 'de
         if result.get('success'):
             extracted = result.get('extracted', {})
             txns = extracted.get('transactions', [])
+            # Offset per-page seq so multi-page PDFs get continuous numbering
+            offset = len(all_transactions)
+            for t in txns:
+                t['seq'] = offset + t.get('seq', 1)
             all_transactions.extend(txns)
             if i == 0:
                 first_page_header = extracted
