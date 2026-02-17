@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<templates>
+    <t t-name="pos_sales_dashboard.Dashboard">
+        <div class="o_pos_sales_dashboard">
+            <!-- Control Bar -->
+            <div class="dashboard-controls d-flex align-items-center gap-3 p-3 bg-white border-bottom flex-wrap">
+                <h4 class="mb-0 me-auto" t-esc="labels.title"/>
+
+                <!-- Mode Toggle -->
+                <div class="btn-group btn-group-sm" role="group">
+                    <button type="button"
+                        t-att-class="'btn ' + (state.mode === 'day' ? 'btn-primary' : 'btn-outline-primary')"
+                        t-on-click="() => this.onModeChange('day')"
+                        t-esc="labels.daily"/>
+                    <button type="button"
+                        t-att-class="'btn ' + (state.mode === 'month' ? 'btn-primary' : 'btn-outline-primary')"
+                        t-on-click="() => this.onModeChange('month')"
+                        t-esc="labels.monthly"/>
+                </div>
+
+                <!-- Date Picker -->
+                <input type="date" class="form-control form-control-sm"
+                    style="width: 160px;"
+                    t-att-value="state.dateStr"
+                    t-on-change="onDateChange"/>
+
+                <!-- Config Filter -->
+                <select class="form-select form-select-sm" style="width: 180px;"
+                    t-att-value="state.configId or ''"
+                    t-on-change="onConfigChange">
+                    <option value="" t-esc="labels.allStores"/>
+                    <t t-foreach="state.configs" t-as="cfg" t-key="cfg.id">
+                        <option t-att-value="cfg.id">
+                            <t t-esc="cfg.name"/>
+                        </option>
+                    </t>
+                </select>
+            </div>
+
+            <!-- Loading -->
+            <div t-if="state.loading" class="text-center p-5">
+                <i class="fa fa-spinner fa-spin fa-3x text-primary"/>
+            </div>
+
+            <!-- Dashboard Content -->
+            <div t-if="!state.loading" class="p-3">
+                <!-- KPI Cards -->
+                <div class="row g-3 mb-4">
+                    <!-- Total Sales -->
+                    <div class="col-12 col-sm-6 col-lg-4 col-xl">
+                        <div class="card h-100 shadow-sm kpi-card">
+                            <div class="card-body">
+                                <div class="text-muted small mb-1" t-esc="labels.totalSales"/>
+                                <div class="fs-4 fw-bold" t-esc="formatCurrency(state.kpis.total_sales || 0)"/>
+                                <div class="small mt-1">
+                                    <span t-att-class="pctClass(state.comparison.total_sales || 0)"
+                                        t-esc="formatPct(state.comparison.total_sales || 0)"/>
+                                    <span class="text-muted ms-1" t-esc="modeLabel"/>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Order Count -->
+                    <div class="col-12 col-sm-6 col-lg-4 col-xl">
+                        <div class="card h-100 shadow-sm kpi-card">
+                            <div class="card-body">
+                                <div class="text-muted small mb-1" t-esc="labels.orderCount"/>
+                                <div class="fs-4 fw-bold" t-esc="state.kpis.order_count || 0"/>
+                                <div class="small mt-1">
+                                    <span t-att-class="pctClass(state.comparison.order_count || 0)"
+                                        t-esc="formatPct(state.comparison.order_count || 0)"/>
+                                    <span class="text-muted ms-1" t-esc="modeLabel"/>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Avg Amount -->
+                    <div class="col-12 col-sm-6 col-lg-4 col-xl">
+                        <div class="card h-100 shadow-sm kpi-card">
+                            <div class="card-body">
+                                <div class="text-muted small mb-1" t-esc="labels.avgAmount"/>
+                                <div class="fs-4 fw-bold" t-esc="formatCurrency(state.kpis.avg_amount || 0)"/>
+                                <div class="small mt-1">
+                                    <span t-att-class="pctClass(state.comparison.avg_amount || 0)"
+                                        t-esc="formatPct(state.comparison.avg_amount || 0)"/>
+                                    <span class="text-muted ms-1" t-esc="modeLabel"/>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Food Sales -->
+                    <div class="col-12 col-sm-6 col-lg-4 col-xl">
+                        <div class="card h-100 shadow-sm kpi-card kpi-food">
+                            <div class="card-body">
+                                <div class="text-muted small mb-1" t-esc="labels.foodSales"/>
+                                <div class="fs-4 fw-bold" t-esc="formatCurrency(state.kpis.food_sales || 0)"/>
+                                <div class="small mt-1">
+                                    <span t-att-class="pctClass(state.comparison.food_sales || 0)"
+                                        t-esc="formatPct(state.comparison.food_sales || 0)"/>
+                                    <span class="text-muted ms-1" t-esc="modeLabel"/>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Drink Sales -->
+                    <div class="col-12 col-sm-6 col-lg-4 col-xl">
+                        <div class="card h-100 shadow-sm kpi-card kpi-drink">
+                            <div class="card-body">
+                                <div class="text-muted small mb-1" t-esc="labels.drinkSales"/>
+                                <div class="fs-4 fw-bold" t-esc="formatCurrency(state.kpis.drink_sales || 0)"/>
+                                <div class="small mt-1">
+                                    <span t-att-class="pctClass(state.comparison.drink_sales || 0)"
+                                        t-esc="formatPct(state.comparison.drink_sales || 0)"/>
+                                    <span class="text-muted ms-1" t-esc="modeLabel"/>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ranking Table -->
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white">
+                        <h6 class="mb-0" t-esc="labels.rankingTitle"/>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-hover table-sm mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 50px;" class="text-center">#</th>
+                                    <th t-esc="labels.product"/>
+                                    <th class="text-end" style="width: 100px;" t-esc="labels.qty"/>
+                                    <th class="text-end" style="width: 140px;" t-esc="labels.amount"/>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="state.ranking" t-as="item" t-key="item.product_id">
+                                    <tr>
+                                        <td class="text-center fw-bold">
+                                            <t t-esc="item_index + 1"/>
+                                        </td>
+                                        <td t-esc="item.product_name"/>
+                                        <td class="text-end" t-esc="item.qty"/>
+                                        <td class="text-end" t-esc="formatCurrency(item.amount)"/>
+                                    </tr>
+                                </t>
+                                <tr t-if="!state.ranking.length">
+                                    <td colspan="4" class="text-center text-muted py-4" t-esc="labels.noData"/>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </t>
+</templates>

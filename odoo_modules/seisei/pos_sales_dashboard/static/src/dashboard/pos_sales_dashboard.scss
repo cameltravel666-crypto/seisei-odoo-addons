@@ -1,0 +1,27 @@
+.o_pos_sales_dashboard {
+    background-color: #f8f9fa;
+    min-height: 100vh;
+
+    .dashboard-controls {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+
+    .kpi-card {
+        border-left: 4px solid #6c757d;
+        transition: transform 0.15s ease;
+
+        &:hover {
+            transform: translateY(-2px);
+        }
+
+        &.kpi-food {
+            border-left-color: #fd7e14;
+        }
+
+        &.kpi-drink {
+            border-left-color: #0dcaf0;
+        }
+    }
+}
