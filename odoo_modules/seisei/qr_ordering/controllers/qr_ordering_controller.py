@@ -602,6 +602,14 @@ class QrOrderingController(http.Controller):
             table_token, access_token, client_ip
         )
 
+    # 前端使用 en_US 作为英文语言代码，但 Odoo 实例安装的是 en_GB
+    # ORM 查询时需要映射到 en_GB 才能读取正确的翻译
+    _LANG_MAP = {'en_US': 'en_GB'}
+
+    def _map_lang(self, lang):
+        """将前端语言代码映射到 Odoo 安装的语言代码"""
+        return self._LANG_MAP.get(lang, lang)
+
     def _detect_language(self):
         """检测语言"""
         accept_lang = request.httprequest.headers.get('Accept-Language', '')
@@ -627,6 +635,8 @@ class QrOrderingController(http.Controller):
 
     def _get_menu_data(self, pos_config, lang='zh_CN'):
         """获取菜单数据"""
+        # 映射前端语言代码到 Odoo 安装的语言
+        lang = self._map_lang(lang)
         # 获取 POS 可用的产品
         products = request.env['product.product'].sudo().with_context(lang=lang).search([
             ('available_in_pos', '=', True),
@@ -708,7 +718,7 @@ class QrOrderingController(http.Controller):
             tdata['price_with_tax_max'] = max(tdata['price_with_tax_max'], price_with_tax)
 
         # Build search keywords for each template (all supported languages)
-        LANGS = ['zh_CN', 'ja_JP', 'en_US']
+        LANGS = ['zh_CN', 'ja_JP', 'en_GB']
         for tdata in templates_map.values():
             keywords = set()
             tmpl_record = request.env['product.template'].sudo().browse(tdata['id'])

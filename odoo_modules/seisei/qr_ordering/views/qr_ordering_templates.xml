@@ -470,6 +470,7 @@
                     }
                 </style>
                 
+                <div class="qr-print-title">QRコードで注文</div>
                 <div class="qr-print-title">扫码点餐</div>
                 <div class="qr-print-subtitle">Scan to Order</div>
                 
@@ -482,8 +483,9 @@
                 <div class="qr-print-table-name" t-esc="table.name"/>
                 
                 <div class="qr-print-instruction">
+                    QRコードをスキャンしてご注文ください<br/>
                     请扫描二维码点餐<br/>
-                    Please scan to order
+                    Please scan QR code to order
                 </div>
                 
                 <div class="no-print" style="margin-top: 30px;">
@@ -553,7 +555,7 @@
                     }
                     .qr-label-title {
                         font-weight: bold; text-align: center;
-                        line-height: 1.2; margin: 0;
+                        line-height: 1.1; margin: 0;
                     }
                     .qr-label-img {
                         display: block; margin: 0 auto;
@@ -565,7 +567,7 @@
                     }
                     .qr-label-hint {
                         text-align: center; color: #333;
-                        line-height: 1.2; margin: 0;
+                        line-height: 1.1; margin: 0;
                     }
 
                     /* ===== Print: one label per page ===== */
@@ -631,10 +633,18 @@
                         <div class="qr-label-card"
                              t-att-data-name="item['table'].name"
                              t-att-data-barcode="item['barcode_url']">
-                            <div class="qr-label-title">扫码点餐</div>
+                            <div class="qr-label-title">
+                                <div>QRコードで注文</div>
+                                <div>扫码点餐</div>
+                                <div>Scan to Order</div>
+                            </div>
                             <img class="qr-label-img" t-att-src="item['barcode_url']" alt="QR Code" crossorigin="anonymous"/>
                             <div class="qr-label-name" t-esc="item['table'].name"/>
-                            <div class="qr-label-hint">请扫描二维码点餐</div>
+                            <div class="qr-label-hint">
+                                <div>QRコードをスキャンしてご注文ください</div>
+                                <div>请扫描二维码点餐</div>
+                                <div>Please scan QR code to order</div>
+                            </div>
                         </div>
                     </t>
                 </div>
@@ -667,10 +677,10 @@
                         var scale = 3.78;  // 1mm ≈ 3.78px at 96dpi
                         var cardW = contentW * scale;
                         var cardH = contentH * scale;
-                        var qrSize = Math.min(contentW, contentH) * 0.60 * scale;
-                        var titleSize = Math.max(10, Math.min(contentW, contentH) * 0.08);
-                        var nameSize = Math.max(12, Math.min(contentW, contentH) * 0.14);
-                        var hintSize = Math.max(8, Math.min(contentW, contentH) * 0.06);
+                        var qrSize = Math.min(contentW, contentH) * 0.50 * scale;
+                        var titleSize = Math.max(7, Math.min(contentW, contentH) * 0.045);
+                        var nameSize = Math.max(10, Math.min(contentW, contentH) * 0.12);
+                        var hintSize = Math.max(6, Math.min(contentW, contentH) * 0.035);
                         var nameBorder = Math.max(1, Math.min(contentW, contentH) * 0.015);
                         var gap = Math.max(2, contentH * 0.02) + 'px';
 
@@ -737,10 +747,10 @@
                         var mmToPx = dpi / 25.4;
                         var canvasW = Math.round((v.w - 2 * v.m) * mmToPx);
                         var canvasH = Math.round((v.h - 2 * v.m) * mmToPx);
-                        var qrSize = Math.round(Math.min(canvasW, canvasH) * 0.60);
-                        var titleFontSize = Math.round(Math.min(canvasW, canvasH) * 0.08);
-                        var nameFontSize = Math.round(Math.min(canvasW, canvasH) * 0.14);
-                        var hintFontSize = Math.round(Math.min(canvasW, canvasH) * 0.06);
+                        var qrSize = Math.round(Math.min(canvasW, canvasH) * 0.50);
+                        var titleFontSize = Math.round(Math.min(canvasW, canvasH) * 0.045);
+                        var nameFontSize = Math.round(Math.min(canvasW, canvasH) * 0.12);
+                        var hintFontSize = Math.round(Math.min(canvasW, canvasH) * 0.035);
 
                         for (var i = 0; i &lt; cards.length; i++) {
                             var card = cards[i];
@@ -760,15 +770,19 @@
                             ctx.textBaseline = 'middle';
 
                             // Layout vertical positions
-                            var titleY = canvasH * 0.08;
-                            var qrY = (canvasH - qrSize) * 0.42;
-                            var nameY = qrY + qrSize + canvasH * 0.06;
-                            var hintY = canvasH * 0.93;
                             var cx = canvasW / 2;
+                            var titleLineH = titleFontSize * 1.25;
+                            var titleStartY = canvasH * 0.06;
+                            var qrY = titleStartY + titleLineH * 3 + canvasH * 0.02;
+                            var nameY = qrY + qrSize + canvasH * 0.05;
+                            var hintLineH = hintFontSize * 1.25;
+                            var hintStartY = canvasH - hintLineH * 3 - canvasH * 0.02;
 
-                            // Title
+                            // Title (3 languages)
                             ctx.font = 'bold ' + titleFontSize + 'px Arial, sans-serif';
-                            ctx.fillText('扫码点餐', cx, titleY);
+                            ctx.fillText('QRコードで注文', cx, titleStartY);
+                            ctx.fillText('扫码点餐', cx, titleStartY + titleLineH);
+                            ctx.fillText('Scan to Order', cx, titleStartY + titleLineH * 2);
 
                             // QR image
                             try {
@@ -792,10 +806,12 @@
                             ctx.strokeRect(cx - nameBoxW/2, nameY - nameBoxH/2, nameBoxW, nameBoxH);
                             ctx.fillText(name, cx, nameY);
 
-                            // Hint
+                            // Hint (3 languages)
                             ctx.font = hintFontSize + 'px Arial, sans-serif';
                             ctx.fillStyle = '#333';
-                            ctx.fillText('请扫描二维码点餐', cx, hintY);
+                            ctx.fillText('QRコードをスキャンしてご注文ください', cx, hintStartY);
+                            ctx.fillText('请扫描二维码点餐', cx, hintStartY + hintLineH);
+                            ctx.fillText('Please scan QR code to order', cx, hintStartY + hintLineH * 2);
 
                             // Download
                             await downloadCanvas(canvas, 'QR_' + name + '.png');
