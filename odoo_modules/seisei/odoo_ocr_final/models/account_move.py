@@ -1370,6 +1370,7 @@ class AccountMove(models.Model):
         """
         if not text:
             return ''
+        text = text.replace('\n', '').replace('\r', '')
         width = 0
         result = []
         for ch in text:
