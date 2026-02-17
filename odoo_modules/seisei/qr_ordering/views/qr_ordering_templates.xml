@@ -429,7 +429,12 @@
     
     <!-- Print QR Code Page -->
     <template id="print_qr_page" name="Print QR Code">
-        <t t-call="web.html_container">
+        <html>
+        <head>
+            <meta charset="utf-8"/>
+            <title>QR Code</title>
+        </head>
+        <body style="margin:0;padding:0;">
             <div class="qr-print-page">
                 <style>
                     .qr-print-page {
@@ -468,8 +473,11 @@
                     @media print {
                         .no-print { display: none; }
                     }
+                    @page {
+                        margin: 0;
+                    }
                 </style>
-                
+
                 <div class="qr-print-title">QRコードで注文</div>
                 <div class="qr-print-title">扫码点餐</div>
                 <div class="qr-print-subtitle">Scan to Order</div>
@@ -492,16 +500,21 @@
                     <button onclick="window.print()" class="btn btn-primary">打印 Print</button>
                 </div>
             </div>
-        </t>
+        </body>
+        </html>
     </template>
 
     <!-- Batch Print QR Codes Page — Label Mode -->
     <template id="print_qr_batch_page" name="Batch Print QR Codes">
-        <t t-call="web.html_container">
+        <html>
+        <head>
+            <meta charset="utf-8"/>
+            <title>QR Labels</title>
+        </head>
+        <body style="margin:0;padding:0;">
             <div class="qr-label-page">
-                <!-- Dynamic @page style — updated by JS -->
                 <style id="qr-page-style">
-                    @page { size: 62mm 62mm; margin: 3mm; }
+                    @page { margin: 0; }
                 </style>
 
                 <style>
@@ -573,19 +586,30 @@
                     /* ===== Print: one label per page ===== */
                     @media print {
                         .qr-label-toolbar { display: none !important; }
-                        .qr-label-page { padding: 0; }
+                        .qr-label-page { padding: 0; margin: 0; }
                         .qr-label-list {
                             display: block; padding: 0; gap: 0;
                         }
                         .qr-label-card {
-                            width: 100% !important; height: 100% !important;
+                            width: 100% !important;
+                            height: auto !important;
                             border: none; border-radius: 0;
                             page-break-after: always;
-                            margin: 0; padding: 0;
+                            page-break-inside: avoid;
+                            margin: 0;
+                            padding: var(--qr-label-margin, 2mm);
+                            box-sizing: border-box;
                         }
                         .qr-label-card:last-child {
                             page-break-after: auto;
                         }
+                        .qr-label-img {
+                            width: 70% !important;
+                            height: auto !important;
+                        }
+                        .qr-label-title { font-size: 8pt !important; }
+                        .qr-label-name { font-size: 12pt !important; }
+                        .qr-label-hint { font-size: 6pt !important; }
                     }
                 </style>
 
@@ -661,9 +685,11 @@
 
                     function updatePageSize() {
                         var v = getVals();
-                        // Update @page
+                        // Update @page — margin 固定为 0 以去掉浏览器页眉页脚
                         document.getElementById('qr-page-style').textContent =
-                            '@page { size: ' + v.w + 'mm ' + v.h + 'mm; margin: ' + v.m + 'mm; }';
+                            '@page { margin: 0; }';
+                        // 将用户设定的边距作为 CSS 变量传递给打印样式中的 padding
+                        document.documentElement.style.setProperty('--qr-label-margin', v.m + 'mm');
                         updateCardPreview(v.w, v.h, v.m);
                         // Persist
                         try { localStorage.setItem('qr_label_size', JSON.stringify(v)); } catch(e) {}
@@ -846,7 +872,8 @@
                     document.addEventListener('DOMContentLoaded', restoreSettings);
                 </script>
             </div>
-        </t>
+        </body>
+        </html>
     </template>
 
     <!--
