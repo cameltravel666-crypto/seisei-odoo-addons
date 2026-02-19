@@ -1,0 +1,128 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* pos_sales_dashboard
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 18.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-02-17 00:00+0000\n"
+"PO-Revision-Date: 2026-02-17 00:00+0000\n"
+"Last-Translator: \n"
+"Language-Team: English (UK)\n"
+"Language: en_GB\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#. module: pos_sales_dashboard
+#: model:ir.actions.client,name:pos_sales_dashboard.action_pos_sales_dashboard
+msgid "Sales Dashboard"
+msgstr "Sales Dashboard"
+
+#. module: pos_sales_dashboard
+#: model:ir.ui.menu,name:pos_sales_dashboard.menu_pos_sales_dashboard
+msgid "Sales Dashboard"
+msgstr "Sales Dashboard"
+
+#. module: pos_sales_dashboard
+#: model:ir.model,name:pos_sales_dashboard.model_pos_sales_dashboard
+msgid "POS Sales Dashboard"
+msgstr "POS Sales Dashboard"
+
+#. module: pos_sales_dashboard
+#. odoo-javascript
+#: code:addons/pos_sales_dashboard/static/src/dashboard/pos_sales_dashboard.js:0
+msgid "Sales Dashboard"
+msgstr "Sales Dashboard"
+
+#. module: pos_sales_dashboard
+#. odoo-javascript
+#: code:addons/pos_sales_dashboard/static/src/dashboard/pos_sales_dashboard.js:0
+msgid "Daily"
+msgstr "Daily"
+
+#. module: pos_sales_dashboard
+#. odoo-javascript
+#: code:addons/pos_sales_dashboard/static/src/dashboard/pos_sales_dashboard.js:0
+msgid "Monthly"
+msgstr "Monthly"
+
+#. module: pos_sales_dashboard
+#. odoo-javascript
+#: code:addons/pos_sales_dashboard/static/src/dashboard/pos_sales_dashboard.js:0
+msgid "All Stores"
+msgstr "All Stores"
+
+#. module: pos_sales_dashboard
+#. odoo-javascript
+#: code:addons/pos_sales_dashboard/static/src/dashboard/pos_sales_dashboard.js:0
+msgid "Total Sales"
+msgstr "Total Sales"
+
+#. module: pos_sales_dashboard
+#. odoo-javascript
+#: code:addons/pos_sales_dashboard/static/src/dashboard/pos_sales_dashboard.js:0
+msgid "Order Count"
+msgstr "Order Count"
+
+#. module: pos_sales_dashboard
+#. odoo-javascript
+#: code:addons/pos_sales_dashboard/static/src/dashboard/pos_sales_dashboard.js:0
+msgid "Avg per Order"
+msgstr "Avg per Order"
+
+#. module: pos_sales_dashboard
+#. odoo-javascript
+#: code:addons/pos_sales_dashboard/static/src/dashboard/pos_sales_dashboard.js:0
+msgid "Food Sales"
+msgstr "Food Sales"
+
+#. module: pos_sales_dashboard
+#. odoo-javascript
+#: code:addons/pos_sales_dashboard/static/src/dashboard/pos_sales_dashboard.js:0
+msgid "Drink Sales"
+msgstr "Drink Sales"
+
+#. module: pos_sales_dashboard
+#. odoo-javascript
+#: code:addons/pos_sales_dashboard/static/src/dashboard/pos_sales_dashboard.js:0
+msgid "Product Ranking Top 10"
+msgstr "Product Ranking Top 10"
+
+#. module: pos_sales_dashboard
+#. odoo-javascript
+#: code:addons/pos_sales_dashboard/static/src/dashboard/pos_sales_dashboard.js:0
+msgid "Product"
+msgstr "Product"
+
+#. module: pos_sales_dashboard
+#. odoo-javascript
+#: code:addons/pos_sales_dashboard/static/src/dashboard/pos_sales_dashboard.js:0
+msgid "Quantity"
+msgstr "Quantity"
+
+#. module: pos_sales_dashboard
+#. odoo-javascript
+#: code:addons/pos_sales_dashboard/static/src/dashboard/pos_sales_dashboard.js:0
+msgid "Amount"
+msgstr "Amount"
+
+#. module: pos_sales_dashboard
+#. odoo-javascript
+#: code:addons/pos_sales_dashboard/static/src/dashboard/pos_sales_dashboard.js:0
+msgid "No data available"
+msgstr "No data available"
+
+#. module: pos_sales_dashboard
+#. odoo-javascript
+#: code:addons/pos_sales_dashboard/static/src/dashboard/pos_sales_dashboard.js:0
+msgid "vs prev day"
+msgstr "vs prev day"
+
+#. module: pos_sales_dashboard
+#. odoo-javascript
+#: code:addons/pos_sales_dashboard/static/src/dashboard/pos_sales_dashboard.js:0
+msgid "vs prev month"
+msgstr "vs prev month"

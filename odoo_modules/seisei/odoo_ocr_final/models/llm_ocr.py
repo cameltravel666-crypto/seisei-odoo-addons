@@ -298,8 +298,31 @@ def _normalize_reiwa_date(date_str: str) -> str:
     return f'{year:04d}-{month:02d}-{day:02d}'
 
 
+_REF_WITH_SUPPLEMENT_RE = re.compile(r'^([RLQK]T\d*)\s+(.+)$')
+
+
+def _fix_reference_supplement(transactions: list) -> list:
+    """Move supplemental text incorrectly placed in reference to description.
+
+    Gemini sometimes puts counterparty names in the reference field, e.g.
+    reference="RT フカヤ モエカ" instead of description="振込IB2 フカヤ モエカ".
+    Detect this pattern and move the text to description.
+    """
+    for txn in transactions:
+        ref = txn.get('reference', '')
+        m = _REF_WITH_SUPPLEMENT_RE.match(ref)
+        if m:
+            txn['reference'] = m.group(1)
+            supplement = m.group(2)
+            desc = txn.get('description', '')
+            if supplement not in desc:
+                txn['description'] = f'{desc} {supplement}' if desc else supplement
+    return transactions
+
+
 def _normalize_bank_transactions(transactions: list) -> list:
-    """Normalize dates in all bank transactions."""
+    """Normalize dates and fix misplaced supplement text in bank transactions."""
+    _fix_reference_supplement(transactions)
     for txn in transactions:
         if txn.get('date'):
             txn['date'] = _normalize_reiwa_date(txn['date'])
@@ -347,6 +370,10 @@ def process_bank_statement(file_data: bytes, mimetype: str, tenant_id: str = 'de
         if result.get('success'):
             extracted = result.get('extracted', {})
             txns = extracted.get('transactions', [])
+            # Offset per-page seq so multi-page PDFs get continuous numbering
+            offset = len(all_transactions)
+            for t in txns:
+                t['seq'] = offset + t.get('seq', 1)
             all_transactions.extend(txns)
             if i == 0:
                 first_page_header = extracted

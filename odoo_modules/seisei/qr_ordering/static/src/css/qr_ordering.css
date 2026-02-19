@@ -44,18 +44,18 @@ html, body {
     height: 100%;
     margin: 0;
     padding: 0;
-    overflow: visible; /* 默认不锁滚动，只有弹层打开时才锁 */
+    overflow: hidden; /* 页面不滚动，由内部区域独立滚动 */
 }
 
-/* P0: 整页容器 - 测试模式：允许自然滚动 */
+/* P0: 整页容器 - 固定视口高度，内部双栏独立滚动 */
 #qr-ordering-app.qr-page,
 .qr-page {
-    min-height: 100dvh !important;
+    height: 100dvh !important;
     display: flex !important;
     flex-direction: column !important;
     width: 100% !important;
     background-color: var(--qr-background);
-    overflow: visible !important; /* 测试模式：允许滚动 */
+    overflow: hidden !important;
     position: relative !important;
 }
 
@@ -116,11 +116,11 @@ html, body {
     -moz-appearance: none;
 }
 
-/* Main Content - flex: 1 占满剩余空间 */
+/* Main Content - flex: 1 占满剩余空间，左右双栏独立滚动 */
 .qr-main {
     display: flex;
     flex: 1 1 auto;
-    overflow: visible; /* 测试模式：允许滚动 */
+    overflow: hidden;
     min-height: 0; /* 关键：允许 flex 子元素收缩 */
 }
 
@@ -138,6 +138,8 @@ html, body {
     -webkit-overflow-scrolling: touch;
     /* 防止滚动穿透 */
     overscroll-behavior: contain;
+    /* 底部留空，避免被固定底栏遮挡 */
+    padding-bottom: 80px;
 }
 
 .qr-categories {
@@ -191,12 +193,15 @@ html, body {
     max-width: 100%;
 }
 
-/* P0: 内容区 - 测试模式：简化滚动 */
+/* P0: 内容区 - 独立滚动 */
 .qr-content {
     flex: 1 1 auto !important;
-    overflow: visible !important; /* 测试模式：自然滚动 */
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
     padding: 12px;
-    padding-bottom: 80px; /* 简化底部间距 */
+    padding-bottom: 80px; /* 底部栏留空 */
     min-height: 0 !important;
     position: relative !important;
 }
