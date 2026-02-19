@@ -257,13 +257,8 @@ class YayoiImportWizard(models.TransientModel):
             if line.date:
                 date_str = f'{line.date.year}/{line.date.month}/{line.date.day}'
 
-            # Build description: MM/DD--{description}
-            desc_parts = []
-            if line.date:
-                desc_parts.append(f'{line.date.month:02d}/{line.date.day:02d}')
-            if line.description:
-                desc_parts.append(line.description)
-            description = '--'.join(desc_parts) if desc_parts else ''
+            # Build memo: No.XXXX--MM/DD-description (same for col17 & col22)
+            memo = line.receipt_no or ''
 
             rate = int(line.tax_rate or '0')
 
@@ -298,12 +293,12 @@ class YayoiImportWizard(models.TransientModel):
                 credit_tax_cat,                 # Col14: 貸方税区分
                 line.amount,                    # Col15: 貸方金額
                 0,                              # Col16: 貸方税金額
-                t(h(description), 64),          # Col17: 摘要
+                t(h(memo), 64),                 # Col17: 摘要
                 '',                             # Col18: 番号
                 '',                             # Col19: 期日
                 0,                              # Col20: タイプ (0=仕訳)
                 '',                             # Col21: 生成元
-                t(h(line.receipt_no or ''), 64),  # Col22: 仕訳メモ
+                t(h(memo), 64),                 # Col22: 仕訳メモ
                 '0',                            # Col23: 付箋1 (str → quoted)
                 '0',                            # Col24: 付箋2 (str → quoted)
                 'no',                           # Col25: 調整
