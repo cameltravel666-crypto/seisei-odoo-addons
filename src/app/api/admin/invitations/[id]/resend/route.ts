@@ -4,15 +4,15 @@
  * Required role: ORG_ADMIN or higher
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth';
-import { combinedGuard } from '@/lib/guards';
-import { resendInvitation } from '@/lib/invitation-service';
-import { prisma } from '@/lib/db';
+import { NextRequest, NextResponse } from "next/server";
+import { getSession } from "@/lib/auth";
+import { combinedGuard } from "@/lib/guards";
+import { resendInvitation } from "@/lib/invitation-service";
+import { prisma } from "@/lib/db";
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await params;
@@ -20,20 +20,29 @@ export async function POST(
 
     if (!session?.userId || !session?.tenantId) {
       return NextResponse.json(
-        { success: false, error: { code: 'UNAUTHORIZED', message: 'Not authenticated' } },
-        { status: 401 }
+        {
+          success: false,
+          error: { code: "UNAUTHORIZED", message: "Not authenticated" },
+        },
+        { status: 401 },
       );
     }
 
     // Check role
     const guard = await combinedGuard(session.tenantId, session.userId, {
-      minRole: 'ORG_ADMIN',
+      minRole: "ORG_ADMIN",
     });
 
     if (!guard.allowed) {
       return NextResponse.json(
-        { success: false, error: { code: 'FORBIDDEN', message: guard.reason || 'Insufficient permissions' } },
-        { status: 403 }
+        {
+          success: false,
+          error: {
+            code: "FORBIDDEN",
+            message: guard.reason || "Insufficient permissions",
+          },
+        },
+        { status: 403 },
       );
     }
 
@@ -47,15 +56,20 @@ export async function POST(
 
     if (!invitation) {
       return NextResponse.json(
-        { success: false, error: { code: 'NOT_FOUND', message: 'Invitation not found' } },
-        { status: 404 }
+        {
+          success: false,
+          error: { code: "NOT_FOUND", message: "Invitation not found" },
+        },
+        { status: 404 },
       );
     }
 
     const result = await resendInvitation(id, session.userId);
 
     // Generate new invitation URL
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://biznexus.seisei.tokyo';
+    const forwardedProto = request.headers.get("x-forwarded-proto") || "https";
+    const host = request.headers.get("host") || "localhost:3000";
+    const baseUrl = `${forwardedProto}://${host}`;
     const invitationUrl = `${baseUrl}/set-password?token=${encodeURIComponent(result.token)}`;
 
     // TODO: Send email with new invitation URL
@@ -71,17 +85,19 @@ export async function POST(
           resentCount: result.invitation.resentCount,
         },
         // Include URL in development only
-        invitationUrl: process.env.NODE_ENV === 'development' ? invitationUrl : undefined,
+        invitationUrl:
+          process.env.NODE_ENV === "development" ? invitationUrl : undefined,
       },
     });
   } catch (error) {
-    console.error('[Invitation Resend Error]', error);
+    console.error("[Invitation Resend Error]", error);
 
-    const message = error instanceof Error ? error.message : 'Failed to resend invitation';
+    const message =
+      error instanceof Error ? error.message : "Failed to resend invitation";
 
     return NextResponse.json(
-      { success: false, error: { code: 'INTERNAL_ERROR', message } },
-      { status: 500 }
+      { success: false, error: { code: "INTERNAL_ERROR", message } },
+      { status: 500 },
     );
   }
 }

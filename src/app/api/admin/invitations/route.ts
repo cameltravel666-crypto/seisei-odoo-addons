@@ -5,16 +5,18 @@
  * Required role: ORG_ADMIN or higher
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth';
-import { roleGuard, combinedGuard } from '@/lib/guards';
-import { createInvitation, listInvitations } from '@/lib/invitation-service';
-import { Role, InvitationStatus } from '@prisma/client';
-import { z } from 'zod';
+import { NextRequest, NextResponse } from "next/server";
+import { getSession } from "@/lib/auth";
+import { roleGuard, combinedGuard } from "@/lib/guards";
+import { createInvitation, listInvitations } from "@/lib/invitation-service";
+import { Role, InvitationStatus } from "@prisma/client";
+import { z } from "zod";
 
 const createInvitationSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  role: z.enum(['BILLING_ADMIN', 'ORG_ADMIN', 'MANAGER', 'OPERATOR']).default('OPERATOR'),
+  email: z.string().email("Invalid email address"),
+  role: z
+    .enum(["BILLING_ADMIN", "ORG_ADMIN", "MANAGER", "OPERATOR"])
+    .default("OPERATOR"),
   storeScope: z.array(z.string()).default([]),
 });
 
@@ -23,20 +25,29 @@ export async function POST(request: NextRequest) {
     const session = await getSession();
     if (!session?.userId || !session?.tenantId) {
       return NextResponse.json(
-        { success: false, error: { code: 'UNAUTHORIZED', message: 'Not authenticated' } },
-        { status: 401 }
+        {
+          success: false,
+          error: { code: "UNAUTHORIZED", message: "Not authenticated" },
+        },
+        { status: 401 },
       );
     }
 
     // Check role - must be ORG_ADMIN or higher to invite
     const guard = await combinedGuard(session.tenantId, session.userId, {
-      minRole: 'ORG_ADMIN',
+      minRole: "ORG_ADMIN",
     });
 
     if (!guard.allowed) {
       return NextResponse.json(
-        { success: false, error: { code: 'FORBIDDEN', message: guard.reason || 'Insufficient permissions' } },
-        { status: 403 }
+        {
+          success: false,
+          error: {
+            code: "FORBIDDEN",
+            message: guard.reason || "Insufficient permissions",
+          },
+        },
+        { status: 403 },
       );
     }
 
@@ -45,8 +56,14 @@ export async function POST(request: NextRequest) {
 
     if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: { code: 'VALIDATION_ERROR', message: parsed.error.issues[0].message } },
-        { status: 400 }
+        {
+          success: false,
+          error: {
+            code: "VALIDATION_ERROR",
+            message: parsed.error.issues[0].message,
+          },
+        },
+        { status: 400 },
       );
     }
 
@@ -60,11 +77,17 @@ export async function POST(request: NextRequest) {
       OPERATOR: 1,
     };
 
-    const inviterRole = guard.membership?.role || 'OPERATOR';
+    const inviterRole = guard.membership?.role || "OPERATOR";
     if (roleHierarchy[role] > roleHierarchy[inviterRole]) {
       return NextResponse.json(
-        { success: false, error: { code: 'FORBIDDEN', message: 'Cannot invite user with higher role than yourself' } },
-        { status: 403 }
+        {
+          success: false,
+          error: {
+            code: "FORBIDDEN",
+            message: "Cannot invite user with higher role than yourself",
+          },
+        },
+        { status: 403 },
       );
     }
 
@@ -77,7 +100,9 @@ export async function POST(request: NextRequest) {
     });
 
     // Generate invitation URL
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://biznexus.seisei.tokyo';
+    const forwardedProto = request.headers.get("x-forwarded-proto") || "https";
+    const host = request.headers.get("host") || "localhost:3000";
+    const baseUrl = `${forwardedProto}://${host}`;
     const invitationUrl = `${baseUrl}/set-password?token=${encodeURIComponent(result.token)}`;
 
     // TODO: Send email with invitation URL
@@ -96,15 +121,22 @@ export async function POST(request: NextRequest) {
           createdAt: result.invitation.createdAt.toISOString(),
         },
         // Include URL in development only
-        invitationUrl: process.env.NODE_ENV === 'development' ? invitationUrl : undefined,
+        invitationUrl:
+          process.env.NODE_ENV === "development" ? invitationUrl : undefined,
       },
     });
   } catch (error) {
-    console.error('[Invitation Create Error]', error);
+    console.error("[Invitation Create Error]", error);
 
     return NextResponse.json(
-      { success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to create invitation' } },
-      { status: 500 }
+      {
+        success: false,
+        error: {
+          code: "INTERNAL_ERROR",
+          message: "Failed to create invitation",
+        },
+      },
+      { status: 500 },
     );
   }
 }
@@ -114,28 +146,37 @@ export async function GET(request: NextRequest) {
     const session = await getSession();
     if (!session?.userId || !session?.tenantId) {
       return NextResponse.json(
-        { success: false, error: { code: 'UNAUTHORIZED', message: 'Not authenticated' } },
-        { status: 401 }
+        {
+          success: false,
+          error: { code: "UNAUTHORIZED", message: "Not authenticated" },
+        },
+        { status: 401 },
       );
     }
 
     // Check role - must be ORG_ADMIN or higher to view invitations
     const guard = await combinedGuard(session.tenantId, session.userId, {
-      minRole: 'ORG_ADMIN',
+      minRole: "ORG_ADMIN",
     });
 
     if (!guard.allowed) {
       return NextResponse.json(
-        { success: false, error: { code: 'FORBIDDEN', message: guard.reason || 'Insufficient permissions' } },
-        { status: 403 }
+        {
+          success: false,
+          error: {
+            code: "FORBIDDEN",
+            message: guard.reason || "Insufficient permissions",
+          },
+        },
+        { status: 403 },
       );
     }
 
     const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status') as InvitationStatus | null;
-    const email = searchParams.get('email');
-    const page = parseInt(searchParams.get('page') || '1', 10);
-    const pageSize = parseInt(searchParams.get('pageSize') || '20', 10);
+    const status = searchParams.get("status") as InvitationStatus | null;
+    const email = searchParams.get("email");
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const pageSize = parseInt(searchParams.get("pageSize") || "20", 10);
 
     const result = await listInvitations(session.tenantId, {
       status: status || undefined,
@@ -158,7 +199,8 @@ export async function GET(request: NextRequest) {
           usedAt: inv.usedAt?.toISOString(),
           resentCount: inv.resentCount,
           createdAt: inv.createdAt.toISOString(),
-          sender: (inv as { sender?: { displayName: string; email: string } }).sender,
+          sender: (inv as { sender?: { displayName: string; email: string } })
+            .sender,
         })),
         pagination: {
           page,
@@ -169,11 +211,17 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[Invitation List Error]', error);
+    console.error("[Invitation List Error]", error);
 
     return NextResponse.json(
-      { success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to list invitations' } },
-      { status: 500 }
+      {
+        success: false,
+        error: {
+          code: "INTERNAL_ERROR",
+          message: "Failed to list invitations",
+        },
+      },
+      { status: 500 },
     );
   }
 }
