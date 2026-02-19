@@ -80,6 +80,7 @@ class YayoiImportLine(models.TransientModel):
     wizard_id = fields.Many2one('seisei.yayoi.import.wizard', ondelete='cascade')
     date = fields.Date(string='日付')
     description = fields.Char(string='適用')
+    account_name = fields.Char(string='勘定科目')
     receipt_no = fields.Char(string='領収書No.')
     seq_no = fields.Integer(string='伝票番号')
     amount = fields.Integer(string='金額')
@@ -162,6 +163,7 @@ class YayoiImportWizard(models.TransientModel):
         for row_idx in range(4, ws.max_row + 1):
             date_val = ws.cell(row=row_idx, column=1).value   # A: 日付
             desc_val = ws.cell(row=row_idx, column=2).value    # B: 適用
+            acct_val = ws.cell(row=row_idx, column=3).value    # C: Account (勘定科目)
             non_tax = ws.cell(row=row_idx, column=4).value     # D: 非課税
             rate_8 = ws.cell(row=row_idx, column=5).value      # E: 8%
             rate_10 = ws.cell(row=row_idx, column=6).value     # F: 10%
@@ -207,6 +209,7 @@ class YayoiImportWizard(models.TransientModel):
             lines_vals.append({
                 'date': parsed_date,
                 'description': str(desc_val or ''),
+                'account_name': str(acct_val or ''),
                 'receipt_no': str(receipt_no or ''),
                 'seq_no': seq_no,
                 'amount': amount,
@@ -242,7 +245,7 @@ class YayoiImportWizard(models.TransientModel):
         t = truncate_yayoi
         h = to_halfwidth_kana
 
-        debit_acct = self.debit_account or '仕入高'
+        default_debit_acct = self.debit_account or '仕入高'
         credit_acct = self.credit_account or '現金'
 
         output = io.BytesIO()
@@ -263,6 +266,9 @@ class YayoiImportWizard(models.TransientModel):
             description = '--'.join(desc_parts) if desc_parts else ''
 
             rate = int(line.tax_rate or '0')
+
+            # Debit account: use line-level account_name, fallback to wizard default
+            debit_acct = line.account_name or default_debit_acct
 
             # Debit side: expense account with tax
             if rate == 10:
