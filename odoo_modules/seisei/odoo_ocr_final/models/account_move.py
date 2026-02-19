@@ -402,10 +402,15 @@ class AccountMove(models.Model):
                 existing[0].write({'quantity': existing[0].quantity + quantity})
                 _logger.info(f'[OCR] Updated line: {product_name} (qty: +{quantity})')
             else:
-                # Try OCR suggested_account first (from Gemini)
+                # Try OCR suggested_account_code first, then name (from Gemini)
                 account = None
+                suggested_code = item.get('suggested_account_code')
                 suggested = item.get('suggested_account')
-                if suggested:
+                if suggested_code:
+                    account = self._search_account_by_code(suggested_code)
+                    if account:
+                        _logger.info(f'[OCR] Using suggested_account_code "{suggested_code}" -> {account.code} {account.name}')
+                if not account and suggested:
                     account = self._search_account_by_name(suggested)
                     if account:
                         _logger.info(f'[OCR] Using suggested_account "{suggested}" -> {account.code} {account.name}')
@@ -642,7 +647,12 @@ class AccountMove(models.Model):
 
     def _get_default_ocr_account(self, is_purchase, extracted):
         """Resolve default account for OCR lines (supports suggested_account)."""
+        suggested_code = extracted.get('suggested_account_code') if extracted else None
         suggested = extracted.get('suggested_account') if extracted else None
+        if suggested_code:
+            account = self._search_account_by_code(suggested_code)
+            if account:
+                return account
         if suggested:
             account = self._search_account_by_name(suggested)
             if account:
@@ -651,30 +661,50 @@ class AccountMove(models.Model):
         # Fallback to company default accounts (Odoo 18: ir.property removed)
         return self._get_default_expense_account() if is_purchase else self._get_default_income_account()
 
+    def _search_account_by_code(self, code):
+        """Search account by code (e.g. 3-digit Yayoi code like '755').
+
+        OCR returns suggested_account_code which is the Yayoi 3-digit code.
+        This is more reliable than name matching since codes are unambiguous.
+        """
+        if not code:
+            return False
+        code = str(code).strip()
+        Account = self.env['account.account']
+        company = self.company_id or self.env.company
+        base_domain = [('company_ids', 'in', [company.id]), ('deprecated', '=', False)]
+        account = Account.search([('code', '=', code)] + base_domain, limit=1)
+        if account:
+            return account
+        # Try prefix match (e.g. code '755' matches '7550' if exact not found)
+        account = Account.search([('code', '=like', code + '%')] + base_domain, limit=1)
+        return account or False
+
     def _search_account_by_name(self, name):
         """Search account by name across multiple languages (ja_JP, zh_CN, en_US).
 
         OCR returns Japanese account names (e.g. 旅費交通費) but user's Odoo
         may be in Chinese or English. Odoo 18 stores names as jsonb and ORM
         searches only in current user language by default.
+        Excludes deprecated accounts to prefer active Yayoi chart accounts.
         """
         Account = self.env['account.account']
         company = self.company_id or self.env.company
-        company_domain = [('company_ids', 'in', [company.id])]
+        base_domain = [('company_ids', 'in', [company.id]), ('deprecated', '=', False)]
         # 1. Try current user language
-        account = Account.search([('name', '=', name)] + company_domain, limit=1)
+        account = Account.search([('name', '=', name)] + base_domain, limit=1)
         if account:
             return account
         # 2. Try Japanese (OCR returns Japanese names)
-        account = Account.with_context(lang='ja_JP').search([('name', '=', name)] + company_domain, limit=1)
+        account = Account.with_context(lang='ja_JP').search([('name', '=', name)] + base_domain, limit=1)
         if account:
             return account
         # 3. Fuzzy match in current language
-        account = Account.search([('name', 'ilike', name)] + company_domain, limit=1)
+        account = Account.search([('name', 'ilike', name)] + base_domain, limit=1)
         if account:
             return account
         # 4. Fuzzy match in Japanese
-        account = Account.with_context(lang='ja_JP').search([('name', 'ilike', name)] + company_domain, limit=1)
+        account = Account.with_context(lang='ja_JP').search([('name', 'ilike', name)] + base_domain, limit=1)
         return account or False
 
     def _infer_account_from_keywords(self, text_sources):
@@ -1362,6 +1392,36 @@ class AccountMove(models.Model):
             return os.path.splitext(name)[0]
         return self.name or ''
 
+    # Full-width katakana → half-width katakana mapping for Yayoi CSV
+    _FULL_TO_HALF_KANA = {
+        'ア': 'ｱ', 'イ': 'ｲ', 'ウ': 'ｳ', 'エ': 'ｴ', 'オ': 'ｵ',
+        'カ': 'ｶ', 'キ': 'ｷ', 'ク': 'ｸ', 'ケ': 'ｹ', 'コ': 'ｺ',
+        'サ': 'ｻ', 'シ': 'ｼ', 'ス': 'ｽ', 'セ': 'ｾ', 'ソ': 'ｿ',
+        'タ': 'ﾀ', 'チ': 'ﾁ', 'ツ': 'ﾂ', 'テ': 'ﾃ', 'ト': 'ﾄ',
+        'ナ': 'ﾅ', 'ニ': 'ﾆ', 'ヌ': 'ﾇ', 'ネ': 'ﾈ', 'ノ': 'ﾉ',
+        'ハ': 'ﾊ', 'ヒ': 'ﾋ', 'フ': 'ﾌ', 'ヘ': 'ﾍ', 'ホ': 'ﾎ',
+        'マ': 'ﾏ', 'ミ': 'ﾐ', 'ム': 'ﾑ', 'メ': 'ﾒ', 'モ': 'ﾓ',
+        'ヤ': 'ﾔ', 'ユ': 'ﾕ', 'ヨ': 'ﾖ',
+        'ラ': 'ﾗ', 'リ': 'ﾘ', 'ル': 'ﾙ', 'レ': 'ﾚ', 'ロ': 'ﾛ',
+        'ワ': 'ﾜ', 'ヲ': 'ｦ', 'ン': 'ﾝ',
+        'ァ': 'ｧ', 'ィ': 'ｨ', 'ゥ': 'ｩ', 'ェ': 'ｪ', 'ォ': 'ｫ',
+        'ッ': 'ｯ', 'ャ': 'ｬ', 'ュ': 'ｭ', 'ョ': 'ｮ',
+        'ー': 'ｰ', '゛': 'ﾞ', '゜': 'ﾟ',
+        'ガ': 'ｶﾞ', 'ギ': 'ｷﾞ', 'グ': 'ｸﾞ', 'ゲ': 'ｹﾞ', 'ゴ': 'ｺﾞ',
+        'ザ': 'ｻﾞ', 'ジ': 'ｼﾞ', 'ズ': 'ｽﾞ', 'ゼ': 'ｾﾞ', 'ゾ': 'ｿﾞ',
+        'ダ': 'ﾀﾞ', 'ヂ': 'ﾁﾞ', 'ヅ': 'ﾂﾞ', 'デ': 'ﾃﾞ', 'ド': 'ﾄﾞ',
+        'バ': 'ﾊﾞ', 'ビ': 'ﾋﾞ', 'ブ': 'ﾌﾞ', 'ベ': 'ﾍﾞ', 'ボ': 'ﾎﾞ',
+        'パ': 'ﾊﾟ', 'ピ': 'ﾋﾟ', 'プ': 'ﾌﾟ', 'ペ': 'ﾍﾟ', 'ポ': 'ﾎﾟ',
+        'ヴ': 'ｳﾞ',
+    }
+
+    @classmethod
+    def _to_halfwidth_kana(cls, text):
+        """Convert full-width katakana to half-width for Yayoi compatibility."""
+        if not text:
+            return ''
+        return ''.join(cls._FULL_TO_HALF_KANA.get(ch, ch) for ch in text)
+
     @staticmethod
     def _truncate_yayoi(text, max_halfwidth):
         """Truncate text to fit within max_halfwidth half-width character count.
@@ -1408,49 +1468,70 @@ class AccountMove(models.Model):
 
         if is_purchase:
             debit_amount = amount_total
-            debit_tax = amount_tax
+            debit_tax = amount_tax if rate > 0 else 0
             credit_amount = amount_total
             credit_tax = 0
         else:
             debit_amount = amount_total
             debit_tax = 0
             credit_amount = amount_total
-            credit_tax = amount_tax
+            credit_tax = amount_tax if rate > 0 else 0
 
         t = self._truncate_yayoi
+        h = self._to_halfwidth_kana
         return [
-            2000,               # Col1: fixed
-            slip_number,        # Col2: attachment filename (伝票番号)
-            '',                 # Col3: empty
-            self._format_yayoi_date(self.invoice_date),  # Col4: date
-            t(debit_acct, 24),  # Col5: debit account (max 24)
-            t(debit_sub, 24),   # Col6: debit sub-account (max 24)
-            '',                 # Col7: empty
-            debit_tax_cat,      # Col8: debit tax category
-            debit_amount,       # Col9: debit amount
-            debit_tax,          # Col10: debit tax
-            t(credit_acct, 24), # Col11: credit account (max 24)
-            t(credit_sub, 24),  # Col12: credit sub-account (max 24)
-            '',                 # Col13: empty
-            credit_tax_cat,     # Col14: credit tax category
-            credit_amount,      # Col15: credit amount
-            credit_tax,         # Col16: credit tax
-            t(description, 64), # Col17: description (max 64)
-            '',                 # Col18: empty
-            '',                 # Col19: empty
-            0,                  # Col20: 0
-            '',                 # Col21: empty
-            '',                 # Col22: empty
-            0,                  # Col23: 0
-            0,                  # Col24: 0
-            'no',               # Col25: no
+            2000,               # Col1: 識別フラグ
+            slip_number,        # Col2: 伝票番号
+            '',                 # Col3: 決算 (空=通常, 本決=本決算)
+            self._format_yayoi_date(self.invoice_date),  # Col4: 取引日付
+            t(debit_acct, 24),  # Col5: 借方勘定科目
+            t(h(debit_sub), 24),   # Col6: 借方補助科目
+            '',                 # Col7: 借方部門
+            debit_tax_cat,      # Col8: 借方税区分
+            debit_amount,       # Col9: 借方金額
+            debit_tax,          # Col10: 借方税金額
+            t(credit_acct, 24), # Col11: 貸方勘定科目
+            t(h(credit_sub), 24),  # Col12: 貸方補助科目
+            '',                 # Col13: 貸方部門
+            credit_tax_cat,     # Col14: 貸方税区分
+            credit_amount,      # Col15: 貸方金額
+            credit_tax,         # Col16: 貸方税金額
+            t(h(description), 64), # Col17: 摘要
+            '',                 # Col18: 番号
+            '',                 # Col19: 期日
+            0,                  # Col20: タイプ (0=仕訳)
+            '',                 # Col21: 生成元
+            '',                 # Col22: 仕訳メモ
+            0,                  # Col23: 付箋1
+            0,                  # Col24: 付箋2
+            'no',               # Col25: 調整
         ]
+
+    def _build_yayoi_txt_row(self):
+        """Assemble 25-column Yayoi TXT row (QUOTE_NONNUMERIC format).
+
+        Same data as CSV but with types adjusted for quoting:
+        - Col 0: str (quoted), Col 1: int (unquoted)
+        - Col 22-23: str '0' (quoted), Col 19: int 0 (unquoted)
+        """
+        row = self._build_yayoi_row()
+        # Col 0: int → str for quoting
+        row[0] = str(row[0])
+        # Col 1: ensure numeric (use Odoo record id if slip_number is not numeric)
+        try:
+            row[1] = int(row[1])
+        except (ValueError, TypeError):
+            row[1] = self.id
+        # Col 22-23 (sticky notes): int → str for quoting
+        row[22] = str(row[22])
+        row[23] = str(row[23])
+        return row
 
     def action_export_yayoi_csv(self):
         """Export selected invoices/bills to Yayoi Accounting CSV format.
 
         Called from list view Action menu. Filters to posted records only,
-        builds CSV with UTF-8 BOM, no header, 25 columns per row.
+        builds CSV with Shift-JIS (cp932) encoding, no header, 25 columns per row.
         """
         valid_types = ('in_invoice', 'in_refund', 'out_invoice', 'out_refund')
         to_export = self.filtered(
@@ -1477,10 +1558,9 @@ class AccountMove(models.Model):
 
         to_export = to_export.sorted(key=lambda r: (r.invoice_date, r.id))
 
-        # Build CSV (UTF-8 BOM, no header)
+        # Build CSV (Shift-JIS, no BOM, no header — Yayoi requires Shift-JIS)
         output = io.BytesIO()
-        output.write(b'\xef\xbb\xbf')  # UTF-8 BOM
-        wrapper = io.TextIOWrapper(output, encoding='utf-8', newline='')
+        wrapper = io.TextIOWrapper(output, encoding='cp932', newline='')
         writer = csv.writer(wrapper)
 
         for record in to_export:
@@ -1501,6 +1581,68 @@ class AccountMove(models.Model):
             'res_model': 'account.move',
             'res_id': to_export[0].id,
             'mimetype': 'text/csv',
+        })
+
+        return {
+            'type': 'ir.actions.act_url',
+            'url': f'/web/content/{attachment.id}?download=true',
+            'target': 'self',
+        }
+
+    def action_export_yayoi_txt(self):
+        """Export selected invoices/bills to Yayoi Accounting TXT format.
+
+        Same data as CSV but uses QUOTE_NONNUMERIC quoting:
+        string fields are double-quoted, numeric fields are unquoted.
+        """
+        valid_types = ('in_invoice', 'in_refund', 'out_invoice', 'out_refund')
+        to_export = self.filtered(
+            lambda r: r.state == 'posted'
+            and r.move_type in valid_types
+            and r.invoice_date
+        )
+
+        if not to_export:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('弥生TXT出力'),
+                    'message': _('出力対象の記帳済み伝票がありません。記帳済みで日付のある伝票を選択してください。'),
+                    'type': 'warning',
+                    'sticky': False,
+                }
+            }
+
+        skipped = len(self) - len(to_export)
+        if skipped:
+            _logger.info(f'[Yayoi] Skipped {skipped} records (draft/no date)')
+
+        to_export = to_export.sorted(key=lambda r: (r.invoice_date, r.id))
+
+        # Build TXT (Shift-JIS, QUOTE_NONNUMERIC — Yayoi TXT format)
+        output = io.BytesIO()
+        wrapper = io.TextIOWrapper(output, encoding='cp932', newline='')
+        writer = csv.writer(wrapper, quoting=csv.QUOTE_NONNUMERIC)
+
+        for record in to_export:
+            try:
+                row = record._build_yayoi_txt_row()
+                writer.writerow(row)
+            except Exception as e:
+                _logger.warning(f'[Yayoi] Failed to export record {record.id}: {e}')
+
+        wrapper.flush()
+        wrapper.detach()
+
+        filename = f'yayoi_export_{fields.Date.today().strftime("%Y%m%d")}.txt'
+        attachment = self.env['ir.attachment'].create({
+            'name': filename,
+            'type': 'binary',
+            'datas': base64.b64encode(output.getvalue()),
+            'res_model': 'account.move',
+            'res_id': to_export[0].id,
+            'mimetype': 'application/octet-stream',
         })
 
         return {

@@ -65,7 +65,7 @@
         </field>
     </record>
 
-    <!-- Yayoi CSV export button on Vendor Bills list view -->
+    <!-- Yayoi export buttons on Vendor Bills list view -->
     <record id="view_in_invoice_bill_tree_yayoi" model="ir.ui.view">
         <field name="name">account.move.bill.list.yayoi</field>
         <field name="model">account.move</field>
@@ -77,12 +77,16 @@
                             string="弥生CSV出力"
                             type="object"
                             class="btn-secondary"/>
+                    <button name="action_export_yayoi_txt"
+                            string="弥生TXT出力"
+                            type="object"
+                            class="btn-secondary"/>
                 </header>
             </xpath>
         </field>
     </record>
 
-    <!-- Yayoi CSV export button on Customer Invoices list view -->
+    <!-- Yayoi export buttons on Customer Invoices list view -->
     <record id="view_out_invoice_tree_yayoi" model="ir.ui.view">
         <field name="name">account.move.invoice.list.yayoi</field>
         <field name="model">account.move</field>
@@ -92,6 +96,10 @@
                 <header>
                     <button name="action_export_yayoi_csv"
                             string="弥生CSV出力"
+                            type="object"
+                            class="btn-secondary"/>
+                    <button name="action_export_yayoi_txt"
+                            string="弥生TXT出力"
                             type="object"
                             class="btn-secondary"/>
                 </header>
