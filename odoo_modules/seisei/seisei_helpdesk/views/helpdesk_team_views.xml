@@ -14,14 +14,14 @@
                                 type="action"
                                 class="oe_stat_button"
                                 icon="fa-life-ring"
-                                context="{'search_default_team_id': active_id}">
+                                context="{'search_default_team_id': id}">
                             <field name="ticket_count" widget="statinfo" string="Tickets"/>
                         </button>
                         <button name="%(seisei_helpdesk.action_seisei_helpdesk_ticket)d"
                                 type="action"
                                 class="oe_stat_button"
                                 icon="fa-clock-o"
-                                context="{'search_default_team_id': active_id, 'search_default_is_open': 1}">
+                                context="{'search_default_team_id': id, 'search_default_is_open': 1}">
                             <field name="ticket_open_count" widget="statinfo" string="Open"/>
                         </button>
                     </div>
@@ -125,7 +125,7 @@
                                         <button class="btn btn-primary"
                                                 name="%(seisei_helpdesk.action_seisei_helpdesk_ticket)d"
                                                 type="action"
-                                                context="{'search_default_team_id': active_id, 'default_team_id': active_id}">
+                                                context="{'search_default_team_id': id, 'default_team_id': id}">
                                             Tickets
                                         </button>
                                     </div>

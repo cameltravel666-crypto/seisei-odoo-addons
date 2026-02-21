@@ -7,7 +7,6 @@
         <field name="code">env['seisei.messaging.adapter.wechat_work']._cron_refresh_tokens()</field>
         <field name="interval_number">2</field>
         <field name="interval_type">hours</field>
-        <field name="numbercall">-1</field>
         <field name="active" eval="True"/>
     </record>
 </odoo>

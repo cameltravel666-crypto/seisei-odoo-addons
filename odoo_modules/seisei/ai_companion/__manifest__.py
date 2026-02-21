@@ -48,7 +48,7 @@ Technical Implementation:
     'data': [
         'data/res_partner_data.xml',
         'views/ai_chat_views.xml',
-        'views/discuss_channel_views.xml',
+        # 'views/discuss_channel_views.xml',  # Disabled: discuss.channel form has no <header>
         'views/res_config_settings_views.xml',
         'security/ir.model.access.csv',
     ],

@@ -66,7 +66,7 @@ class HelpdeskTeam(models.Model):
     )
 
     # --- Features ---
-    use_sla = fields.Boolean(string='SLA Policies')
+    use_sla = fields.Boolean(string='Use SLA')
     use_rating = fields.Boolean(string='Customer Ratings')
     auto_close_days = fields.Integer(
         string='Auto Close (days)',

@@ -16,7 +16,7 @@ TICKET_PRIORITY = [
 class HelpdeskTicket(models.Model):
     _name = 'seisei.helpdesk.ticket'
     _description = 'Helpdesk Ticket'
-    _inherit = ['mail.thread', 'mail.activity.mixin', 'rating.mixin', 'portal.mixin']
+    _inherit = ['portal.mixin', 'rating.mixin', 'mail.activity.mixin']
     _order = 'priority desc, create_date desc'
     _mail_post_access = 'read'
 

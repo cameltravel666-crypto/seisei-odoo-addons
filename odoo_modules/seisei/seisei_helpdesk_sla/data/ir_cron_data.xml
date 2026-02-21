@@ -7,7 +7,6 @@
         <field name="code">model._cron_sla_check()</field>
         <field name="interval_number">15</field>
         <field name="interval_type">minutes</field>
-        <field name="numbercall">-1</field>
         <field name="active" eval="True"/>
     </record>
 </odoo>

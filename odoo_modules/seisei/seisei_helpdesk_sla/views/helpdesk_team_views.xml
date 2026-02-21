@@ -12,7 +12,7 @@
                         class="oe_stat_button"
                         icon="fa-clock-o"
                         invisible="not use_sla"
-                        context="{'search_default_team_id': active_id}">
+                        context="{'search_default_team_id': id}">
                     <field name="sla_count" widget="statinfo" string="SLA"/>
                 </button>
             </xpath>
