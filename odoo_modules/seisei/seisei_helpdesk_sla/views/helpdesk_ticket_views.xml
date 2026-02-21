@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Extend ticket form to show SLA statuses -->
+    <record id="seisei_helpdesk_ticket_view_form_sla" model="ir.ui.view">
+        <field name="name">seisei.helpdesk.ticket.form.sla</field>
+        <field name="model">seisei.helpdesk.ticket</field>
+        <field name="inherit_id" ref="seisei_helpdesk.seisei_helpdesk_ticket_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page string="SLA" name="sla"
+                      invisible="not sla_status_ids">
+                    <field name="sla_status_ids"/>
+                </page>
+            </xpath>
+            <xpath expr="//field[@name='kanban_state']" position="after">
+                <field name="sla_deadline"
+                       decoration-danger="sla_fail"
+                       decoration-warning="not sla_fail and sla_deadline"/>
+                <field name="sla_fail" invisible="1"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Extend ticket Kanban to show SLA badge -->
+    <record id="seisei_helpdesk_ticket_view_kanban_sla" model="ir.ui.view">
+        <field name="name">seisei.helpdesk.ticket.kanban.sla</field>
+        <field name="model">seisei.helpdesk.ticket</field>
+        <field name="inherit_id" ref="seisei_helpdesk.seisei_helpdesk_ticket_view_kanban"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='is_closed']" position="after">
+                <field name="sla_deadline"/>
+                <field name="sla_fail"/>
+            </xpath>
+            <xpath expr="//div[hasclass('o_kanban_record_body')]" position="inside">
+                <span t-if="record.sla_fail.raw_value"
+                      class="badge text-bg-danger ms-1">SLA</span>
+                <span t-elif="record.sla_deadline.raw_value"
+                      class="badge text-bg-warning ms-1">SLA</span>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Extend ticket list to show SLA -->
+    <record id="seisei_helpdesk_ticket_view_list_sla" model="ir.ui.view">
+        <field name="name">seisei.helpdesk.ticket.list.sla</field>
+        <field name="model">seisei.helpdesk.ticket</field>
+        <field name="inherit_id" ref="seisei_helpdesk.seisei_helpdesk_ticket_view_list"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='create_date']" position="before">
+                <field name="sla_deadline" optional="show"
+                       decoration-danger="sla_fail"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Extend ticket search to add SLA filters -->
+    <record id="seisei_helpdesk_ticket_view_search_sla" model="ir.ui.view">
+        <field name="name">seisei.helpdesk.ticket.search.sla</field>
+        <field name="model">seisei.helpdesk.ticket</field>
+        <field name="inherit_id" ref="seisei_helpdesk.seisei_helpdesk_ticket_view_search"/>
+        <field name="arch" type="xml">
+            <xpath expr="//filter[@name='high_priority']" position="after">
+                <filter string="SLA Failed" name="sla_failed"
+                        domain="[('sla_fail', '=', True)]"/>
+                <filter string="SLA Active" name="sla_active"
+                        domain="[('sla_deadline', '!=', False), ('sla_fail', '=', False)]"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

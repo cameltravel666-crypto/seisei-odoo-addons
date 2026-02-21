@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <!-- Default stages -->
+    <record id="stage_new" model="seisei.helpdesk.stage">
+        <field name="name">New</field>
+        <field name="sequence">1</field>
+    </record>
+    <record id="stage_in_progress" model="seisei.helpdesk.stage">
+        <field name="name">In Progress</field>
+        <field name="sequence">2</field>
+    </record>
+    <record id="stage_on_hold" model="seisei.helpdesk.stage">
+        <field name="name">On Hold</field>
+        <field name="sequence">3</field>
+    </record>
+    <record id="stage_solved" model="seisei.helpdesk.stage">
+        <field name="name">Solved</field>
+        <field name="sequence">4</field>
+        <field name="fold" eval="True"/>
+        <field name="is_close" eval="True"/>
+    </record>
+    <record id="stage_cancelled" model="seisei.helpdesk.stage">
+        <field name="name">Cancelled</field>
+        <field name="sequence">5</field>
+        <field name="fold" eval="True"/>
+        <field name="is_close" eval="True"/>
+    </record>
+
+    <!-- Default tags -->
+    <record id="tag_question" model="seisei.helpdesk.tag">
+        <field name="name">Question</field>
+        <field name="color">1</field>
+    </record>
+    <record id="tag_bug" model="seisei.helpdesk.tag">
+        <field name="name">Bug</field>
+        <field name="color">4</field>
+    </record>
+    <record id="tag_feature_request" model="seisei.helpdesk.tag">
+        <field name="name">Feature Request</field>
+        <field name="color">10</field>
+    </record>
+    <record id="tag_complaint" model="seisei.helpdesk.tag">
+        <field name="name">Complaint</field>
+        <field name="color">2</field>
+    </record>
+</odoo>

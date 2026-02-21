@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Add helpdesk to portal home -->
+    <template id="portal_my_home_helpdesk"
+              inherit_id="portal.portal_my_home"
+              name="Helpdesk Tickets">
+        <xpath expr="//div[hasclass('o_portal_docs')]" position="inside">
+            <t t-call="portal.portal_docs_entry">
+                <t t-set="icon" t-value="'/seisei_helpdesk_portal/static/description/icon.png'"/>
+                <t t-set="title">Helpdesk Tickets</t>
+                <t t-set="url" t-value="'/my/helpdesk/tickets'"/>
+                <t t-set="text">View and submit support requests</t>
+                <t t-set="placeholder_count" t-value="'helpdesk_count'"/>
+            </t>
+        </xpath>
+    </template>
+
+    <!-- Ticket list -->
+    <template id="portal_my_tickets" name="My Helpdesk Tickets">
+        <t t-call="portal.portal_layout">
+            <t t-set="breadcrumbs_searchbar" t-value="True"/>
+
+            <t t-call="portal.portal_searchbar">
+                <t t-set="title">Helpdesk Tickets</t>
+            </t>
+
+            <div class="d-flex justify-content-between mb-3">
+                <div>
+                    <a href="/my/helpdesk/submit" class="btn btn-primary">
+                        Submit New Ticket
+                    </a>
+                </div>
+                <div class="btn-group">
+                    <t t-foreach="filters" t-as="f">
+                        <a t-attf-href="/my/helpdesk/tickets?filterby=#{f_key}&amp;sortby=#{sortby}"
+                           t-attf-class="btn btn-sm #{filterby == f_key and 'btn-primary' or 'btn-outline-primary'}">
+                            <t t-out="f_value['label']"/>
+                        </a>
+                    </t>
+                </div>
+            </div>
+
+            <t t-if="not tickets">
+                <div class="alert alert-info" role="alert">
+                    No tickets found. <a href="/my/helpdesk/submit">Submit a new ticket</a>.
+                </div>
+            </t>
+            <t t-else="">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Number</th>
+                                <th>Subject</th>
+                                <th>Team</th>
+                                <th>Stage</th>
+                                <th>Priority</th>
+                                <th>Created</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-foreach="tickets" t-as="ticket">
+                                <tr>
+                                    <td>
+                                        <a t-attf-href="/my/helpdesk/ticket/#{ticket.id}">
+                                            <t t-out="ticket.number"/>
+                                        </a>
+                                    </td>
+                                    <td><t t-out="ticket.name"/></td>
+                                    <td><t t-out="ticket.team_id.name"/></td>
+                                    <td>
+                                        <span t-attf-class="badge #{ticket.is_closed and 'text-bg-secondary' or 'text-bg-primary'}">
+                                            <t t-out="ticket.stage_id.name"/>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <t t-if="ticket.priority == '3'">
+                                            <span class="badge text-bg-danger">Urgent</span>
+                                        </t>
+                                        <t t-elif="ticket.priority == '2'">
+                                            <span class="badge text-bg-warning">High</span>
+                                        </t>
+                                        <t t-elif="ticket.priority == '1'">
+                                            <span class="badge text-bg-info">Medium</span>
+                                        </t>
+                                        <t t-else="">
+                                            <span class="badge text-bg-light">Low</span>
+                                        </t>
+                                    </td>
+                                    <td><t t-out="ticket.create_date" t-options="{'widget': 'date'}"/></td>
+                                </tr>
+                            </t>
+                        </tbody>
+                    </table>
+                </div>
+                <div t-if="pager" class="o_portal_pager text-center">
+                    <t t-call="portal.pager"/>
+                </div>
+            </t>
+        </t>
+    </template>
+
+    <!-- Ticket detail -->
+    <template id="portal_ticket_detail" name="Helpdesk Ticket Detail">
+        <t t-call="portal.portal_layout">
+            <t t-set="o_portal_fullwidth_alert" groups="seisei_helpdesk.group_seisei_helpdesk_user">
+                <t t-call="portal.portal_back_in_edit_mode">
+                    <t t-set="backend_url" t-value="'/odoo/seisei-helpdesk/%s' % ticket.id"/>
+                </t>
+            </t>
+
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0">
+                        <t t-out="ticket.number"/> - <t t-out="ticket.name"/>
+                    </h3>
+                    <span t-attf-class="badge #{ticket.is_closed and 'text-bg-secondary' or 'text-bg-primary'}">
+                        <t t-out="ticket.stage_id.name"/>
+                    </span>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Team:</strong> <t t-out="ticket.team_id.name"/>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Assigned to:</strong>
+                            <t t-out="ticket.user_id.name or 'Unassigned'"/>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Priority:</strong>
+                            <t t-if="ticket.priority == '3'">Urgent</t>
+                            <t t-elif="ticket.priority == '2'">High</t>
+                            <t t-elif="ticket.priority == '1'">Medium</t>
+                            <t t-else="">Low</t>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Created:</strong>
+                            <t t-out="ticket.create_date" t-options="{'widget': 'datetime'}"/>
+                        </div>
+                    </div>
+                    <hr/>
+                    <div class="mb-3">
+                        <h5>Description</h5>
+                        <t t-if="ticket.description">
+                            <t t-out="ticket.description"/>
+                        </t>
+                        <t t-else="">
+                            <em>No description provided.</em>
+                        </t>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chatter / Message history -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Comments</h5>
+                </div>
+                <div class="card-body">
+                    <t t-call="portal.message_thread">
+                        <t t-set="object" t-value="ticket"/>
+                        <t t-set="token" t-value="ticket.access_token"/>
+                    </t>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- Submit ticket form -->
+    <template id="portal_submit_ticket" name="Submit Helpdesk Ticket">
+        <t t-call="portal.portal_layout">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="mb-0">Submit a Support Request</h3>
+                </div>
+                <div class="card-body">
+                    <form action="/my/helpdesk/submit/create" method="POST"
+                          class="needs-validation">
+                        <input type="hidden" name="csrf_token"
+                               t-att-value="request.csrf_token()"/>
+                        <div class="mb-3">
+                            <label for="team_id" class="form-label">Team</label>
+                            <select name="team_id" id="team_id"
+                                    class="form-select" required="">
+                                <option value="">-- Select Team --</option>
+                                <t t-foreach="teams" t-as="team">
+                                    <option t-att-value="team.id">
+                                        <t t-out="team.name"/>
+                                    </option>
+                                </t>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Subject</label>
+                            <input type="text" name="name" id="name"
+                                   class="form-control" required=""
+                                   placeholder="Brief description of your issue"/>
+                        </div>
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea name="description" id="description"
+                                      class="form-control" rows="6"
+                                      placeholder="Please provide details about your issue..."/>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            Submit Ticket
+                        </button>
+                        <a href="/my/helpdesk/tickets" class="btn btn-secondary ms-2">
+                            Cancel
+                        </a>
+                    </form>
+                </div>
+            </div>
+        </t>
+    </template>
+</odoo>

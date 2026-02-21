@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ============================================================ -->
+    <!-- Stage: Form                                                  -->
+    <!-- ============================================================ -->
+    <record id="seisei_helpdesk_stage_view_form" model="ir.ui.view">
+        <field name="name">seisei.helpdesk.stage.form</field>
+        <field name="model">seisei.helpdesk.stage</field>
+        <field name="arch" type="xml">
+            <form string="Helpdesk Stage">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="sequence"/>
+                        </group>
+                        <group>
+                            <field name="fold"/>
+                            <field name="is_close"/>
+                            <field name="mail_template_id"/>
+                        </group>
+                    </group>
+                    <group string="Teams">
+                        <field name="team_ids" widget="many2many_tags" nolabel="1"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ============================================================ -->
+    <!-- Stage: List                                                  -->
+    <!-- ============================================================ -->
+    <record id="seisei_helpdesk_stage_view_list" model="ir.ui.view">
+        <field name="name">seisei.helpdesk.stage.list</field>
+        <field name="model">seisei.helpdesk.stage</field>
+        <field name="arch" type="xml">
+            <list string="Helpdesk Stages" editable="bottom">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="fold"/>
+                <field name="is_close"/>
+                <field name="mail_template_id"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- ============================================================ -->
+    <!-- Stage: Action                                                -->
+    <!-- ============================================================ -->
+    <record id="action_seisei_helpdesk_stage" model="ir.actions.act_window">
+        <field name="name">Stages</field>
+        <field name="res_model">seisei.helpdesk.stage</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

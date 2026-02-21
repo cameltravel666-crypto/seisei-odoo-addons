@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <!-- Ticket created notification -->
+    <record id="mail_template_ticket_created" model="mail.template">
+        <field name="name">Helpdesk: Ticket Created</field>
+        <field name="model_id" ref="model_seisei_helpdesk_ticket"/>
+        <field name="email_from">{{ (object.company_id.email or user.email) }}</field>
+        <field name="email_to">{{ object.partner_email }}</field>
+        <field name="subject">{{ object.number }} - {{ object.name }}</field>
+        <field name="body_html"><![CDATA[
+<div style="margin: 0px; padding: 0px;">
+    <p>Dear {{ object.partner_name or 'Customer' }},</p>
+    <p>Your support request <strong>{{ object.number }}</strong> has been received.</p>
+    <p><strong>Subject:</strong> {{ object.name }}</p>
+    <p><strong>Team:</strong> {{ object.team_id.name }}</p>
+    <p>We will get back to you shortly.</p>
+    <p>Best regards,<br/>{{ object.company_id.name }}</p>
+</div>
+        ]]></field>
+        <field name="auto_delete" eval="True"/>
+        <field name="lang">{{ object.partner_id.lang }}</field>
+    </record>
+
+    <!-- Ticket resolved notification -->
+    <record id="mail_template_ticket_resolved" model="mail.template">
+        <field name="name">Helpdesk: Ticket Resolved</field>
+        <field name="model_id" ref="model_seisei_helpdesk_ticket"/>
+        <field name="email_from">{{ (object.company_id.email or user.email) }}</field>
+        <field name="email_to">{{ object.partner_email }}</field>
+        <field name="subject">{{ object.number }} - Resolved: {{ object.name }}</field>
+        <field name="body_html"><![CDATA[
+<div style="margin: 0px; padding: 0px;">
+    <p>Dear {{ object.partner_name or 'Customer' }},</p>
+    <p>Your support request <strong>{{ object.number }}</strong> - <em>{{ object.name }}</em> has been resolved.</p>
+    <p>If you have further questions, please reply to this email.</p>
+    <p>Best regards,<br/>{{ object.company_id.name }}</p>
+</div>
+        ]]></field>
+        <field name="auto_delete" eval="True"/>
+        <field name="lang">{{ object.partner_id.lang }}</field>
+    </record>
+</odoo>

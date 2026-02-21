@@ -1,0 +1,303 @@
+# Japanese translation for seisei_helpdesk
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo 18.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-02-21\n"
+"PO-Revision-Date: 2026-02-21\n"
+"Language: ja\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. module: seisei_helpdesk
+msgid "New"
+msgstr "新規"
+
+#. module: seisei_helpdesk
+msgid "In Progress"
+msgstr "対応中"
+
+#. module: seisei_helpdesk
+msgid "On Hold"
+msgstr "保留"
+
+#. module: seisei_helpdesk
+msgid "Solved"
+msgstr "解決済み"
+
+#. module: seisei_helpdesk
+msgid "Cancelled"
+msgstr "キャンセル"
+
+#. module: seisei_helpdesk
+msgid "Helpdesk Team"
+msgstr "ヘルプデスクチーム"
+
+#. module: seisei_helpdesk
+msgid "Helpdesk Stage"
+msgstr "ヘルプデスクステージ"
+
+#. module: seisei_helpdesk
+msgid "Helpdesk Ticket"
+msgstr "ヘルプデスクチケット"
+
+#. module: seisei_helpdesk
+msgid "Helpdesk Tag"
+msgstr "ヘルプデスクタグ"
+
+#. module: seisei_helpdesk
+msgid "Subject"
+msgstr "件名"
+
+#. module: seisei_helpdesk
+msgid "Team"
+msgstr "チーム"
+
+#. module: seisei_helpdesk
+msgid "Stage"
+msgstr "ステージ"
+
+#. module: seisei_helpdesk
+msgid "Assigned to"
+msgstr "担当者"
+
+#. module: seisei_helpdesk
+msgid "Tags"
+msgstr "タグ"
+
+#. module: seisei_helpdesk
+msgid "Customer"
+msgstr "顧客"
+
+#. module: seisei_helpdesk
+msgid "Customer Name"
+msgstr "顧客名"
+
+#. module: seisei_helpdesk
+msgid "Customer Email"
+msgstr "顧客メール"
+
+#. module: seisei_helpdesk
+msgid "Customer Phone"
+msgstr "顧客電話番号"
+
+#. module: seisei_helpdesk
+msgid "Ticket Number"
+msgstr "チケット番号"
+
+#. module: seisei_helpdesk
+msgid "Low"
+msgstr "低"
+
+#. module: seisei_helpdesk
+msgid "Medium"
+msgstr "中"
+
+#. module: seisei_helpdesk
+msgid "High"
+msgstr "高"
+
+#. module: seisei_helpdesk
+msgid "Urgent"
+msgstr "緊急"
+
+#. module: seisei_helpdesk
+msgid "Ready"
+msgstr "準備完了"
+
+#. module: seisei_helpdesk
+msgid "Blocked"
+msgstr "ブロック中"
+
+#. module: seisei_helpdesk
+msgid "Manual"
+msgstr "手動"
+
+#. module: seisei_helpdesk
+msgid "Round Robin"
+msgstr "ラウンドロビン"
+
+#. module: seisei_helpdesk
+msgid "Load Balanced"
+msgstr "負荷分散"
+
+#. module: seisei_helpdesk
+msgid "Skill / Tag Based"
+msgstr "スキル/タグベース"
+
+#. module: seisei_helpdesk
+msgid "Assignment Method"
+msgstr "割り当て方法"
+
+#. module: seisei_helpdesk
+msgid "Team Members"
+msgstr "チームメンバー"
+
+#. module: seisei_helpdesk
+msgid "Team Leader"
+msgstr "チームリーダー"
+
+#. module: seisei_helpdesk
+msgid "Working Hours"
+msgstr "営業時間"
+
+#. module: seisei_helpdesk
+msgid "SLA Policies"
+msgstr "SLAポリシー"
+
+#. module: seisei_helpdesk
+msgid "Customer Ratings"
+msgstr "顧客評価"
+
+#. module: seisei_helpdesk
+msgid "Auto Close (days)"
+msgstr "自動クローズ（日数）"
+
+#. module: seisei_helpdesk
+msgid "Folded in Kanban"
+msgstr "カンバンで折り畳み"
+
+#. module: seisei_helpdesk
+msgid "Closing Stage"
+msgstr "クローズステージ"
+
+#. module: seisei_helpdesk
+msgid "Email Template"
+msgstr "メールテンプレート"
+
+#. module: seisei_helpdesk
+msgid "First Assigned"
+msgstr "初回割り当て"
+
+#. module: seisei_helpdesk
+msgid "Closed Date"
+msgstr "クローズ日"
+
+#. module: seisei_helpdesk
+msgid "Hours to Assign"
+msgstr "割り当てまでの時間"
+
+#. module: seisei_helpdesk
+msgid "Hours to Close"
+msgstr "クローズまでの時間"
+
+#. module: seisei_helpdesk
+msgid "Channel"
+msgstr "チャネル"
+
+#. module: seisei_helpdesk
+msgid "Web Form"
+msgstr "Webフォーム"
+
+#. module: seisei_helpdesk
+msgid "Email"
+msgstr "メール"
+
+#. module: seisei_helpdesk
+msgid "Live Chat"
+msgstr "ライブチャット"
+
+#. module: seisei_helpdesk
+msgid "WeChat Work"
+msgstr "企業微信"
+
+#. module: seisei_helpdesk
+msgid "Phone"
+msgstr "電話"
+
+#. module: seisei_helpdesk
+msgid "Tickets"
+msgstr "チケット"
+
+#. module: seisei_helpdesk
+msgid "My Tickets"
+msgstr "マイチケット"
+
+#. module: seisei_helpdesk
+msgid "All Tickets"
+msgstr "すべてのチケット"
+
+#. module: seisei_helpdesk
+msgid "Dashboard"
+msgstr "ダッシュボード"
+
+#. module: seisei_helpdesk
+msgid "Configuration"
+msgstr "設定"
+
+#. module: seisei_helpdesk
+msgid "Stages"
+msgstr "ステージ"
+
+#. module: seisei_helpdesk
+msgid "Assign to Me"
+msgstr "自分に割り当て"
+
+#. module: seisei_helpdesk
+msgid "Description"
+msgstr "説明"
+
+#. module: seisei_helpdesk
+msgid "Extra Info"
+msgstr "追加情報"
+
+#. module: seisei_helpdesk
+msgid "Question"
+msgstr "質問"
+
+#. module: seisei_helpdesk
+msgid "Bug"
+msgstr "バグ"
+
+#. module: seisei_helpdesk
+msgid "Feature Request"
+msgstr "機能リクエスト"
+
+#. module: seisei_helpdesk
+msgid "Complaint"
+msgstr "苦情"
+
+#. module: seisei_helpdesk
+msgid "Agent"
+msgstr "エージェント"
+
+#. module: seisei_helpdesk
+msgid "Manager"
+msgstr "マネージャー"
+
+#. module: seisei_helpdesk
+msgid "Helpdesk"
+msgstr "ヘルプデスク"
+
+#. module: seisei_helpdesk
+msgid "Unassigned"
+msgstr "未割り当て"
+
+#. module: seisei_helpdesk
+msgid "Open"
+msgstr "オープン"
+
+#. module: seisei_helpdesk
+msgid "Closed"
+msgstr "クローズ"
+
+#. module: seisei_helpdesk
+msgid "High Priority"
+msgstr "高優先度"
+
+#. module: seisei_helpdesk
+msgid "Created Today"
+msgstr "本日作成"
+
+#. module: seisei_helpdesk
+msgid "Created This Week"
+msgstr "今週作成"
+
+#. module: seisei_helpdesk
+msgid "Tag Assignment Rules"
+msgstr "タグ割り当てルール"
+
+#. module: seisei_helpdesk
+msgid "Agents"
+msgstr "エージェント"

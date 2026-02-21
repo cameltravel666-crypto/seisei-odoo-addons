@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ============================================================ -->
+    <!-- Team: Form                                                   -->
+    <!-- ============================================================ -->
+    <record id="seisei_helpdesk_team_view_form" model="ir.ui.view">
+        <field name="name">seisei.helpdesk.team.form</field>
+        <field name="model">seisei.helpdesk.team</field>
+        <field name="arch" type="xml">
+            <form string="Helpdesk Team">
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="%(seisei_helpdesk.action_seisei_helpdesk_ticket)d"
+                                type="action"
+                                class="oe_stat_button"
+                                icon="fa-life-ring"
+                                context="{'search_default_team_id': active_id}">
+                            <field name="ticket_count" widget="statinfo" string="Tickets"/>
+                        </button>
+                        <button name="%(seisei_helpdesk.action_seisei_helpdesk_ticket)d"
+                                type="action"
+                                class="oe_stat_button"
+                                icon="fa-clock-o"
+                                context="{'search_default_team_id': active_id, 'search_default_is_open': 1}">
+                            <field name="ticket_open_count" widget="statinfo" string="Open"/>
+                        </button>
+                    </div>
+                    <widget name="web_ribbon" title="Archived" bg_color="text-bg-danger"
+                            invisible="active"/>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" placeholder="e.g. Customer Support"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="leader_id"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="resource_calendar_id"/>
+                        </group>
+                        <group>
+                            <field name="assignment_method"/>
+                            <field name="auto_close_days"/>
+                            <field name="use_sla"/>
+                            <field name="use_rating"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Members" name="members">
+                            <field name="member_ids" widget="many2many_tags"/>
+                        </page>
+                        <page string="Stages" name="stages">
+                            <field name="stage_ids">
+                                <list>
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="name"/>
+                                    <field name="fold"/>
+                                    <field name="is_close"/>
+                                    <field name="mail_template_id"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Tag Assignment" name="tag_assignment"
+                              invisible="assignment_method != 'tag'">
+                            <field name="tag_assignment_ids">
+                                <list editable="bottom">
+                                    <field name="tag_id"/>
+                                    <field name="user_ids" widget="many2many_tags"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Description" name="description">
+                            <field name="description" placeholder="Team description..."/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <!-- ============================================================ -->
+    <!-- Team: List                                                   -->
+    <!-- ============================================================ -->
+    <record id="seisei_helpdesk_team_view_list" model="ir.ui.view">
+        <field name="name">seisei.helpdesk.team.list</field>
+        <field name="model">seisei.helpdesk.team</field>
+        <field name="arch" type="xml">
+            <list string="Helpdesk Teams">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="leader_id"/>
+                <field name="assignment_method"/>
+                <field name="ticket_open_count" string="Open Tickets"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- ============================================================ -->
+    <!-- Team: Kanban (dashboard)                                     -->
+    <!-- ============================================================ -->
+    <record id="seisei_helpdesk_team_view_kanban" model="ir.ui.view">
+        <field name="name">seisei.helpdesk.team.kanban</field>
+        <field name="model">seisei.helpdesk.team</field>
+        <field name="arch" type="xml">
+            <kanban class="o_kanban_dashboard" create="false">
+                <field name="name"/>
+                <field name="ticket_count"/>
+                <field name="ticket_open_count"/>
+                <field name="color"/>
+                <templates>
+                    <t t-name="card">
+                        <div t-attf-class="#{kanban_color(record.color.raw_value)}">
+                            <div class="o_kanban_card_header">
+                                <div class="o_kanban_card_header_title mb16">
+                                    <div class="o_primary">
+                                        <field name="name"/>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="container o_kanban_card_content">
+                                <div class="row">
+                                    <div class="col-6">
+                                        <button class="btn btn-primary"
+                                                name="%(seisei_helpdesk.action_seisei_helpdesk_ticket)d"
+                                                type="action"
+                                                context="{'search_default_team_id': active_id, 'default_team_id': active_id}">
+                                            Tickets
+                                        </button>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="d-flex flex-column align-items-end">
+                                            <span><strong><field name="ticket_open_count"/></strong> Open</span>
+                                            <span><strong><field name="ticket_count"/></strong> Total</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- ============================================================ -->
+    <!-- Team: Action                                                 -->
+    <!-- ============================================================ -->
+    <record id="action_seisei_helpdesk_team" model="ir.actions.act_window">
+        <field name="name">Helpdesk Teams</field>
+        <field name="res_model">seisei.helpdesk.team</field>
+        <field name="view_mode">kanban,list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first helpdesk team
+            </p>
+            <p>Teams group agents and define assignment rules for incoming tickets.</p>
+        </field>
+    </record>
+</odoo>
