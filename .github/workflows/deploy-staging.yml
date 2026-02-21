@@ -6,6 +6,12 @@ on:
       - staging
       - develop
 
+permissions:
+  contents: read
+
+env:
+  DEPLOY_HISTORY: /opt/seisei-odoo-addons/.deploy-history.log
+
 jobs:
   deploy-staging:
     runs-on: ubuntu-latest
@@ -22,39 +28,106 @@ jobs:
           script: |
             set -euo pipefail
 
+            REPO_DIR="/opt/seisei-odoo-addons"
+            COMPOSE_DIR="/srv/stacks/odoo18-staging"
+            HISTORY_FILE="${REPO_DIR}/.deploy-history.log"
+
+            cd "$REPO_DIR" || exit 1
+
+            # ── Record pre-deploy state for rollback ──
+            PREV_SHA=$(git rev-parse HEAD)
+            PREV_DATE=$(git log -1 --format='%ci' HEAD)
+            echo "Previous SHA: ${PREV_SHA} (${PREV_DATE})"
+
+            # ── Pull latest code ──
             echo "--- PULLING STAGING CODE ---"
-            cd /opt/seisei-odoo-addons || exit 1
             git fetch origin staging
             git reset --hard origin/staging
 
+            NEW_SHA=$(git rev-parse HEAD)
+            NEW_DATE=$(git log -1 --format='%ci' HEAD)
             echo "--- CODE UPDATED ---"
             git log --oneline -3
 
-            # The addons are volume-mounted from /opt/seisei-odoo-addons/odoo_modules
-            # into the running container, so a git pull updates the code directly.
-            # No image pull needed unless the Dockerfile/base image changed.
+            # ── Append to deploy history (newest first when reading) ──
+            # Format: timestamp|prev_sha|new_sha|actor|status
+            DEPLOY_TS=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+            echo "${DEPLOY_TS}|${PREV_SHA}|${NEW_SHA}|github-actions|pending" >> "$HISTORY_FILE"
 
+            # Keep only last 50 entries
+            if [ "$(wc -l < "$HISTORY_FILE")" -gt 50 ]; then
+              tail -50 "$HISTORY_FILE" > "${HISTORY_FILE}.tmp"
+              mv "${HISTORY_FILE}.tmp" "$HISTORY_FILE"
+            fi
+
+            if [ "$PREV_SHA" = "$NEW_SHA" ]; then
+              echo "No changes detected (same SHA). Skipping restart."
+              # Update history status
+              sed -i "s|${DEPLOY_TS}|${PREV_SHA}|${NEW_SHA}|github-actions|pending|${DEPLOY_TS}|${PREV_SHA}|${NEW_SHA}|github-actions|no-change|" "$HISTORY_FILE"
+              exit 0
+            fi
+
+            # ── Restart Odoo to pick up new code (volume-mounted addons) ──
             echo "--- RESTARTING ODOO ---"
-            COMPOSE_DIR="/srv/stacks/odoo18-staging"
             cd "$COMPOSE_DIR"
-
-            # Restart to pick up new code (volume-mounted addons)
             docker compose restart web
 
-            # Wait for health check
+            # ── Wait for health check ──
             echo "--- WAITING FOR HEALTH ---"
-            for i in $(seq 1 30); do
+            HEALTHY=false
+            for i in $(seq 1 60); do
               if docker exec odoo18-staging-web curl -sf http://localhost:8069/web/health > /dev/null 2>&1; then
-                echo "✅ Odoo is healthy after $i seconds"
+                echo "Odoo is healthy after $i seconds"
+                HEALTHY=true
                 break
               fi
               sleep 1
             done
 
-            # Verify health one more time
-            if ! docker exec odoo18-staging-web curl -sf http://localhost:8069/web/health > /dev/null 2>&1; then
-              echo "⚠️ Warning: Odoo may not be fully ready yet, but container is running"
+            if $HEALTHY; then
+              echo "--- DEPLOY SUCCESS ---"
+              # Update history status
+              cd "$REPO_DIR"
+              sed -i "s|${DEPLOY_TS}|${PREV_SHA}|${NEW_SHA}|github-actions|pending|${DEPLOY_TS}|${PREV_SHA}|${NEW_SHA}|github-actions|success|" "$HISTORY_FILE"
+            else
+              echo "--- HEALTH CHECK FAILED ---"
+              echo "Odoo did not become healthy within 60 seconds"
+              echo "Container status:"
+              cd "$COMPOSE_DIR"
+              docker compose ps
+              echo "Recent logs:"
+              docker compose logs --tail=30 web
+
+              # Update history status
+              cd "$REPO_DIR"
+              sed -i "s|${DEPLOY_TS}|${PREV_SHA}|${NEW_SHA}|github-actions|pending|${DEPLOY_TS}|${PREV_SHA}|${NEW_SHA}|github-actions|unhealthy|" "$HISTORY_FILE"
+
+              # Auto-rollback: revert to previous SHA
+              echo "--- AUTO-ROLLBACK to ${PREV_SHA} ---"
+              git reset --hard "$PREV_SHA"
+              cd "$COMPOSE_DIR"
+              docker compose restart web
+
+              # Wait for rollback health
+              for i in $(seq 1 60); do
+                if docker exec odoo18-staging-web curl -sf http://localhost:8069/web/health > /dev/null 2>&1; then
+                  echo "Rollback healthy after $i seconds"
+                  break
+                fi
+                sleep 1
+              done
+
+              exit 1
             fi
 
             echo "--- DONE ---"
+            cd "$COMPOSE_DIR"
             docker compose ps
+
+            echo ""
+            echo "Deploy summary:"
+            echo "  From: ${PREV_SHA:0:8} (${PREV_DATE})"
+            echo "  To:   ${NEW_SHA:0:8} (${NEW_DATE})"
+            echo "  Changes:"
+            cd "$REPO_DIR"
+            git log --oneline "${PREV_SHA}..${NEW_SHA}" | head -20

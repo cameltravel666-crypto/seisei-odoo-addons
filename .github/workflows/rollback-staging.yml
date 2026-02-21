@@ -1,0 +1,148 @@
+name: Rollback Staging
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: 'Git SHA to rollback to (leave empty to rollback 1 deploy)'
+        required: false
+        type: string
+      steps_back:
+        description: 'Number of deploys to rollback (ignored if target_sha is set)'
+        required: false
+        type: number
+        default: 1
+
+permissions:
+  contents: read
+
+jobs:
+  rollback-staging:
+    name: Rollback Staging Deployment
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rollback
+        uses: appleboy/ssh-action@v1.2.1
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 10m
+          script: |
+            set -euo pipefail
+
+            REPO_DIR="/opt/seisei-odoo-addons"
+            COMPOSE_DIR="/srv/stacks/odoo18-staging"
+            HISTORY_FILE="${REPO_DIR}/.deploy-history.log"
+            TARGET_SHA="${{ inputs.target_sha }}"
+            STEPS_BACK="${{ inputs.steps_back }}"
+
+            cd "$REPO_DIR" || exit 1
+
+            CURRENT_SHA=$(git rev-parse HEAD)
+            echo "Current SHA: ${CURRENT_SHA}"
+            echo ""
+
+            # ── Show recent deploy history ──
+            echo "=== Recent Deploy History ==="
+            if [ -f "$HISTORY_FILE" ]; then
+              echo "timestamp | prev_sha | new_sha | actor | status"
+              echo "----------|----------|---------|-------|-------"
+              tail -10 "$HISTORY_FILE" | tac
+            else
+              echo "(no deploy history found)"
+            fi
+            echo ""
+
+            # ── Determine target SHA ──
+            if [ -n "$TARGET_SHA" ]; then
+              echo "Rolling back to specified SHA: ${TARGET_SHA}"
+            else
+              # Find the SHA from N deploys ago using history
+              if [ ! -f "$HISTORY_FILE" ]; then
+                echo "ERROR: No deploy history found. Cannot determine rollback target."
+                echo "Please specify target_sha manually."
+                exit 1
+              fi
+
+              # Get the prev_sha from the Nth-most-recent successful deploy
+              ROLLBACK_LINE=$(grep '|success' "$HISTORY_FILE" | tail -"${STEPS_BACK}" | head -1)
+              if [ -z "$ROLLBACK_LINE" ]; then
+                echo "ERROR: Not enough successful deploys in history to rollback ${STEPS_BACK} steps."
+                echo "Available successful deploys:"
+                grep '|success' "$HISTORY_FILE" | tail -5
+                exit 1
+              fi
+
+              TARGET_SHA=$(echo "$ROLLBACK_LINE" | cut -d'|' -f2)
+              echo "Rolling back ${STEPS_BACK} deploy(s) to SHA: ${TARGET_SHA}"
+            fi
+
+            # ── Validate target SHA exists ──
+            if ! git cat-file -t "$TARGET_SHA" > /dev/null 2>&1; then
+              echo "ERROR: SHA ${TARGET_SHA} not found in repository."
+              echo "Try: git fetch --all"
+              git fetch origin --quiet
+              if ! git cat-file -t "$TARGET_SHA" > /dev/null 2>&1; then
+                echo "SHA still not found after fetch. Aborting."
+                exit 1
+              fi
+            fi
+
+            echo ""
+            echo "=== Changes being rolled back ==="
+            git log --oneline "${TARGET_SHA}..HEAD" | head -20
+            echo ""
+
+            # ── Execute rollback ──
+            echo "--- ROLLING BACK ---"
+            git reset --hard "$TARGET_SHA"
+            echo "Git reset to: $(git rev-parse --short HEAD)"
+            echo ""
+
+            # ── Record rollback in history ──
+            DEPLOY_TS=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+            echo "${DEPLOY_TS}|${CURRENT_SHA}|${TARGET_SHA}|rollback-${{ github.actor }}|pending" >> "$HISTORY_FILE"
+
+            # ── Restart Odoo ──
+            echo "--- RESTARTING ODOO ---"
+            cd "$COMPOSE_DIR"
+            docker compose restart web
+
+            # ── Wait for health check ──
+            echo "--- WAITING FOR HEALTH ---"
+            HEALTHY=false
+            for i in $(seq 1 60); do
+              if docker exec odoo18-staging-web curl -sf http://localhost:8069/web/health > /dev/null 2>&1; then
+                echo "Odoo is healthy after $i seconds"
+                HEALTHY=true
+                break
+              fi
+              sleep 1
+            done
+
+            cd "$REPO_DIR"
+            if $HEALTHY; then
+              echo "--- ROLLBACK SUCCESS ---"
+              sed -i "s|${DEPLOY_TS}|${CURRENT_SHA}|${TARGET_SHA}|rollback-${{ github.actor }}|pending|${DEPLOY_TS}|${CURRENT_SHA}|${TARGET_SHA}|rollback-${{ github.actor }}|success|" "$HISTORY_FILE"
+            else
+              echo "--- ROLLBACK HEALTH CHECK FAILED ---"
+              sed -i "s|${DEPLOY_TS}|${CURRENT_SHA}|${TARGET_SHA}|rollback-${{ github.actor }}|pending|${DEPLOY_TS}|${CURRENT_SHA}|${TARGET_SHA}|rollback-${{ github.actor }}|unhealthy|" "$HISTORY_FILE"
+              echo "Container status:"
+              cd "$COMPOSE_DIR"
+              docker compose ps
+              echo "Recent logs:"
+              docker compose logs --tail=30 web
+              exit 1
+            fi
+
+            echo ""
+            echo "Rollback summary:"
+            echo "  From: ${CURRENT_SHA:0:8}"
+            echo "  To:   ${TARGET_SHA:0:8}"
+            echo ""
+            cd "$COMPOSE_DIR"
+            docker compose ps
