@@ -63,7 +63,7 @@ jobs:
             if [ "$PREV_SHA" = "$NEW_SHA" ]; then
               echo "No changes detected (same SHA). Skipping restart."
               # Update history status
-              sed -i "s|${DEPLOY_TS}|${PREV_SHA}|${NEW_SHA}|github-actions|pending|${DEPLOY_TS}|${PREV_SHA}|${NEW_SHA}|github-actions|no-change|" "$HISTORY_FILE"
+              sed -i "s#${DEPLOY_TS}|${PREV_SHA}|${NEW_SHA}|github-actions|pending#${DEPLOY_TS}|${PREV_SHA}|${NEW_SHA}|github-actions|no-change#" "$HISTORY_FILE"
               exit 0
             fi
 
@@ -88,7 +88,7 @@ jobs:
               echo "--- DEPLOY SUCCESS ---"
               # Update history status
               cd "$REPO_DIR"
-              sed -i "s|${DEPLOY_TS}|${PREV_SHA}|${NEW_SHA}|github-actions|pending|${DEPLOY_TS}|${PREV_SHA}|${NEW_SHA}|github-actions|success|" "$HISTORY_FILE"
+              sed -i "s#${DEPLOY_TS}|${PREV_SHA}|${NEW_SHA}|github-actions|pending#${DEPLOY_TS}|${PREV_SHA}|${NEW_SHA}|github-actions|success#" "$HISTORY_FILE"
             else
               echo "--- HEALTH CHECK FAILED ---"
               echo "Odoo did not become healthy within 60 seconds"
@@ -100,7 +100,7 @@ jobs:
 
               # Update history status
               cd "$REPO_DIR"
-              sed -i "s|${DEPLOY_TS}|${PREV_SHA}|${NEW_SHA}|github-actions|pending|${DEPLOY_TS}|${PREV_SHA}|${NEW_SHA}|github-actions|unhealthy|" "$HISTORY_FILE"
+              sed -i "s#${DEPLOY_TS}|${PREV_SHA}|${NEW_SHA}|github-actions|pending#${DEPLOY_TS}|${PREV_SHA}|${NEW_SHA}|github-actions|unhealthy#" "$HISTORY_FILE"
 
               # Auto-rollback: revert to previous SHA
               echo "--- AUTO-ROLLBACK to ${PREV_SHA} ---"

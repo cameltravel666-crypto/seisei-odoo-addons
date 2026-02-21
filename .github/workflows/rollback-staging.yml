@@ -127,10 +127,10 @@ jobs:
             cd "$REPO_DIR"
             if $HEALTHY; then
               echo "--- ROLLBACK SUCCESS ---"
-              sed -i "s|${DEPLOY_TS}|${CURRENT_SHA}|${TARGET_SHA}|rollback-${{ github.actor }}|pending|${DEPLOY_TS}|${CURRENT_SHA}|${TARGET_SHA}|rollback-${{ github.actor }}|success|" "$HISTORY_FILE"
+              sed -i "s#${DEPLOY_TS}|${CURRENT_SHA}|${TARGET_SHA}|rollback-${{ github.actor }}|pending#${DEPLOY_TS}|${CURRENT_SHA}|${TARGET_SHA}|rollback-${{ github.actor }}|success#" "$HISTORY_FILE"
             else
               echo "--- ROLLBACK HEALTH CHECK FAILED ---"
-              sed -i "s|${DEPLOY_TS}|${CURRENT_SHA}|${TARGET_SHA}|rollback-${{ github.actor }}|pending|${DEPLOY_TS}|${CURRENT_SHA}|${TARGET_SHA}|rollback-${{ github.actor }}|unhealthy|" "$HISTORY_FILE"
+              sed -i "s#${DEPLOY_TS}|${CURRENT_SHA}|${TARGET_SHA}|rollback-${{ github.actor }}|pending#${DEPLOY_TS}|${CURRENT_SHA}|${TARGET_SHA}|rollback-${{ github.actor }}|unhealthy#" "$HISTORY_FILE"
               echo "Container status:"
               cd "$COMPOSE_DIR"
               docker compose ps
