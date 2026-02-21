@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <menuitem id="menu_ocr_root" 
-              name="票据识别" 
+              name="AI票据处理" 
               sequence="50"/>
     
     <menuitem id="menu_ocr_documents" 

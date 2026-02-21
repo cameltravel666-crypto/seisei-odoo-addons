@@ -1,10 +1,10 @@
 {
-    'name': 'Financial OCR Integration',
+    'name': 'AI Financial Intelligence (Legacy)',
     'version': '18.0.11.2.0',
     'category': 'Accounting',
-    'summary': 'AI-powered OCR for Purchase Orders, Invoices, and Expenses',
+    'summary': 'AI-powered document processing for Purchase Orders, Invoices, and Expenses (Legacy)',
     'description': '''
-Financial OCR Integration Module
+AI Financial Intelligence Module (Legacy)
 ================================
 
 AI-powered document recognition using Gemini/GPT:
@@ -15,10 +15,10 @@ AI-powered document recognition using Gemini/GPT:
 - Per-user usage tracking and billing
 
 Features:
-- Purchase order OCR scanning
-- Invoice OCR scanning (supports Japanese receipts)
-- Customer invoice OCR (out_invoice)
-- Expense receipt OCR scanning
+- Purchase order AI scanning
+- Invoice AI scanning (supports Japanese receipts)
+- Customer invoice AI processing (out_invoice)
+- Expense receipt AI scanning
 - Automatic vendor matching with tax_id (登録番号)
 - Automatic product creation
 - 8% / 10% tax rate detection

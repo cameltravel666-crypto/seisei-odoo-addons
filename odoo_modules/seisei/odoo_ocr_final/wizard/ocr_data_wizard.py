@@ -3,9 +3,9 @@ from odoo import models, fields, api
 
 class OcrDataWizard(models.TransientModel):
     _name = 'ocr.data.wizard'
-    _description = 'OCR Data Viewer'
+    _description = 'AI Data Viewer'
 
-    ocr_extracted_texts = fields.Text(string='OCR Raw Text', readonly=True)
+    ocr_extracted_texts = fields.Text(string='AI Raw Text', readonly=True)
     ocr_line_items = fields.Text(string='Extracted Items (JSON)', readonly=True)
     ocr_confidence = fields.Float(string='Confidence', readonly=True)
     ocr_status = fields.Char(string='Status', readonly=True)

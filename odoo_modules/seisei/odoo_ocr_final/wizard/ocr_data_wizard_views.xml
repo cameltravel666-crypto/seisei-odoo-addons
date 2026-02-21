@@ -4,7 +4,7 @@
         <field name="name">ocr.data.wizard.form</field>
         <field name="model">ocr.data.wizard</field>
         <field name="arch" type="xml">
-            <form string="OCR Data">
+            <form string="AI Results">
                 <group>
                     <group>
                         <field name="ocr_status"/>
@@ -31,7 +31,7 @@
     </record>
 
     <record id="action_ocr_data_wizard" model="ir.actions.act_window">
-        <field name="name">OCR Data</field>
+        <field name="name">AI Results</field>
         <field name="res_model">ocr.data.wizard</field>
         <field name="view_mode">form</field>
         <field name="target">new</field>

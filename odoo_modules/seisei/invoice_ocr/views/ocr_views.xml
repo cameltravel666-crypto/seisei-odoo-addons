@@ -5,13 +5,13 @@
         <field name="name">ocr.document.form</field>
         <field name="model">ocr.document</field>
         <field name="arch" type="xml">
-            <form string="票据识别">
+            <form string="AI票据处理">
                 <header>
                     <button name="action_recognize" type="object" 
-                            string="🔍 开始识别" class="btn-primary"
+                            string="🔍 AI解析" class="btn-primary"
                             invisible="state != 'draft'"/>
                     <button name="action_recognize" type="object" 
-                            string="🔄 重新识别" class="btn-secondary"
+                            string="🔄 重新AI解析" class="btn-secondary"
                             invisible="state == 'draft'"/>
                     <button name="action_auto_classify_all" type="object"
                             string="🏷️ 自动分类科目" class="btn-info"
@@ -114,7 +114,7 @@
         <field name="name">ocr.document.list</field>
         <field name="model">ocr.document</field>
         <field name="arch" type="xml">
-            <list string="票据识别" 
+            <list string="AI票据处理" 
                   decoration-success="state=='done'" 
                   decoration-danger="state=='error'"
                   decoration-info="state=='draft'">
@@ -143,9 +143,9 @@
                 <field name="name"/>
                 <field name="invoice_number"/>
                 <field name="seller_name"/>
-                <filter string="待识别" name="draft" domain="[('state','=','draft')]"/>
-                <filter string="已识别" name="done" domain="[('state','=','done')]"/>
-                <filter string="识别失败" name="error" domain="[('state','=','error')]"/>
+                <filter string="待AI处理" name="draft" domain="[('state','=','draft')]"/>
+                <filter string="AI处理完成" name="done" domain="[('state','=','done')]"/>
+                <filter string="AI处理失败" name="error" domain="[('state','=','error')]"/>
                 <separator/>
                 <filter string="零售小票" name="retail" domain="[('doc_type','=','retail_receipt')]"/>
                 <filter string="适格请求书" name="qualified" domain="[('doc_type','=','qualified_invoice')]"/>
@@ -159,11 +159,11 @@
     </record>
 
     <record id="action_ocr_document" model="ir.actions.act_window">
-        <field name="name">票据识别</field>
+        <field name="name">AI票据处理</field>
         <field name="res_model">ocr.document</field>
         <field name="view_mode">list,form</field>
         <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">开始使用智能票据识别</p>
+            <p class="o_view_nocontent_smiling_face">开始使用智能AI票据处理</p>
         </field>
     </record>
 

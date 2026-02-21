@@ -23,14 +23,14 @@ class AccountMove(models.Model):
         ('processing', 'Processing'),
         ('done', 'Done'),
         ('failed', 'Failed'),
-    ], string='OCR Status', default='pending', tracking=True)
+    ], string='AI Status', default='pending', tracking=True)
 
-    ocr_raw_data = fields.Text(string='OCR Raw Data')
-    ocr_extracted_texts = fields.Text(string='OCR Texts')
-    ocr_line_items = fields.Text(string='OCR Line Items (JSON)')
-    ocr_error_message = fields.Text(string='OCR Error')
-    ocr_processed_at = fields.Datetime(string='OCR Processed At')
-    ocr_confidence = fields.Float(string='OCR Confidence')
+    ocr_raw_data = fields.Text(string='AI Raw Data')
+    ocr_extracted_texts = fields.Text(string='AI Texts')
+    ocr_line_items = fields.Text(string='AI Line Items (JSON)')
+    ocr_error_message = fields.Text(string='AI Error')
+    ocr_processed_at = fields.Datetime(string='AI Processed At')
+    ocr_confidence = fields.Float(string='AI Confidence')
     ocr_matched_count = fields.Integer(string='Matched Products', default=0)
     ocr_pages = fields.Integer(string='Pages Processed', default=0)
 
@@ -1298,7 +1298,7 @@ class AccountMove(models.Model):
         """Return the tax rate with the highest total amount across invoice lines."""
         self.ensure_one()
         rate_totals = {}
-        for line in self.invoice_line_ids.filtered(lambda l: not l.display_type):
+        for line in self.invoice_line_ids.filtered(lambda l: l.display_type not in ('line_section', 'line_note')):
             for tax in line.tax_ids:
                 if tax.amount_type != 'percent':
                     continue
@@ -1320,12 +1320,12 @@ class AccountMove(models.Model):
         """
         if rate <= 0:
             return '対象外'
-        reduced = '（軽）' if rate == 8 else ''
+        reduced = '軽減' if rate == 8 else ''
         is_purchase = self.move_type in ('in_invoice', 'in_refund')
         if is_purchase:
-            return f'課対仕入内{rate}%{reduced}' if side == 'debit' else '対象外'
+            return f'課対仕入込{reduced}{rate}%' if side == 'debit' else '対象外'
         else:
-            return '対象外' if side == 'debit' else f'課税売上内{rate}%{reduced}'
+            return '対象外' if side == 'debit' else f'課税売上込{reduced}{rate}%'
 
     def _get_account_name_ja(self, account):
         """Get Japanese name for an account."""
@@ -1354,7 +1354,7 @@ class AccountMove(models.Model):
         # Find primary expense/income account (highest total from invoice_line_ids)
         primary_account = False
         max_amount = 0
-        for line in self.invoice_line_ids.filtered(lambda l: not l.display_type):
+        for line in self.invoice_line_ids.filtered(lambda l: l.display_type not in ('line_section', 'line_note')):
             if abs(line.price_subtotal) > max_amount:
                 max_amount = abs(line.price_subtotal)
                 primary_account = line.account_id
@@ -1449,6 +1449,18 @@ class AccountMove(models.Model):
             result.append(ch)
         return ''.join(result)
 
+    def _get_attachment_names(self):
+        """Return comma-separated attachment filenames for this move."""
+        self.ensure_one()
+        attachments = self.env['ir.attachment'].search([
+            ('res_model', '=', 'account.move'),
+            ('res_id', '=', self.id),
+            ('mimetype', 'not like', 'text/'),
+        ], order='id')
+        if not attachments:
+            return ''
+        return ', '.join(att.name for att in attachments)
+
     def _build_yayoi_row(self):
         """Assemble 25-column Yayoi CSV row."""
         self.ensure_one()
@@ -1501,7 +1513,7 @@ class AccountMove(models.Model):
             '',                 # Col19: 期日
             0,                  # Col20: タイプ (0=仕訳)
             '',                 # Col21: 生成元
-            '',                 # Col22: 仕訳メモ
+            t(self._get_attachment_names(), 64),  # Col22: 仕訳メモ (附件名)
             0,                  # Col23: 付箋1
             0,                  # Col24: 付箋2
             'no',               # Col25: 調整

@@ -1,10 +1,10 @@
 {
-    'name': 'Financial OCR Integration',
-    'version': '18.0.13.13.0',
+    'name': 'AI Financial Intelligence',
+    'version': '18.0.13.15.0',
     'category': 'Accounting',
-    'summary': 'AI-powered OCR for Purchase Orders, Invoices, and Expenses',
+    'summary': 'AI-powered document processing for Purchase Orders, Invoices, and Expenses',
     'description': '''
-Financial OCR Integration Module
+AI Financial Intelligence Module
 ================================
 
 AI-powered document recognition using Gemini/GPT:
@@ -12,19 +12,19 @@ AI-powered document recognition using Gemini/GPT:
 - PDF automatically converted to images
 - Automatic product matching and line creation
 - Tax-inclusive (内税) price support
-- Per-user usage tracking and billing
+- Per-user AI usage tracking and billing
 
 Features:
-- Purchase order OCR scanning
-- Invoice OCR scanning (supports Japanese receipts)
-- Customer invoice OCR (out_invoice)
-- Expense receipt OCR scanning
+- Purchase order AI scanning
+- Invoice AI scanning (supports Japanese receipts)
+- Customer invoice AI processing (out_invoice)
+- Expense receipt AI scanning
 - Automatic vendor matching with tax_id (登録番号)
 - Automatic product creation
 - 8% / 10% tax rate detection
 - Chatter-integrated upload zone
 - Auto-compress images to 100KB
-- Batch OCR with real-time progress tracking
+- Batch AI processing with real-time progress tracking
 - Background processing via cron job
     ''',
     'author': 'Seisei',

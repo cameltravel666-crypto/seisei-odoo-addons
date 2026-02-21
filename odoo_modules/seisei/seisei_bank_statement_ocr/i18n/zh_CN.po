@@ -12,23 +12,23 @@ msgstr ""
 
 #. module: seisei_bank_statement_ocr
 #: model:ir.model,name:seisei_bank_statement_ocr.model_seisei_bank_statement_ocr
-msgid "Bank Statement OCR Record"
-msgstr "银行对账单OCR"
+msgid "Bank Statement AI Record"
+msgstr "银行对账单AI"
 
 #. module: seisei_bank_statement_ocr
 #: model:ir.model,name:seisei_bank_statement_ocr.model_seisei_bank_statement_ocr_line
-msgid "Bank Statement OCR Transaction Line"
-msgstr "OCR交易明细行"
+msgid "Bank Statement AI Transaction Line"
+msgstr "AI交易明细行"
 
 #. module: seisei_bank_statement_ocr
 #: model:ir.model,name:seisei_bank_statement_ocr.model_seisei_bank_statement_ocr_upload
-msgid "Bank Statement OCR Upload Wizard"
-msgstr "银行对账单OCR上传"
+msgid "Bank Statement AI Upload Wizard"
+msgstr "银行对账单AI上传"
 
 #. module: seisei_bank_statement_ocr
 #: model_terms:ir.ui.view,arch_db:seisei_bank_statement_ocr.view_bank_statement_ocr_form
-msgid "Start OCR"
-msgstr "开始OCR"
+msgid "Start AI"
+msgstr "开始AI"
 
 #. module: seisei_bank_statement_ocr
 #: model_terms:ir.ui.view,arch_db:seisei_bank_statement_ocr.view_bank_statement_ocr_form
@@ -37,8 +37,8 @@ msgstr "导入对账单"
 
 #. module: seisei_bank_statement_ocr
 #: model_terms:ir.ui.view,arch_db:seisei_bank_statement_ocr.view_bank_statement_ocr_form
-msgid "Retry OCR"
-msgstr "重新OCR"
+msgid "Retry AI"
+msgstr "重新AI"
 
 #. module: seisei_bank_statement_ocr
 #: model_terms:ir.ui.view,arch_db:seisei_bank_statement_ocr.view_bank_statement_ocr_form
@@ -84,7 +84,7 @@ msgstr "草稿"
 #. module: seisei_bank_statement_ocr
 #: model:ir.model.fields.selection,name:seisei_bank_statement_ocr.selection__seisei_bank_statement_ocr__state__processing
 msgid "Processing"
-msgstr "OCR处理中"
+msgstr "AI处理中"
 
 #. module: seisei_bank_statement_ocr
 #: model:ir.model.fields.selection,name:seisei_bank_statement_ocr.selection__seisei_bank_statement_ocr__state__review
@@ -154,7 +154,7 @@ msgstr "错误"
 #. module: seisei_bank_statement_ocr
 #: model:ir.model.fields,field_description:seisei_bank_statement_ocr.field_seisei_bank_statement_ocr__ocr_processed_at
 msgid "Processed At"
-msgstr "OCR处理时间"
+msgstr "AI处理时间"
 
 #. module: seisei_bank_statement_ocr
 #: model:ir.model.fields,field_description:seisei_bank_statement_ocr.field_seisei_bank_statement_ocr__line_ids
@@ -218,7 +218,7 @@ msgstr "合作伙伴"
 
 #. module: seisei_bank_statement_ocr
 #: model:ir.model.fields,field_description:seisei_bank_statement_ocr.field_seisei_bank_statement_ocr_line__partner_name
-msgid "Counterparty (OCR)"
+msgid "Counterparty (AI)"
 msgstr "交易方"
 
 #. module: seisei_bank_statement_ocr
@@ -238,8 +238,8 @@ msgstr "余额不平衡:"
 
 #. module: seisei_bank_statement_ocr
 #: model_terms:ir.ui.view,arch_db:seisei_bank_statement_ocr.view_bank_statement_ocr_form
-msgid "OCR Error:"
-msgstr "OCR错误:"
+msgid "AI Error:"
+msgstr "AI错误:"
 
 #. module: seisei_bank_statement_ocr
 #: model_terms:ir.ui.view,arch_db:seisei_bank_statement_ocr.view_bank_statement_ocr_form
@@ -263,13 +263,13 @@ msgstr "交易明细"
 
 #. module: seisei_bank_statement_ocr
 #: model_terms:ir.ui.view,arch_db:seisei_bank_statement_ocr.view_bank_statement_ocr_form
-msgid "OCR Raw Data"
-msgstr "OCR原始数据"
+msgid "AI Raw Data"
+msgstr "AI原始数据"
 
 #. module: seisei_bank_statement_ocr
 #: model_terms:ir.ui.view,arch_db:seisei_bank_statement_ocr.view_bank_statement_ocr_upload_form
-msgid "Bank Statement OCR"
-msgstr "银行对账单OCR"
+msgid "Bank Statement AI"
+msgstr "银行对账单AI"
 
 #. module: seisei_bank_statement_ocr
 #: model_terms:ir.ui.view,arch_db:seisei_bank_statement_ocr.view_bank_statement_ocr_upload_form
@@ -279,13 +279,13 @@ msgstr "支持多页PDF及图片（JPG、PNG）。"
 #. module: seisei_bank_statement_ocr
 #: model:ir.actions.act_window,name:seisei_bank_statement_ocr.action_bank_statement_ocr
 #: model:ir.ui.menu,name:seisei_bank_statement_ocr.menu_bank_statement_ocr
-msgid "OCR Statements"
-msgstr "OCR对账单"
+msgid "AI Statements"
+msgstr "AI对账单"
 
 #. module: seisei_bank_statement_ocr
 #: model:ir.actions.act_window,name:seisei_bank_statement_ocr.action_bank_statement_ocr_upload
-msgid "Bank Statement OCR"
-msgstr "银行对账单OCR"
+msgid "Bank Statement AI"
+msgstr "银行对账单AI"
 
 #. module: seisei_bank_statement_ocr
 #: model_terms:ir.ui.view,arch_db:seisei_bank_statement_ocr.view_bank_statement_ocr_search
@@ -309,8 +309,8 @@ msgstr "银行账户"
 
 #. module: seisei_bank_statement_ocr
 #: model_terms:ir.ui.view,arch_db:seisei_bank_statement_ocr.account_journal_dashboard_kanban_view_ocr
-msgid "OCR Upload"
-msgstr "OCR上传"
+msgid "AI Upload"
+msgstr "AI上传"
 
 #. module: seisei_bank_statement_ocr
 #: code:addons/seisei_bank_statement_ocr/models/bank_statement_ocr.py:0
@@ -339,8 +339,8 @@ msgstr "扫描文件"
 
 #. module: seisei_bank_statement_ocr
 #: code:addons/seisei_bank_statement_ocr/models/bank_statement_ocr.py:0
-msgid "OCR completed: %(pages)s pages, %(txns)s transactions extracted."
-msgstr "OCR完成：%(pages)s页，提取%(txns)s条交易记录。"
+msgid "AI completed: %(pages)s pages, %(txns)s transactions extracted."
+msgstr "AI完成：%(pages)s页，提取%(txns)s条交易记录。"
 
 #. module: seisei_bank_statement_ocr
 #: code:addons/seisei_bank_statement_ocr/models/bank_statement_ocr.py:0

@@ -8,13 +8,13 @@
             <form>
                 <header>
                     <button name="action_process_ocr" type="object"
-                            string="Start OCR" class="btn-primary"
+                            string="Start AI Analysis" class="btn-primary"
                             invisible="state != 'draft'"/>
                     <button name="action_confirm_import" type="object"
                             string="Import Statement" class="btn-primary"
                             invisible="state != 'review'"/>
                     <button name="action_process_ocr" type="object"
-                            string="Retry OCR" class="btn-secondary"
+                            string="Retry AI" class="btn-secondary"
                             invisible="state not in ('review', 'failed')"/>
                     <button name="action_reset_to_draft" type="object"
                             string="Reset" class="btn-secondary"
@@ -85,7 +85,7 @@
                             <field name="attachment_ids" widget="many2many_binary"
                                    readonly="state not in ('draft', 'failed')"/>
                         </page>
-                        <page string="OCR Raw Data" name="raw"
+                        <page string="AI Raw Data" name="raw"
                               invisible="not ocr_raw_data">
                             <field name="ocr_raw_data" readonly="1"/>
                         </page>
@@ -151,7 +151,7 @@
 
     <!-- ========== Action ========== -->
     <record id="action_bank_statement_ocr" model="ir.actions.act_window">
-        <field name="name">OCR Statements</field>
+        <field name="name">AI Statements</field>
         <field name="res_model">seisei.bank.statement.ocr</field>
         <field name="view_mode">list,form</field>
         <field name="search_view_id" ref="view_bank_statement_ocr_search"/>
@@ -160,7 +160,7 @@
 
     <!-- ========== Menu (under Accounting > Journal Entries) ========== -->
     <menuitem id="menu_bank_statement_ocr"
-              name="OCR Statements"
+              name="AI Statements"
               parent="account.menu_finance_entries"
               action="action_bank_statement_ocr"
               sequence="20"/>

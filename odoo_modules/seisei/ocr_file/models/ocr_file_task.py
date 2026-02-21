@@ -297,7 +297,7 @@ def extract_template_headers(template_data: bytes) -> tuple:
 class OcrFileSource(models.Model):
     """Source file for OCR processing - supports multiple files"""
     _name = 'ocr.file.source'
-    _description = 'OCR Source File'
+    _description = 'AI Source File'
     _order = 'sequence, id'
 
     task_id = fields.Many2one(
@@ -328,7 +328,7 @@ class OcrFileSource(models.Model):
     ocr_error_message = fields.Text(string='Error Message')
 
     # Extracted data - stored as JSON for flexibility
-    ocr_raw_data = fields.Text(string='OCR Raw Data')
+    ocr_raw_data = fields.Text(string='AI Raw Data')
     extracted_data = fields.Text(string='Extracted Data (JSON)')
 
     # Common fields for quick access
@@ -343,7 +343,7 @@ class OcrFileSource(models.Model):
 
 class OcrFileTask(models.Model):
     _name = 'ocr.file.task'
-    _description = 'OCR File Processing Task'
+    _description = 'AI File Processing Task'
     _inherit = ['mail.thread', 'mail.activity.mixin']
     _order = 'create_date desc'
 

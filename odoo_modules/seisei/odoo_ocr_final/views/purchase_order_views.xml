@@ -10,7 +10,7 @@
             <!-- OCR Buttons in Header -->
             <xpath expr="//header" position="inside">
                 <button name="action_ocr_scan"
-                        string="OCR Scan"
+                        string="AI Analyze"
                         type="object"
                         class="btn-primary"
                         invisible="ocr_status == 'processing' or state not in ('draft', 'sent')"
@@ -31,7 +31,7 @@
                         class="btn-secondary"
                         invisible="ocr_status == 'pending'"
                         icon="fa-refresh"
-                        title="Reset OCR status"/>
+                        title="Reset AI status"/>
 
                 <button name="action_ocr_view_usage"
                         string="Usage"
@@ -41,7 +41,7 @@
                         title="View OCR usage this month"/>
             </xpath>
 
-            <!-- OCR Status Badge -->
+            <!-- AI Status Badge -->
             <xpath expr="//field[@name='partner_id']" position="before">
                 <field name="ocr_status" widget="badge" readonly="1"
                        decoration-info="ocr_status == 'pending'"
@@ -59,9 +59,9 @@
                        string="Cost ¥"/>
             </xpath>
 
-            <!-- OCR Data Tab -->
+            <!-- AI Results Tab -->
             <xpath expr="//notebook" position="inside">
-                <page string="OCR Data" name="ocr_data"
+                <page string="AI Results" name="ocr_data"
                       invisible="ocr_status == 'pending'">
 
                     <group col="2">

@@ -9,19 +9,19 @@
             <!-- Add OCR button in header - supports all invoice types -->
             <xpath expr="//header" position="inside">
                 <button name="action_send_to_ocr"
-                        string="Send to OCR"
+                        string="AI Analyze"
                         type="object"
                         class="btn-primary"
                         invisible="ocr_status == 'processing' or move_type not in ('in_invoice', 'in_refund', 'out_invoice', 'out_refund')"
                         icon="fa-eye"/>
                 <button name="action_ocr_apply_lines"
-                        string="Apply OCR Lines"
+                        string="Apply AI Results"
                         type="object"
                         class="btn-secondary"
                         invisible="not ocr_line_items or ocr_status != 'done'"
                         icon="fa-list-alt"/>
                 <button name="action_reset_ocr"
-                        string="Reset OCR"
+                        string="Reset AI"
                         type="object"
                         class="btn-secondary"
                         invisible="ocr_status == 'pending'"
@@ -39,19 +39,19 @@
 
             <!-- Add OCR tab in notebook -->
             <xpath expr="//notebook" position="inside">
-                <page string="OCR Data" name="ocr_data">
+                <page string="AI Results" name="ocr_data">
                     <group>
-                        <group string="OCR Status">
+                        <group string="AI Status">
                             <field name="ocr_status" readonly="1"/>
                             <field name="ocr_processed_at" readonly="1"/>
                             <field name="ocr_confidence" readonly="1" widget="percentage"/>
                         </group>
-                        <group string="OCR Results">
+                        <group string="AI Results">
                             <field name="ocr_pages" readonly="1"/>
                             <field name="ocr_matched_count" readonly="1"/>
                         </group>
                     </group>
-                    <group string="OCR Error" invisible="not ocr_error_message">
+                    <group string="AI Error" invisible="not ocr_error_message">
                         <field name="ocr_error_message" readonly="1" colspan="2"/>
                     </group>
                     <group string="Extracted Line Items (JSON)" invisible="not ocr_line_items">

@@ -16,10 +16,10 @@ class HrExpense(models.Model):
         ('processing', 'Processing'),
         ('done', 'Done'),
         ('failed', 'Failed'),
-    ], string='OCR Status', default='pending', tracking=True)
-    ocr_raw_data = fields.Text(string='OCR Raw Data')
-    ocr_error_message = fields.Text(string='OCR Error')
-    ocr_processed_at = fields.Datetime(string='OCR Processed At')
+    ], string='AI Status', default='pending', tracking=True)
+    ocr_raw_data = fields.Text(string='AI Raw Data')
+    ocr_error_message = fields.Text(string='AI Error')
+    ocr_processed_at = fields.Datetime(string='AI Processed At')
 
     def action_send_to_ocr(self):
         """Process attached receipt with LLM OCR"""

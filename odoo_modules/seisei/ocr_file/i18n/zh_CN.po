@@ -1,10 +1,10 @@
-# Chinese (Simplified) translation for OCR File Module
+# Chinese (Simplified) translation for AI File Module
 # Copyright (C) 2024 Seisei ERP
-# This file is distributed under the same license as the OCR File module.
+# This file is distributed under the same license as the AI File module.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: OCR File 18.0.1.0.0\n"
+"Project-Id-Version: AI File 18.0.1.0.0\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2024-01-18 00:00+0000\n"
 "PO-Revision-Date: 2024-01-18 00:00+0000\n"
@@ -17,28 +17,28 @@ msgstr ""
 
 #. module: ocr_file
 #: model:ir.model,name:ocr_file.model_ocr_file_task
-msgid "OCR File Processing Task"
-msgstr "OCR文件处理任务"
+msgid "AI File Processing Task"
+msgstr "AI文件处理任务"
 
 #. module: ocr_file
 #: model:ir.model,name:ocr_file.model_ocr_file_source
-msgid "OCR Source File"
-msgstr "OCR源文件"
+msgid "AI Source File"
+msgstr "AI源文件"
 
 #. module: ocr_file
 #: model:ir.model,name:ocr_file.model_ocr_file_usage
-msgid "OCR File Usage"
-msgstr "OCR文件使用情况"
+msgid "AI File Usage"
+msgstr "AI文件使用情况"
 
 #. module: ocr_file
 #: model:ir.actions.act_window,name:ocr_file.action_ocr_file_task
-msgid "OCR File Processing"
-msgstr "OCR文件处理"
+msgid "AI File Processing"
+msgstr "AI文件处理"
 
 #. module: ocr_file
 #: model:ir.actions.act_window,name:ocr_file.action_ocr_file_usage
-msgid "OCR Usage"
-msgstr "OCR使用情况"
+msgid "AI Usage"
+msgstr "AI使用情况"
 
 #. module: ocr_file
 #: model:ir.ui.menu,name:ocr_file.menu_ocr_file_root
@@ -47,8 +47,8 @@ msgstr "表格引擎"
 
 #. module: ocr_file
 #: model:ir.ui.menu,name:ocr_file.menu_ocr_file_tasks
-msgid "OCR Tasks"
-msgstr "OCR任务"
+msgid "AI Tasks"
+msgstr "AI任务"
 
 #. module: ocr_file
 #: model:ir.ui.menu,name:ocr_file.menu_ocr_file_usage
@@ -212,8 +212,8 @@ msgstr "待处理"
 
 #. module: ocr_file
 #: code:ocr_file/views/ocr_file_views.xml:0
-msgid "Start OCR"
-msgstr "开始OCR"
+msgid "Start AI"
+msgstr "开始AI"
 
 #. module: ocr_file
 #: code:ocr_file/views/ocr_file_views.xml:0
@@ -302,13 +302,13 @@ msgstr "请至少上传一个源文件！"
 
 #. module: ocr_file
 #: code:ocr_file/models/ocr_file_task.py:0
-msgid "OCR is already processing."
-msgstr "OCR正在处理中。"
+msgid "AI is already processing."
+msgstr "AI正在处理中。"
 
 #. module: ocr_file
 #: code:ocr_file/models/ocr_file_task.py:0
-msgid "OCR processing must be completed before filling the template!"
-msgstr "填充模板前必须完成OCR处理！"
+msgid "AI processing must be completed before filling the template!"
+msgstr "填充模板前必须完成AI处理！"
 
 #. module: ocr_file
 #: code:ocr_file/models/ocr_file_task.py:0
@@ -364,12 +364,12 @@ msgid "Year"
 msgstr "年份"
 
 #. module: ocr_file
-msgid "Create your first OCR file task"
-msgstr "创建您的第一个OCR文件任务"
+msgid "Create your first AI file task"
+msgstr "创建您的第一个AI文件任务"
 
 #. module: ocr_file
-msgid "Upload an Excel template and multiple source documents (images/PDFs), then let OCR extract the data and fill your template automatically."
-msgstr "上传Excel模板和多个源文件（图片/PDF），然后让OCR自动提取数据并填充模板。"
+msgid "Upload an Excel template and multiple source documents (images/PDFs), then let AI extract the data and fill your template automatically."
+msgstr "上传Excel模板和多个源文件（图片/PDF），然后让AI自动提取数据并填充模板。"
 
 #. module: ocr_file
 msgid "Today"
