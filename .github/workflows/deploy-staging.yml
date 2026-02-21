@@ -10,25 +10,51 @@ jobs:
   deploy-staging:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Deploy Staging
-        uses: appleboy/ssh-action@v0.1.7
+        uses: appleboy/ssh-action@v1.2.1
         with:
           host: ${{ secrets.STAGING_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 10m
           script: |
+            set -euo pipefail
+
             echo "--- PULLING STAGING CODE ---"
-            cd /opt/seisei-odoo-addons/infra/stacks/odoo18-staging || exit 1
+            cd /opt/seisei-odoo-addons || exit 1
             git fetch origin staging
             git reset --hard origin/staging
 
-            echo "--- UPDATING SERVICES ---"
-            docker compose pull || true
-            docker compose up -d
+            echo "--- CODE UPDATED ---"
+            git log --oneline -3
 
-            echo "--- MIGRATING DATABASE (IF NEEDED) ---"
-            docker compose stop web
-            docker compose run --rm -T web odoo -u all --stop-after-init
-            docker compose up -d web
+            # The addons are volume-mounted from /opt/seisei-odoo-addons/odoo_modules
+            # into the running container, so a git pull updates the code directly.
+            # No image pull needed unless the Dockerfile/base image changed.
+
+            echo "--- RESTARTING ODOO ---"
+            COMPOSE_DIR="/srv/stacks/odoo18-staging"
+            cd "$COMPOSE_DIR"
+
+            # Restart to pick up new code (volume-mounted addons)
+            docker compose restart web
+
+            # Wait for health check
+            echo "--- WAITING FOR HEALTH ---"
+            for i in $(seq 1 30); do
+              if docker exec odoo18-staging-web curl -sf http://localhost:8069/web/health > /dev/null 2>&1; then
+                echo "✅ Odoo is healthy after $i seconds"
+                break
+              fi
+              sleep 1
+            done
+
+            # Verify health one more time
+            if ! docker exec odoo18-staging-web curl -sf http://localhost:8069/web/health > /dev/null 2>&1; then
+              echo "⚠️ Warning: Odoo may not be fully ready yet, but container is running"
+            fi
+
+            echo "--- DONE ---"
+            docker compose ps
