@@ -1,6 +1,6 @@
 {
     'name': 'Seisei Helpdesk',
-    'version': '18.0.1.0.0',
+    'version': '18.0.1.1.0',
     'category': 'Services/Helpdesk',
     'summary': 'Smart helpdesk with team management, ticket pipeline, and auto-assignment',
     'description': """
@@ -33,8 +33,16 @@ Core helpdesk module providing:
         'views/helpdesk_tag_views.xml',
         'views/helpdesk_ticket_views.xml',
         'views/helpdesk_team_views.xml',
+        'views/helpdesk_dashboard_action.xml',
         'views/helpdesk_menu.xml',
     ],
+    'assets': {
+        'web.assets_backend': [
+            'seisei_helpdesk/static/src/dashboard/helpdesk_dashboard.js',
+            'seisei_helpdesk/static/src/dashboard/helpdesk_dashboard.xml',
+            'seisei_helpdesk/static/src/dashboard/helpdesk_dashboard.scss',
+        ],
+    },
     'installable': True,
     'application': True,
     'auto_install': False,

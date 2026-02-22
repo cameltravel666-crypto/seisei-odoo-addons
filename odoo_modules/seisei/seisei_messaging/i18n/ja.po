@@ -1,0 +1,344 @@
+# Translation for seisei_messaging
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo 18.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-02-22\n"
+"PO-Revision-Date: 2026-02-22\n"
+"Language: ja\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#. module: seisei_messaging
+#: model:ir.model,name:seisei_messaging.model_seisei_messaging_channel
+msgid "Messaging Channel"
+msgstr "メッセージングチャネル"
+
+#. module: seisei_messaging
+#: model:ir.model,name:seisei_messaging.model_seisei_messaging_conversation
+msgid "Messaging Conversation"
+msgstr "メッセージング会話"
+
+#. module: seisei_messaging
+#: model:ir.model,name:seisei_messaging.model_seisei_messaging_message
+msgid "Messaging Message"
+msgstr "メッセージングメッセージ"
+
+#. module: seisei_messaging
+#: model:ir.model,name:seisei_messaging.model_seisei_messaging_send_wizard
+msgid "Send Message Wizard"
+msgstr "メッセージ送信ウィザード"
+
+#. module: seisei_messaging
+#: model:ir.model.fields,field_description:seisei_messaging.field_seisei_messaging_channel__name
+msgid "Channel Name"
+msgstr "チャネル名"
+
+#. module: seisei_messaging
+#: model:ir.model.fields,field_description:seisei_messaging.field_seisei_messaging_channel__channel_type
+msgid "Channel Type"
+msgstr "チャネルタイプ"
+
+#. module: seisei_messaging
+#: model:ir.model.fields,field_description:seisei_messaging.field_seisei_messaging_channel__active
+#: model:ir.model.fields.selection,name:seisei_messaging.selection__seisei_messaging_conversation__state__active
+#: model_terms:ir.ui.view,arch_db:seisei_messaging.seisei_messaging_conversation_view_search
+msgid "Active"
+msgstr "有効"
+
+#. module: seisei_messaging
+#: model:ir.model.fields,field_description:seisei_messaging.field_seisei_messaging_channel__ai_enabled
+msgid "AI Enabled"
+msgstr "AI有効"
+
+#. module: seisei_messaging
+#: model:ir.model.fields,field_description:seisei_messaging.field_seisei_messaging_channel__webhook_url
+msgid "Webhook URL"
+msgstr "Webhook URL"
+
+#. module: seisei_messaging
+#: model:ir.model.fields,field_description:seisei_messaging.field_seisei_messaging_channel__token
+msgid "Token"
+msgstr "トークン"
+
+#. module: seisei_messaging
+#: model:ir.model.fields,field_description:seisei_messaging.field_seisei_messaging_channel__secret
+msgid "Secret"
+msgstr "シークレット"
+
+#. module: seisei_messaging
+#: model:ir.model.fields,field_description:seisei_messaging.field_seisei_messaging_channel__app_id
+msgid "App ID"
+msgstr "アプリID"
+
+#. module: seisei_messaging
+#: model:ir.model.fields,field_description:seisei_messaging.field_seisei_messaging_channel__conversation_ids
+#: model:ir.ui.menu,name:seisei_messaging.menu_seisei_messaging_conversations
+msgid "Conversations"
+msgstr "会話"
+
+#. module: seisei_messaging
+#: model:ir.model.fields,field_description:seisei_messaging.field_seisei_messaging_channel__conversation_count
+msgid "Conversation Count"
+msgstr "会話数"
+
+#. module: seisei_messaging
+#: model:ir.model.fields.selection,name:seisei_messaging.selection__seisei_messaging_channel__channel_type__wechat_work
+msgid "WeChat Work"
+msgstr "企業微信"
+
+#. module: seisei_messaging
+#: model:ir.model.fields.selection,name:seisei_messaging.selection__seisei_messaging_channel__channel_type__line
+msgid "LINE"
+msgstr "LINE"
+
+#. module: seisei_messaging
+#: model:ir.model.fields.selection,name:seisei_messaging.selection__seisei_messaging_channel__channel_type__whatsapp
+msgid "WhatsApp"
+msgstr "WhatsApp"
+
+#. module: seisei_messaging
+#. odoo-python
+#: model:ir.model.fields,field_description:seisei_messaging.field_seisei_messaging_conversation__channel_id
+#: model_terms:ir.ui.view,arch_db:seisei_messaging.seisei_messaging_conversation_view_form
+#: model_terms:ir.ui.view,arch_db:seisei_messaging.seisei_messaging_conversation_view_search
+msgid "Channel"
+msgstr "チャネル"
+
+#. module: seisei_messaging
+#: model:ir.model.fields,field_description:seisei_messaging.field_seisei_messaging_conversation__external_id
+msgid "External ID"
+msgstr "外部ID"
+
+#. module: seisei_messaging
+#: model:ir.model.fields,field_description:seisei_messaging.field_seisei_messaging_conversation__external_name
+msgid "External Name"
+msgstr "外部名"
+
+#. module: seisei_messaging
+#: model:ir.model.fields,field_description:seisei_messaging.field_seisei_messaging_conversation__external_avatar_url
+msgid "Avatar URL"
+msgstr "アバターURL"
+
+#. module: seisei_messaging
+#: model:ir.model.fields,field_description:seisei_messaging.field_seisei_messaging_conversation__partner_id
+msgid "Contact"
+msgstr "連絡先"
+
+#. module: seisei_messaging
+#: model:ir.model.fields,field_description:seisei_messaging.field_seisei_messaging_conversation__assigned_user_id
+msgid "Assigned Agent"
+msgstr "担当エージェント"
+
+#. module: seisei_messaging
+#: model:ir.model.fields,field_description:seisei_messaging.field_seisei_messaging_conversation__state
+msgid "State"
+msgstr "状態"
+
+#. module: seisei_messaging
+#. odoo-python
+#: model:ir.model.fields,field_description:seisei_messaging.field_seisei_messaging_conversation__message_ids
+#: model:ir.ui.menu,name:seisei_messaging.menu_seisei_messaging_messages
+#: model:ir.actions.act_window,name:seisei_messaging.action_seisei_messaging_message
+msgid "Messages"
+msgstr "メッセージ"
+
+#. module: seisei_messaging
+#: model:ir.model.fields,field_description:seisei_messaging.field_seisei_messaging_conversation__message_count
+msgid "Message Count"
+msgstr "メッセージ数"
+
+#. module: seisei_messaging
+#: model:ir.model.fields,field_description:seisei_messaging.field_seisei_messaging_conversation__last_message_date
+msgid "Last Message"
+msgstr "最新メッセージ"
+
+#. module: seisei_messaging
+#: model:ir.model.fields.selection,name:seisei_messaging.selection__seisei_messaging_conversation__state__closed
+msgid "Closed"
+msgstr "クローズ"
+
+#. module: seisei_messaging
+#. odoo-python
+#: model:ir.model.fields,field_description:seisei_messaging.field_seisei_messaging_message__conversation_id
+#: model_terms:ir.ui.view,arch_db:seisei_messaging.seisei_messaging_conversation_view_form
+#: model:ir.actions.act_window,name:seisei_messaging.action_seisei_messaging_conversation
+msgid "Conversation"
+msgstr "会話"
+
+#. module: seisei_messaging
+#: model:ir.model.fields,field_description:seisei_messaging.field_seisei_messaging_message__direction
+msgid "Direction"
+msgstr "方向"
+
+#. module: seisei_messaging
+#: model:ir.model.fields,field_description:seisei_messaging.field_seisei_messaging_message__message_type
+msgid "Message Type"
+msgstr "メッセージタイプ"
+
+#. module: seisei_messaging
+#: model:ir.model.fields,field_description:seisei_messaging.field_seisei_messaging_message__content
+msgid "Content"
+msgstr "内容"
+
+#. module: seisei_messaging
+#: model:ir.model.fields,field_description:seisei_messaging.field_seisei_messaging_message__media_url
+msgid "Media URL"
+msgstr "メディアURL"
+
+#. module: seisei_messaging
+#: model:ir.model.fields,field_description:seisei_messaging.field_seisei_messaging_message__external_msg_id
+msgid "External Message ID"
+msgstr "外部メッセージID"
+
+#. module: seisei_messaging
+#: model:ir.model.fields,field_description:seisei_messaging.field_seisei_messaging_message__timestamp
+msgid "Timestamp"
+msgstr "タイムスタンプ"
+
+#. module: seisei_messaging
+#: model:ir.model.fields,field_description:seisei_messaging.field_seisei_messaging_message__delivery_status
+msgid "Delivery Status"
+msgstr "配信ステータス"
+
+#. module: seisei_messaging
+#: model:ir.model.fields,field_description:seisei_messaging.field_seisei_messaging_message__is_ai_reply
+msgid "AI Reply"
+msgstr "AI返信"
+
+#. module: seisei_messaging
+#: model:ir.model.fields.selection,name:seisei_messaging.selection__seisei_messaging_message__direction__in
+#: model_terms:ir.ui.view,arch_db:seisei_messaging.seisei_messaging_message_view_search
+msgid "Incoming"
+msgstr "受信"
+
+#. module: seisei_messaging
+#: model:ir.model.fields.selection,name:seisei_messaging.selection__seisei_messaging_message__direction__out
+#: model_terms:ir.ui.view,arch_db:seisei_messaging.seisei_messaging_message_view_search
+msgid "Outgoing"
+msgstr "送信"
+
+#. module: seisei_messaging
+#: model:ir.model.fields.selection,name:seisei_messaging.selection__seisei_messaging_message__message_type__text
+msgid "Text"
+msgstr "テキスト"
+
+#. module: seisei_messaging
+#: model:ir.model.fields.selection,name:seisei_messaging.selection__seisei_messaging_message__message_type__image
+msgid "Image"
+msgstr "画像"
+
+#. module: seisei_messaging
+#: model:ir.model.fields.selection,name:seisei_messaging.selection__seisei_messaging_message__message_type__file
+msgid "File"
+msgstr "ファイル"
+
+#. module: seisei_messaging
+#: model:ir.model.fields.selection,name:seisei_messaging.selection__seisei_messaging_message__message_type__voice
+msgid "Voice"
+msgstr "音声"
+
+#. module: seisei_messaging
+#: model:ir.model.fields.selection,name:seisei_messaging.selection__seisei_messaging_message__message_type__video
+msgid "Video"
+msgstr "動画"
+
+#. module: seisei_messaging
+#: model:ir.model.fields.selection,name:seisei_messaging.selection__seisei_messaging_message__message_type__location
+msgid "Location"
+msgstr "位置"
+
+#. module: seisei_messaging
+#: model:ir.model.fields.selection,name:seisei_messaging.selection__seisei_messaging_message__delivery_status__pending
+msgid "Pending"
+msgstr "保留中"
+
+#. module: seisei_messaging
+#: model:ir.model.fields.selection,name:seisei_messaging.selection__seisei_messaging_message__delivery_status__sent
+msgid "Sent"
+msgstr "送信済み"
+
+#. module: seisei_messaging
+#: model:ir.model.fields.selection,name:seisei_messaging.selection__seisei_messaging_message__delivery_status__delivered
+msgid "Delivered"
+msgstr "配信済み"
+
+#. module: seisei_messaging
+#: model:ir.model.fields.selection,name:seisei_messaging.selection__seisei_messaging_message__delivery_status__read
+msgid "Read"
+msgstr "既読"
+
+#. module: seisei_messaging
+#: model:ir.model.fields.selection,name:seisei_messaging.selection__seisei_messaging_message__delivery_status__failed
+msgid "Failed"
+msgstr "失敗"
+
+#. module: seisei_messaging
+#: model:ir.model.fields,field_description:seisei_messaging.field_seisei_messaging_send_wizard__message
+msgid "Message"
+msgstr "メッセージ"
+
+#. module: seisei_messaging
+#. odoo-python
+#: model_terms:ir.ui.view,arch_db:seisei_messaging.seisei_messaging_send_wizard_form
+#: model_terms:ir.ui.view,arch_db:seisei_messaging.seisei_messaging_conversation_view_form
+#: model:ir.actions.act_window,name:seisei_messaging.action_seisei_messaging_send_wizard
+msgid "Send Message"
+msgstr "メッセージを送信"
+
+#. module: seisei_messaging
+#: model_terms:ir.ui.view,arch_db:seisei_messaging.seisei_messaging_send_wizard_form
+msgid "Send"
+msgstr "送信"
+
+#. module: seisei_messaging
+#: model:ir.ui.menu,name:seisei_messaging.menu_seisei_messaging_root
+msgid "Messaging"
+msgstr "メッセージング"
+
+#. module: seisei_messaging
+#: model:ir.ui.menu,name:seisei_messaging.menu_seisei_messaging_channels
+msgid "Channels"
+msgstr "チャネル"
+
+#. module: seisei_messaging
+#: model:ir.ui.menu,name:seisei_messaging.menu_seisei_messaging_config
+msgid "Configuration"
+msgstr "設定"
+
+#. module: seisei_messaging
+#: model_terms:ir.ui.view,arch_db:seisei_messaging.seisei_messaging_conversation_view_form
+msgid "Close"
+msgstr "クローズ"
+
+#. module: seisei_messaging
+#: model_terms:ir.ui.view,arch_db:seisei_messaging.seisei_messaging_conversation_view_form
+msgid "Reopen"
+msgstr "再開"
+
+#. module: seisei_messaging
+#: model_terms:ir.ui.view,arch_db:seisei_messaging.seisei_messaging_conversation_view_search
+msgid "My Conversations"
+msgstr "マイ会話"
+
+#. module: seisei_messaging
+#: model:ir.actions.act_window,name:seisei_messaging.action_seisei_messaging_channel
+msgid "Messaging Channels"
+msgstr "メッセージングチャネル"
+
+#. module: seisei_messaging
+#: model:ir.module.category,name:seisei_messaging.module_category_seisei_messaging
+msgid "Seisei Messaging"
+msgstr "Seisei メッセージング"
+
+#. module: seisei_messaging
+#: model:res.groups,name:seisei_messaging.group_seisei_messaging_user
+msgid "User"
+msgstr "ユーザー"
+
+#. module: seisei_messaging
+#: model:res.groups,name:seisei_messaging.group_seisei_messaging_manager
+msgid "Manager"
+msgstr "マネージャー"

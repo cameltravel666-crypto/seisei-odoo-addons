@@ -34,7 +34,7 @@
     <menuitem id="menu_helpdesk_dashboard"
               name="Dashboard"
               parent="menu_seisei_helpdesk_root"
-              action="action_seisei_helpdesk_team"
+              action="action_seisei_helpdesk_dashboard"
               sequence="1"/>
 
     <!-- ============================================================ -->

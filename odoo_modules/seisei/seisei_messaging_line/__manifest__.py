@@ -17,9 +17,6 @@ Seisei Messaging - LINE Connector
     'depends': [
         'seisei_messaging',
     ],
-    'external_dependencies': {
-        'python': ['linebot'],
-    },
     'installable': True,
     'auto_install': False,
 }

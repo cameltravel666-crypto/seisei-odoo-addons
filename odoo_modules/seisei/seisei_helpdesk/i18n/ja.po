@@ -1,303 +1,718 @@
-# Japanese translation for seisei_helpdesk
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* seisei_helpdesk
+#
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo 18.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-02-21\n"
-"PO-Revision-Date: 2026-02-21\n"
+"POT-Creation-Date: 2026-02-22\n"
+"PO-Revision-Date: 2026-02-22\n"
 "Language: ja\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
-"Content-Transfer-Encoding: 8bit\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: nplurals=1; plural=0;\n"
 
 #. module: seisei_helpdesk
-msgid "New"
-msgstr "新規"
-
-#. module: seisei_helpdesk
-msgid "In Progress"
-msgstr "対応中"
-
-#. module: seisei_helpdesk
-msgid "On Hold"
-msgstr "保留"
-
-#. module: seisei_helpdesk
-msgid "Solved"
-msgstr "解決済み"
-
-#. module: seisei_helpdesk
-msgid "Cancelled"
-msgstr "キャンセル"
-
-#. module: seisei_helpdesk
-msgid "Helpdesk Team"
-msgstr "ヘルプデスクチーム"
-
-#. module: seisei_helpdesk
+#: model:ir.model,name:seisei_helpdesk.model_seisei_helpdesk_stage
 msgid "Helpdesk Stage"
 msgstr "ヘルプデスクステージ"
 
 #. module: seisei_helpdesk
+#: model:ir.model,name:seisei_helpdesk.model_seisei_helpdesk_team
+msgid "Helpdesk Team"
+msgstr "ヘルプデスクチーム"
+
+#. module: seisei_helpdesk
+#: model:ir.model,name:seisei_helpdesk.model_seisei_helpdesk_ticket
 msgid "Helpdesk Ticket"
 msgstr "ヘルプデスクチケット"
 
 #. module: seisei_helpdesk
+#: model:ir.model,name:seisei_helpdesk.model_seisei_helpdesk_tag
 msgid "Helpdesk Tag"
 msgstr "ヘルプデスクタグ"
 
 #. module: seisei_helpdesk
+#: model:ir.model,name:seisei_helpdesk.model_seisei_helpdesk_tag_assignment
+msgid "Tag-based Agent Assignment"
+msgstr "タグベースエージェント割り当て"
+
+#. module: seisei_helpdesk
+#: model:ir.model.fields,field_description:seisei_helpdesk.field_seisei_helpdesk_ticket__name
 msgid "Subject"
 msgstr "件名"
 
 #. module: seisei_helpdesk
+#: model:ir.model.fields,field_description:seisei_helpdesk.field_seisei_helpdesk_ticket__team_id
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk.view_seisei_helpdesk_ticket_search
 msgid "Team"
 msgstr "チーム"
 
 #. module: seisei_helpdesk
+#: model:ir.model.fields,field_description:seisei_helpdesk.field_seisei_helpdesk_ticket__stage_id
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk.view_seisei_helpdesk_ticket_search
 msgid "Stage"
 msgstr "ステージ"
 
 #. module: seisei_helpdesk
+#: model:ir.model.fields,field_description:seisei_helpdesk.field_seisei_helpdesk_ticket__user_id
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk.view_seisei_helpdesk_ticket_search
 msgid "Assigned to"
 msgstr "担当者"
 
 #. module: seisei_helpdesk
+#: model:ir.model.fields,field_description:seisei_helpdesk.field_seisei_helpdesk_ticket__tag_ids
 msgid "Tags"
 msgstr "タグ"
 
 #. module: seisei_helpdesk
+#: model:ir.model.fields,field_description:seisei_helpdesk.field_seisei_helpdesk_ticket__priority
+msgid "Priority"
+msgstr "優先度"
+
+#. module: seisei_helpdesk
+#: model:ir.model.fields,field_description:seisei_helpdesk.field_seisei_helpdesk_ticket__kanban_state
+msgid "Kanban State"
+msgstr "カンバン状態"
+
+#. module: seisei_helpdesk
+#: model:ir.model.fields,field_description:seisei_helpdesk.field_seisei_helpdesk_ticket__color
+msgid "Color Index"
+msgstr "カラーインデックス"
+
+#. module: seisei_helpdesk
+#: model:ir.model.fields,field_description:seisei_helpdesk.field_seisei_helpdesk_ticket__partner_id
 msgid "Customer"
 msgstr "顧客"
 
 #. module: seisei_helpdesk
+#: model:ir.model.fields,field_description:seisei_helpdesk.field_seisei_helpdesk_ticket__partner_name
 msgid "Customer Name"
 msgstr "顧客名"
 
 #. module: seisei_helpdesk
+#: model:ir.model.fields,field_description:seisei_helpdesk.field_seisei_helpdesk_ticket__partner_email
 msgid "Customer Email"
 msgstr "顧客メール"
 
 #. module: seisei_helpdesk
+#: model:ir.model.fields,field_description:seisei_helpdesk.field_seisei_helpdesk_ticket__partner_phone
 msgid "Customer Phone"
 msgstr "顧客電話番号"
 
 #. module: seisei_helpdesk
+#: model:ir.model.fields,field_description:seisei_helpdesk.field_seisei_helpdesk_ticket__ticket_ref
 msgid "Ticket Number"
 msgstr "チケット番号"
 
 #. module: seisei_helpdesk
-msgid "Low"
-msgstr "低"
-
-#. module: seisei_helpdesk
-msgid "Medium"
-msgstr "中"
-
-#. module: seisei_helpdesk
-msgid "High"
-msgstr "高"
-
-#. module: seisei_helpdesk
-msgid "Urgent"
-msgstr "緊急"
-
-#. module: seisei_helpdesk
-msgid "Ready"
-msgstr "準備完了"
-
-#. module: seisei_helpdesk
-msgid "Blocked"
-msgstr "ブロック中"
-
-#. module: seisei_helpdesk
-msgid "Manual"
-msgstr "手動"
-
-#. module: seisei_helpdesk
-msgid "Round Robin"
-msgstr "ラウンドロビン"
-
-#. module: seisei_helpdesk
-msgid "Load Balanced"
-msgstr "負荷分散"
-
-#. module: seisei_helpdesk
-msgid "Skill / Tag Based"
-msgstr "スキル/タグベース"
-
-#. module: seisei_helpdesk
-msgid "Assignment Method"
-msgstr "割り当て方法"
-
-#. module: seisei_helpdesk
-msgid "Team Members"
-msgstr "チームメンバー"
-
-#. module: seisei_helpdesk
-msgid "Team Leader"
-msgstr "チームリーダー"
-
-#. module: seisei_helpdesk
-msgid "Working Hours"
-msgstr "営業時間"
-
-#. module: seisei_helpdesk
-msgid "SLA Policies"
-msgstr "SLAポリシー"
-
-#. module: seisei_helpdesk
-msgid "Customer Ratings"
-msgstr "顧客評価"
-
-#. module: seisei_helpdesk
-msgid "Auto Close (days)"
-msgstr "自動クローズ（日数）"
-
-#. module: seisei_helpdesk
-msgid "Folded in Kanban"
-msgstr "カンバンで折り畳み"
-
-#. module: seisei_helpdesk
-msgid "Closing Stage"
-msgstr "クローズステージ"
-
-#. module: seisei_helpdesk
-msgid "Email Template"
-msgstr "メールテンプレート"
-
-#. module: seisei_helpdesk
-msgid "First Assigned"
-msgstr "初回割り当て"
-
-#. module: seisei_helpdesk
-msgid "Closed Date"
-msgstr "クローズ日"
-
-#. module: seisei_helpdesk
-msgid "Hours to Assign"
-msgstr "割り当てまでの時間"
-
-#. module: seisei_helpdesk
-msgid "Hours to Close"
-msgstr "クローズまでの時間"
-
-#. module: seisei_helpdesk
-msgid "Channel"
-msgstr "チャネル"
-
-#. module: seisei_helpdesk
-msgid "Web Form"
-msgstr "Webフォーム"
-
-#. module: seisei_helpdesk
-msgid "Email"
-msgstr "メール"
-
-#. module: seisei_helpdesk
-msgid "Live Chat"
-msgstr "ライブチャット"
-
-#. module: seisei_helpdesk
-msgid "WeChat Work"
-msgstr "企業微信"
-
-#. module: seisei_helpdesk
-msgid "Phone"
-msgstr "電話"
-
-#. module: seisei_helpdesk
-msgid "Tickets"
-msgstr "チケット"
-
-#. module: seisei_helpdesk
-msgid "My Tickets"
-msgstr "マイチケット"
-
-#. module: seisei_helpdesk
-msgid "All Tickets"
-msgstr "すべてのチケット"
-
-#. module: seisei_helpdesk
-msgid "Dashboard"
-msgstr "ダッシュボード"
-
-#. module: seisei_helpdesk
-msgid "Configuration"
-msgstr "設定"
-
-#. module: seisei_helpdesk
-msgid "Stages"
-msgstr "ステージ"
-
-#. module: seisei_helpdesk
-msgid "Assign to Me"
-msgstr "自分に割り当て"
-
-#. module: seisei_helpdesk
+#: model:ir.model.fields,field_description:seisei_helpdesk.field_seisei_helpdesk_ticket__description
 msgid "Description"
 msgstr "説明"
 
 #. module: seisei_helpdesk
-msgid "Extra Info"
-msgstr "追加情報"
+#: model:ir.model.fields,field_description:seisei_helpdesk.field_seisei_helpdesk_ticket__first_assigned_date
+msgid "First Assigned"
+msgstr "初回割り当て"
 
 #. module: seisei_helpdesk
-msgid "Question"
-msgstr "質問"
+#: model:ir.model.fields,field_description:seisei_helpdesk.field_seisei_helpdesk_ticket__closed_date
+msgid "Closed Date"
+msgstr "クローズ日"
 
 #. module: seisei_helpdesk
-msgid "Bug"
-msgstr "バグ"
+#: model:ir.model.fields,field_description:seisei_helpdesk.field_seisei_helpdesk_ticket__last_stage_update
+msgid "Last Stage Update"
+msgstr "最終ステージ更新"
 
 #. module: seisei_helpdesk
-msgid "Feature Request"
-msgstr "機能リクエスト"
+#: model:ir.model.fields,field_description:seisei_helpdesk.field_seisei_helpdesk_ticket__hours_to_assign
+msgid "Hours to Assign"
+msgstr "割り当てまでの時間"
 
 #. module: seisei_helpdesk
-msgid "Complaint"
-msgstr "苦情"
+#: model:ir.model.fields,field_description:seisei_helpdesk.field_seisei_helpdesk_ticket__hours_to_close
+msgid "Hours to Close"
+msgstr "クローズまでの時間"
 
 #. module: seisei_helpdesk
-msgid "Agent"
-msgstr "エージェント"
+#: model:ir.model.fields,field_description:seisei_helpdesk.field_seisei_helpdesk_ticket__channel
+msgid "Channel"
+msgstr "チャネル"
 
 #. module: seisei_helpdesk
-msgid "Manager"
-msgstr "マネージャー"
+#: model:ir.model.fields,field_description:seisei_helpdesk.field_seisei_helpdesk_ticket__is_closed
+msgid "Is Closed"
+msgstr "クローズ済み"
 
 #. module: seisei_helpdesk
-msgid "Helpdesk"
-msgstr "ヘルプデスク"
+#: model:ir.model.fields.selection,name:seisei_helpdesk.selection__seisei_helpdesk_ticket__priority__0
+msgid "Low"
+msgstr "低"
 
 #. module: seisei_helpdesk
-msgid "Unassigned"
-msgstr "未割り当て"
+#: model:ir.model.fields.selection,name:seisei_helpdesk.selection__seisei_helpdesk_ticket__priority__1
+msgid "Medium"
+msgstr "中"
 
 #. module: seisei_helpdesk
-msgid "Open"
-msgstr "オープン"
+#: model:ir.model.fields.selection,name:seisei_helpdesk.selection__seisei_helpdesk_ticket__priority__2
+msgid "High"
+msgstr "高"
 
 #. module: seisei_helpdesk
-msgid "Closed"
-msgstr "クローズ"
+#: model:ir.model.fields.selection,name:seisei_helpdesk.selection__seisei_helpdesk_ticket__kanban_state__normal
+msgid "Ready"
+msgstr "準備完了"
 
 #. module: seisei_helpdesk
-msgid "High Priority"
-msgstr "高優先度"
+#: model:ir.model.fields.selection,name:seisei_helpdesk.selection__seisei_helpdesk_ticket__kanban_state__done
+msgid "In Progress"
+msgstr "進行中"
 
 #. module: seisei_helpdesk
-msgid "Created Today"
-msgstr "本日作成"
+#: model:ir.model.fields.selection,name:seisei_helpdesk.selection__seisei_helpdesk_ticket__kanban_state__blocked
+msgid "Blocked"
+msgstr "ブロック中"
 
 #. module: seisei_helpdesk
-msgid "Created This Week"
-msgstr "今週作成"
+#: model:ir.model.fields.selection,name:seisei_helpdesk.selection__seisei_helpdesk_ticket__channel__web
+msgid "Web Form"
+msgstr "Webフォーム"
 
 #. module: seisei_helpdesk
+#: model:ir.model.fields.selection,name:seisei_helpdesk.selection__seisei_helpdesk_ticket__channel__email
+msgid "Email"
+msgstr "メール"
+
+#. module: seisei_helpdesk
+#: model:ir.model.fields.selection,name:seisei_helpdesk.selection__seisei_helpdesk_ticket__channel__livechat
+msgid "Live Chat"
+msgstr "ライブチャット"
+
+#. module: seisei_helpdesk
+#: model:ir.model.fields.selection,name:seisei_helpdesk.selection__seisei_helpdesk_ticket__channel__wechat
+msgid "WeChat Work"
+msgstr "企業微信"
+
+#. module: seisei_helpdesk
+#: model:ir.model.fields.selection,name:seisei_helpdesk.selection__seisei_helpdesk_ticket__channel__line
+msgid "LINE"
+msgstr "LINE"
+
+#. module: seisei_helpdesk
+#: model:ir.model.fields.selection,name:seisei_helpdesk.selection__seisei_helpdesk_ticket__channel__whatsapp
+msgid "WhatsApp"
+msgstr "WhatsApp"
+
+#. module: seisei_helpdesk
+#: model:ir.model.fields.selection,name:seisei_helpdesk.selection__seisei_helpdesk_ticket__channel__phone
+msgid "Phone"
+msgstr "電話"
+
+#. module: seisei_helpdesk
+#: model:ir.model.fields,field_description:seisei_helpdesk.field_seisei_helpdesk_team__assignment_method
+msgid "Assignment Method"
+msgstr "割り当て方法"
+
+#. module: seisei_helpdesk
+#: model:ir.model.fields,field_description:seisei_helpdesk.field_seisei_helpdesk_team__member_ids
+msgid "Team Members"
+msgstr "チームメンバー"
+
+#. module: seisei_helpdesk
+#: model:ir.model.fields,field_description:seisei_helpdesk.field_seisei_helpdesk_team__leader_id
+msgid "Team Leader"
+msgstr "チームリーダー"
+
+#. module: seisei_helpdesk
+#: model:ir.model.fields,field_description:seisei_helpdesk.field_seisei_helpdesk_team__resource_calendar_id
+msgid "Working Hours"
+msgstr "営業時間"
+
+#. module: seisei_helpdesk
+#: model:ir.model.fields,field_description:seisei_helpdesk.field_seisei_helpdesk_team__use_sla
+msgid "SLA Policies"
+msgstr "SLAポリシー"
+
+#. module: seisei_helpdesk
+#: model:ir.model.fields,field_description:seisei_helpdesk.field_seisei_helpdesk_team__use_rating
+msgid "Customer Ratings"
+msgstr "顧客評価"
+
+#. module: seisei_helpdesk
+#: model:ir.model.fields,field_description:seisei_helpdesk.field_seisei_helpdesk_team__auto_close_days
+msgid "Auto Close (days)"
+msgstr "自動クローズ（日数）"
+
+#. module: seisei_helpdesk
+#: model:ir.model.fields,field_description:seisei_helpdesk.field_seisei_helpdesk_team__tag_assignment_ids
 msgid "Tag Assignment Rules"
 msgstr "タグ割り当てルール"
 
 #. module: seisei_helpdesk
+#: model:ir.model.fields,field_description:seisei_helpdesk.field_seisei_helpdesk_team__rr_last_index
+msgid "Round Robin Index"
+msgstr "ラウンドロビンインデックス"
+
+#. module: seisei_helpdesk
+#: model:ir.model.fields,field_description:seisei_helpdesk.field_seisei_helpdesk_team__alias_id
+msgid "Email Alias"
+msgstr "メールエイリアス"
+
+#. module: seisei_helpdesk
+#: model:ir.model.fields,field_description:seisei_helpdesk.field_seisei_helpdesk_team__stage_ids
+msgid "Stages"
+msgstr "ステージ"
+
+#. module: seisei_helpdesk
+#: model:ir.model.fields,field_description:seisei_helpdesk.field_seisei_helpdesk_team__open_ticket_count
+msgid "Open Tickets"
+msgstr "オープンチケット"
+
+#. module: seisei_helpdesk
+#: model:ir.model.fields.selection,name:seisei_helpdesk.selection__seisei_helpdesk_team__assignment_method__manual
+msgid "Manual"
+msgstr "手動"
+
+#. module: seisei_helpdesk
+#: model:ir.model.fields.selection,name:seisei_helpdesk.selection__seisei_helpdesk_team__assignment_method__random
+msgid "Round Robin"
+msgstr "ラウンドロビン"
+
+#. module: seisei_helpdesk
+#: model:ir.model.fields.selection,name:seisei_helpdesk.selection__seisei_helpdesk_team__assignment_method__balanced
+msgid "Load Balanced"
+msgstr "負荷分散"
+
+#. module: seisei_helpdesk
+#: model:ir.model.fields.selection,name:seisei_helpdesk.selection__seisei_helpdesk_team__assignment_method__tag
+msgid "Skill / Tag Based"
+msgstr "スキル/タグベース"
+
+#. module: seisei_helpdesk
+#: model:ir.model.fields,field_description:seisei_helpdesk.field_seisei_helpdesk_stage__fold
+msgid "Folded in Kanban"
+msgstr "カンバンで折り畳み"
+
+#. module: seisei_helpdesk
+#: model:ir.model.fields,field_description:seisei_helpdesk.field_seisei_helpdesk_stage__is_close
+msgid "Closing Stage"
+msgstr "クローズステージ"
+
+#. module: seisei_helpdesk
+#: model:ir.model.fields,field_description:seisei_helpdesk.field_seisei_helpdesk_stage__template_id
+msgid "Email Template"
+msgstr "メールテンプレート"
+
+#. module: seisei_helpdesk
+#: model:ir.model.fields,field_description:seisei_helpdesk.field_seisei_helpdesk_stage__team_ids
+msgid "Teams"
+msgstr "チーム"
+
+#. module: seisei_helpdesk
+#: model:ir.model.fields,field_description:seisei_helpdesk.field_seisei_helpdesk_tag_assignment__agent_ids
 msgid "Agents"
 msgstr "エージェント"
+
+#. module: seisei_helpdesk
+#: model:ir.ui.menu,name:seisei_helpdesk.menu_seisei_helpdesk_root
+msgid "Helpdesk"
+msgstr "ヘルプデスク"
+
+#. module: seisei_helpdesk
+#: model:ir.ui.menu,name:seisei_helpdesk.menu_seisei_helpdesk_tickets
+msgid "Tickets"
+msgstr "チケット"
+
+#. module: seisei_helpdesk
+#: model:ir.ui.menu,name:seisei_helpdesk.menu_seisei_helpdesk_dashboard
+msgid "Dashboard"
+msgstr "ダッシュボード"
+
+#. module: seisei_helpdesk
+#: model:ir.ui.menu,name:seisei_helpdesk.menu_seisei_helpdesk_config
+msgid "Configuration"
+msgstr "設定"
+
+#. module: seisei_helpdesk
+#: model:ir.ui.menu,name:seisei_helpdesk.menu_seisei_helpdesk_teams
+msgid "Teams"
+msgstr "チーム"
+
+#. module: seisei_helpdesk
+#: model:ir.ui.menu,name:seisei_helpdesk.menu_seisei_helpdesk_stages
+msgid "Stages"
+msgstr "ステージ"
+
+#. module: seisei_helpdesk
+#: model:ir.ui.menu,name:seisei_helpdesk.menu_seisei_helpdesk_tags
+msgid "Tags"
+msgstr "タグ"
+
+#. module: seisei_helpdesk
+#: model:ir.actions.client,name:seisei_helpdesk.action_seisei_helpdesk_dashboard
+msgid "Helpdesk Dashboard"
+msgstr "ヘルプデスク ダッシュボード"
+
+#. module: seisei_helpdesk
+#: model:ir.actions.act_window,name:seisei_helpdesk.action_seisei_helpdesk_ticket
+msgid "Tickets"
+msgstr "チケット"
+
+#. module: seisei_helpdesk
+#: model:ir.actions.act_window,name:seisei_helpdesk.action_seisei_helpdesk_team
+msgid "Helpdesk Teams"
+msgstr "ヘルプデスクチーム"
+
+#. module: seisei_helpdesk
+#: model:ir.actions.act_window,name:seisei_helpdesk.action_seisei_helpdesk_stage
+msgid "Stages"
+msgstr "ステージ"
+
+#. module: seisei_helpdesk
+#: model:ir.actions.act_window,name:seisei_helpdesk.action_seisei_helpdesk_tag
+msgid "Tags"
+msgstr "タグ"
+
+#. module: seisei_helpdesk
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk.seisei_helpdesk_ticket_view_form
+msgid "Assign to Me"
+msgstr "自分に割り当て"
+
+#. module: seisei_helpdesk
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk.seisei_helpdesk_ticket_view_form
+msgid "Extra Info"
+msgstr "追加情報"
+
+#. module: seisei_helpdesk
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk.seisei_helpdesk_ticket_view_form
+msgid "Contact"
+msgstr "連絡先"
+
+#. module: seisei_helpdesk
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk.seisei_helpdesk_ticket_view_form
+msgid "Dates"
+msgstr "日付"
+
+#. module: seisei_helpdesk
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk.seisei_helpdesk_ticket_view_form
+msgid "Created"
+msgstr "作成日"
+
+#. module: seisei_helpdesk
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk.seisei_helpdesk_ticket_view_form
+msgid "Metrics"
+msgstr "メトリクス"
+
+#. module: seisei_helpdesk
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk.seisei_helpdesk_ticket_view_form
+msgid "Ticket subject..."
+msgstr "チケットの件名..."
+
+#. module: seisei_helpdesk
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk.seisei_helpdesk_ticket_view_form
+msgid "Describe the issue..."
+msgstr "問題を説明してください..."
+
+#. module: seisei_helpdesk
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk.view_seisei_helpdesk_ticket_search
+msgid "Group By"
+msgstr "グループ"
+
+#. module: seisei_helpdesk
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk.view_seisei_helpdesk_ticket_search
+msgid "Creation Date"
+msgstr "作成日"
+
+#. module: seisei_helpdesk
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk.view_seisei_helpdesk_ticket_search
+msgid "Created Today"
+msgstr "本日作成"
+
+#. module: seisei_helpdesk
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk.view_seisei_helpdesk_ticket_search
+msgid "Created This Week"
+msgstr "今週作成"
+
+#. module: seisei_helpdesk
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk.seisei_helpdesk_team_view_form
+msgid "Members"
+msgstr "メンバー"
+
+#. module: seisei_helpdesk
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk.seisei_helpdesk_team_view_form
+msgid "Tag Assignment"
+msgstr "タグ割り当て"
+
+#. module: seisei_helpdesk
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk.seisei_helpdesk_team_view_form
+msgid "e.g. Customer Support"
+msgstr "例: カスタマーサポート"
+
+#. module: seisei_helpdesk
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk.seisei_helpdesk_team_view_form
+msgid "Team description..."
+msgstr "チームの説明..."
+
+#. module: seisei_helpdesk
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk.action_seisei_helpdesk_ticket
+msgid "Create your first helpdesk ticket"
+msgstr "最初のヘルプデスクチケットを作成"
+
+#. module: seisei_helpdesk
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk.action_seisei_helpdesk_ticket
+msgid "Track customer issues from creation to resolution."
+msgstr "顧客の問題を作成から解決まで追跡します。"
+
+#. module: seisei_helpdesk
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk.action_seisei_helpdesk_team
+msgid "Create your first helpdesk team"
+msgstr "最初のヘルプデスクチームを作成"
+
+#. module: seisei_helpdesk
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk.action_seisei_helpdesk_team
+msgid "Teams group agents and define assignment rules for incoming tickets."
+msgstr "チームはエージェントをグループ化し、受信チケットの割り当てルールを定義します。"
+
+#. module: seisei_helpdesk
+#. odoo-python
+#: code:addons/seisei_helpdesk/models/helpdesk_team.py:0
+#: model:ir.actions.act_window,name:seisei_helpdesk.action_seisei_helpdesk_my_tickets
+#: model:ir.ui.menu,name:seisei_helpdesk.menu_seisei_helpdesk_my_tickets
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk.view_seisei_helpdesk_ticket_search
+msgid "My Tickets"
+msgstr "マイチケット"
+
+#. module: seisei_helpdesk
+#. odoo-python
+#: code:addons/seisei_helpdesk/models/helpdesk_team.py:0
+#: model:ir.ui.menu,name:seisei_helpdesk.menu_seisei_helpdesk_all_tickets
+msgid "All Tickets"
+msgstr "すべてのチケット"
+
+#. module: seisei_helpdesk
+#. odoo-python
+#: code:addons/seisei_helpdesk/models/helpdesk_team.py:0
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk.view_seisei_helpdesk_ticket_search
+msgid "High Priority"
+msgstr "高優先度"
+
+#. module: seisei_helpdesk
+#. odoo-python
+#: code:addons/seisei_helpdesk/models/helpdesk_team.py:0
+#: model:ir.model.fields.selection,name:seisei_helpdesk.selection__seisei_helpdesk_ticket__priority__3
+msgid "Urgent"
+msgstr "緊急"
+
+#. module: seisei_helpdesk
+#. odoo-python
+#: code:addons/seisei_helpdesk/models/helpdesk_team.py:0
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk.view_seisei_helpdesk_ticket_search
+msgid "Closed"
+msgstr "クローズ"
+
+#. module: seisei_helpdesk
+#. odoo-python
+#: code:addons/seisei_helpdesk/models/helpdesk_team.py:0
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk.view_seisei_helpdesk_ticket_search
+msgid "Open"
+msgstr "オープン"
+
+#. module: seisei_helpdesk
+#. odoo-python
+#: code:addons/seisei_helpdesk/models/helpdesk_team.py:0
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk.view_seisei_helpdesk_ticket_search
+msgid "Unassigned"
+msgstr "未割り当て"
+
+#. module: seisei_helpdesk
+#. odoo-python
+#: code:addons/seisei_helpdesk/models/helpdesk_team.py:0
+msgid "My Performance"
+msgstr "マイパフォーマンス"
+
+#. module: seisei_helpdesk
+#. odoo-python
+#: code:addons/seisei_helpdesk/models/helpdesk_team.py:0
+msgid "Customer Care"
+msgstr "カスタマーケア"
+
+#. module: seisei_helpdesk
+#. odoo-python
+#: code:addons/seisei_helpdesk/models/helpdesk_team.py:0
+msgid "Avg Open Hours"
+msgstr "平均対応時間"
+
+#. module: seisei_helpdesk
+#. odoo-python
+#: code:addons/seisei_helpdesk/models/helpdesk_team.py:0
+msgid "SLA Failed"
+msgstr "SLA超過"
+
+#. module: seisei_helpdesk
+#. odoo-python
+#: code:addons/seisei_helpdesk/models/helpdesk_team.py:0
+msgid "Today Closed"
+msgstr "本日クローズ"
+
+#. module: seisei_helpdesk
+#. odoo-python
+#: code:addons/seisei_helpdesk/models/helpdesk_team.py:0
+msgid "SLA Success Rate"
+msgstr "SLA達成率"
+
+#. module: seisei_helpdesk
+#. odoo-python
+#: code:addons/seisei_helpdesk/models/helpdesk_team.py:0
+msgid "Last 7 Days"
+msgstr "過去7日間"
+
+#. module: seisei_helpdesk
+#. odoo-python
+#: code:addons/seisei_helpdesk/models/helpdesk_team.py:0
+msgid "Avg/Day"
+msgstr "日平均"
+
+#. module: seisei_helpdesk
+#. odoo-python
+#: code:addons/seisei_helpdesk/models/helpdesk_team.py:0
+msgid "Daily Target"
+msgstr "デイリー目標"
+
+#. module: seisei_helpdesk
+#. odoo-python
+#: code:addons/seisei_helpdesk/models/helpdesk_team.py:0
+msgid "No teams configured"
+msgstr "チームが設定されていません"
+
+#. module: seisei_helpdesk
+#. odoo-python
+#: code:addons/seisei_helpdesk/models/helpdesk_team.py:0
+msgid "Count"
+msgstr "件数"
+
+#. module: seisei_helpdesk
+#: model:seisei.helpdesk.stage,name:seisei_helpdesk.stage_new
+msgid "New"
+msgstr "新規"
+
+#. module: seisei_helpdesk
+#: model:seisei.helpdesk.stage,name:seisei_helpdesk.stage_in_progress
+msgid "In Progress"
+msgstr "対応中"
+
+#. module: seisei_helpdesk
+#: model:seisei.helpdesk.stage,name:seisei_helpdesk.stage_on_hold
+msgid "On Hold"
+msgstr "保留"
+
+#. module: seisei_helpdesk
+#: model:seisei.helpdesk.stage,name:seisei_helpdesk.stage_solved
+msgid "Solved"
+msgstr "解決済み"
+
+#. module: seisei_helpdesk
+#: model:seisei.helpdesk.stage,name:seisei_helpdesk.stage_cancelled
+msgid "Cancelled"
+msgstr "キャンセル"
+
+#. module: seisei_helpdesk
+#: model:seisei.helpdesk.tag,name:seisei_helpdesk.tag_question
+msgid "Question"
+msgstr "質問"
+
+#. module: seisei_helpdesk
+#: model:seisei.helpdesk.tag,name:seisei_helpdesk.tag_bug
+msgid "Bug"
+msgstr "バグ"
+
+#. module: seisei_helpdesk
+#: model:seisei.helpdesk.tag,name:seisei_helpdesk.tag_feature
+msgid "Feature Request"
+msgstr "機能リクエスト"
+
+#. module: seisei_helpdesk
+#: model:seisei.helpdesk.tag,name:seisei_helpdesk.tag_complaint
+msgid "Complaint"
+msgstr "苦情"
+
+#. module: seisei_helpdesk
+#: model:ir.module.category,name:seisei_helpdesk.module_category_seisei_helpdesk
+msgid "Seisei Helpdesk"
+msgstr "Seisei ヘルプデスク"
+
+#. module: seisei_helpdesk
+#: model:res.groups,name:seisei_helpdesk.group_seisei_helpdesk_user
+msgid "Agent"
+msgstr "エージェント"
+
+#. module: seisei_helpdesk
+#: model:res.groups,name:seisei_helpdesk.group_seisei_helpdesk_manager
+msgid "Manager"
+msgstr "マネージャー"
+
+#. module: seisei_helpdesk
+#. odoo-python
+#: code:addons/seisei_helpdesk/models/helpdesk_ticket.py:0
+msgid "Ticket number must be unique per company!"
+msgstr "チケット番号は会社ごとに一意である必要があります！"
+
+#. module: seisei_helpdesk
+#. odoo-python
+#: code:addons/seisei_helpdesk/models/helpdesk_tag.py:0
+msgid "Tag name already exists!"
+msgstr "タグ名は既に存在します！"
+
+#. module: seisei_helpdesk
+#. odoo-python
+#: code:addons/seisei_helpdesk/models/helpdesk_tag.py:0
+msgid "Only one assignment rule per tag per team!"
+msgstr "チームごとにタグあたり1つの割り当てルールのみ！"
+
+#. module: seisei_helpdesk
+#: model:ir.model.fields,help:seisei_helpdesk.field_seisei_helpdesk_team__rr_last_index
+msgid "Internal pointer for round-robin assignment."
+msgstr "ラウンドロビン割り当ての内部ポインター。"
+
+#. module: seisei_helpdesk
+#: model:ir.model.fields,help:seisei_helpdesk.field_seisei_helpdesk_team__resource_calendar_id
+msgid "Working hours used for SLA deadline calculations."
+msgstr "SLA期限計算に使用する営業時間。"
+
+#. module: seisei_helpdesk
+#: model:ir.model.fields,help:seisei_helpdesk.field_seisei_helpdesk_team__auto_close_days
+msgid "Automatically close tickets with no activity after N days. 0 = disabled."
+msgstr "N日間活動のないチケットを自動クローズ。0 = 無効。"
+
+#. module: seisei_helpdesk
+#: model:ir.model.fields,help:seisei_helpdesk.field_seisei_helpdesk_stage__fold
+msgid "Folded stages are treated as closed in the Kanban view."
+msgstr "折り畳みステージはカンバンビューでクローズとして扱われます。"
+
+#. module: seisei_helpdesk
+#: model:ir.model.fields,help:seisei_helpdesk.field_seisei_helpdesk_stage__is_close
+msgid "Tickets in this stage are considered closed/resolved."
+msgstr "このステージのチケットはクローズ/解決済みとみなされます。"
+
+#. module: seisei_helpdesk
+#: model:ir.model.fields,help:seisei_helpdesk.field_seisei_helpdesk_stage__template_id
+msgid "Automated email sent when a ticket enters this stage."
+msgstr "チケットがこのステージに入ると自動メールが送信されます。"
+
+#. module: seisei_helpdesk
+#: model:mail.template,name:seisei_helpdesk.mail_template_ticket_created
+msgid "Helpdesk: Ticket Created"
+msgstr "ヘルプデスク: チケット作成"
+
+#. module: seisei_helpdesk
+#: model:mail.template,name:seisei_helpdesk.mail_template_ticket_resolved
+msgid "Helpdesk: Ticket Resolved"
+msgstr "ヘルプデスク: チケット解決"
+
+#. module: seisei_helpdesk
+#: model:ir.sequence,name:seisei_helpdesk.seq_helpdesk_ticket
+msgid "Helpdesk Ticket"
+msgstr "ヘルプデスクチケット"

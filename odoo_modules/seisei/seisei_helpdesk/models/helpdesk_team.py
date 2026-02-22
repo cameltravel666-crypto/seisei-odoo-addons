@@ -1,5 +1,6 @@
 import itertools
 import logging
+from datetime import timedelta
 
 from odoo import api, fields, models, _
 
@@ -206,3 +207,143 @@ class HelpdeskTeam(models.Model):
                     'Auto-closed %d tickets for team %s',
                     len(tickets), team.name,
                 )
+
+    # ------------------------------------------------------------------
+    # Dashboard RPC
+    # ------------------------------------------------------------------
+
+    @api.model
+    def retrieve_dashboard(self):
+        """Single RPC returning all helpdesk dashboard data."""
+        Ticket = self.env['seisei.helpdesk.ticket']
+        uid = self.env.uid
+        now = fields.Datetime.now()
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        seven_days_ago = today_start - timedelta(days=7)
+
+        show_sla = 'seisei.helpdesk.sla.status' in self.env
+
+        # ── My Tickets (open, assigned to me) ──
+        my_domain = [('user_id', '=', uid), ('is_closed', '=', False)]
+        my_all = Ticket.search(my_domain)
+        my_high = my_all.filtered(lambda t: t.priority == '2')
+        my_urgent = my_all.filtered(lambda t: t.priority == '3')
+
+        def _ticket_kpi(tickets):
+            count = len(tickets)
+            if count:
+                total_hours = sum(
+                    (now - t.create_date).total_seconds() / 3600.0
+                    for t in tickets if t.create_date
+                )
+                avg_hours = round(total_hours / count, 1)
+            else:
+                avg_hours = 0.0
+            sla_failed = 0
+            if show_sla:
+                for t in tickets:
+                    statuses = self.env['seisei.helpdesk.sla.status'].search([
+                        ('ticket_id', '=', t.id), ('status', '=', 'failed'),
+                    ], limit=1)
+                    if statuses:
+                        sla_failed += 1
+            return {
+                'count': count,
+                'avg_hours': avg_hours,
+                'sla_failed': sla_failed,
+            }
+
+        # ── My Performance ──
+        closed_today = Ticket.search_count([
+            ('user_id', '=', uid),
+            ('is_closed', '=', True),
+            ('closed_date', '>=', today_start),
+        ])
+        closed_7days = Ticket.search_count([
+            ('user_id', '=', uid),
+            ('is_closed', '=', True),
+            ('closed_date', '>=', seven_days_ago),
+        ])
+        avg_7days = round(closed_7days / 7.0, 1) if closed_7days else 0.0
+
+        today_sla_rate = self._compute_sla_success_rate(uid, today_start) if show_sla else 0.0
+        days7_sla_rate = self._compute_sla_success_rate(uid, seven_days_ago) if show_sla else 0.0
+
+        target_closed = 5  # MVP hardcoded daily target
+
+        # ── Customer Care: per-team stats ──
+        teams = self.search([])
+        team_data = []
+        for team in teams:
+            t_domain = [('team_id', '=', team.id), ('is_closed', '=', False)]
+            open_count = Ticket.search_count(t_domain)
+            unassigned_count = Ticket.search_count(t_domain + [('user_id', '=', False)])
+            urgent_count = Ticket.search_count(t_domain + [('priority', '=', '3')])
+            sla_failed_count = 0
+            if show_sla:
+                open_tickets = Ticket.search(t_domain)
+                for t in open_tickets:
+                    statuses = self.env['seisei.helpdesk.sla.status'].search([
+                        ('ticket_id', '=', t.id), ('status', '=', 'failed'),
+                    ], limit=1)
+                    if statuses:
+                        sla_failed_count += 1
+            team_data.append({
+                'id': team.id,
+                'name': team.name,
+                'open_count': open_count,
+                'unassigned_count': unassigned_count,
+                'urgent_count': urgent_count,
+                'sla_failed_count': sla_failed_count,
+            })
+
+        return {
+            'my_all': _ticket_kpi(my_all),
+            'my_high': _ticket_kpi(my_high),
+            'my_urgent': _ticket_kpi(my_urgent),
+            'today_closed': closed_today,
+            'today_sla_success_rate': today_sla_rate,
+            '7days_closed': closed_7days,
+            '7days_avg_closed': avg_7days,
+            '7days_sla_success_rate': days7_sla_rate,
+            'target_closed': target_closed,
+            'teams': team_data,
+            'show_sla': show_sla,
+            'labels': {
+                'title': _('Helpdesk Dashboard'),
+                'myTickets': _('My Tickets'),
+                'myPerformance': _('My Performance'),
+                'customerCare': _('Customer Care'),
+                'allTickets': _('All Tickets'),
+                'highPriority': _('High Priority'),
+                'urgent': _('Urgent'),
+                'avgOpenHours': _('Avg Open Hours'),
+                'slaFailed': _('SLA Failed'),
+                'todayClosed': _('Today Closed'),
+                'slaSuccessRate': _('SLA Success Rate'),
+                'last7Days': _('Last 7 Days'),
+                'closedTickets': _('Closed'),
+                'avgPerDay': _('Avg/Day'),
+                'dailyTarget': _('Daily Target'),
+                'open': _('Open'),
+                'unassigned': _('Unassigned'),
+                'noTeams': _('No teams configured'),
+            },
+        }
+
+    @api.model
+    def _compute_sla_success_rate(self, uid, since):
+        """Compute SLA success rate for a user since a given datetime."""
+        if 'seisei.helpdesk.sla.status' not in self.env:
+            return 0.0
+        SlaStatus = self.env['seisei.helpdesk.sla.status']
+        domain = [
+            ('ticket_id.user_id', '=', uid),
+            ('ticket_id.closed_date', '>=', since),
+            ('ticket_id.is_closed', '=', True),
+        ]
+        total = SlaStatus.search_count(domain)
+        if not total:
+            return 0.0
+        success = SlaStatus.search_count(domain + [('status', '=', 'reached')])
+        return round(success / total * 100.0, 1)
