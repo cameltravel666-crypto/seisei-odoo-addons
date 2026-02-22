@@ -1,10 +1,10 @@
-# Translation Template for OCR File Module
+# Translation Template for AI File Module
 # Copyright (C) 2024 Seisei ERP
-# This file is distributed under the same license as the OCR File module.
+# This file is distributed under the same license as the AI File module.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: OCR File 18.0.1.0.0\n"
+"Project-Id-Version: AI File 18.0.1.0.0\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2024-01-18 00:00+0000\n"
 "PO-Revision-Date: 2024-01-18 00:00+0000\n"
@@ -17,27 +17,27 @@ msgstr ""
 
 #. module: ocr_file
 #: model:ir.model,name:ocr_file.model_ocr_file_task
-msgid "OCR File Processing Task"
+msgid "AI File Processing Task"
 msgstr ""
 
 #. module: ocr_file
 #: model:ir.model,name:ocr_file.model_ocr_file_source
-msgid "OCR Source File"
+msgid "AI Source File"
 msgstr ""
 
 #. module: ocr_file
 #: model:ir.model,name:ocr_file.model_ocr_file_usage
-msgid "OCR File Usage"
+msgid "AI File Usage"
 msgstr ""
 
 #. module: ocr_file
 #: model:ir.actions.act_window,name:ocr_file.action_ocr_file_task
-msgid "OCR File Processing"
+msgid "AI File Processing"
 msgstr ""
 
 #. module: ocr_file
 #: model:ir.actions.act_window,name:ocr_file.action_ocr_file_usage
-msgid "OCR Usage"
+msgid "AI Usage"
 msgstr ""
 
 #. module: ocr_file
@@ -47,7 +47,7 @@ msgstr ""
 
 #. module: ocr_file
 #: model:ir.ui.menu,name:ocr_file.menu_ocr_file_tasks
-msgid "OCR Tasks"
+msgid "AI Tasks"
 msgstr ""
 
 #. module: ocr_file
@@ -212,7 +212,7 @@ msgstr ""
 
 #. module: ocr_file
 #: code:ocr_file/views/ocr_file_views.xml:0
-msgid "Start OCR"
+msgid "Start AI"
 msgstr ""
 
 #. module: ocr_file
@@ -302,12 +302,12 @@ msgstr ""
 
 #. module: ocr_file
 #: code:ocr_file/models/ocr_file_task.py:0
-msgid "OCR is already processing."
+msgid "AI is already processing."
 msgstr ""
 
 #. module: ocr_file
 #: code:ocr_file/models/ocr_file_task.py:0
-msgid "OCR processing must be completed before filling the template!"
+msgid "AI processing must be completed before filling the template!"
 msgstr ""
 
 #. module: ocr_file

@@ -15,7 +15,7 @@ if records:
 
     <!-- Batch Reset OCR Server Action -->
     <record id="action_batch_reset_ocr" model="ir.actions.server">
-        <field name="name">Reset OCR Status</field>
+        <field name="name">Reset AI Status</field>
         <field name="model_id" ref="account.model_account_move"/>
         <field name="binding_model_id" ref="account.model_account_move"/>
         <field name="binding_view_types">list</field>

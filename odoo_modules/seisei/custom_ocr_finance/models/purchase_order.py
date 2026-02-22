@@ -20,13 +20,13 @@ class PurchaseOrder(models.Model):
         ('processing', 'Processing'),
         ('done', 'Done'),
         ('failed', 'Failed'),
-    ], string='OCR Status', default='pending', tracking=True)
+    ], string='AI Status', default='pending', tracking=True)
 
-    ocr_raw_data = fields.Text(string='OCR Raw Data')
-    ocr_extracted_texts = fields.Text(string='OCR Response')
-    ocr_line_items = fields.Text(string='OCR Line Items (JSON)')
-    ocr_error_message = fields.Text(string='OCR Error')
-    ocr_processed_at = fields.Datetime(string='OCR Processed At')
+    ocr_raw_data = fields.Text(string='AI Raw Data')
+    ocr_extracted_texts = fields.Text(string='AI Response')
+    ocr_line_items = fields.Text(string='AI Line Items (JSON)')
+    ocr_error_message = fields.Text(string='AI Error')
+    ocr_processed_at = fields.Datetime(string='AI Processed At')
     ocr_matched_count = fields.Integer(string='Matched Products', default=0)
     ocr_pages = fields.Integer(string='Pages Processed', default=0)
     ocr_cost = fields.Integer(string='Cost (JPY)', default=0)

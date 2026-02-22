@@ -15,7 +15,7 @@ _logger = logging.getLogger(__name__)
 
 class OcrBatchProgress(models.Model):
     _name = "ocr.batch.progress"
-    _description = "OCR Batch Progress"
+    _description = "AI Batch Progress"
     _order = "create_date desc"
 
     # Batch status

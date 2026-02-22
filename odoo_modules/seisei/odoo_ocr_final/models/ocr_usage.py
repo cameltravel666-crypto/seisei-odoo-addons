@@ -15,7 +15,7 @@ PRICE_PER_IMAGE = 20     # JPY per image after free quota
 
 class OcrUsage(models.Model):
     _name = 'ocr.usage'
-    _description = 'OCR Usage Tracking'
+    _description = 'AI Usage Tracking'
     _order = 'month desc, user_id'
 
     user_id = fields.Many2one('res.users', string='User', required=True, index=True)

@@ -3,7 +3,7 @@ from odoo import models, fields, api
 
 class SeiseiBankStatementOcrLine(models.Model):
     _name = 'seisei.bank.statement.ocr.line'
-    _description = 'Bank Statement OCR Transaction Line'
+    _description = 'AI Bank Statement Transaction Line'
     _order = 'sequence, id'
 
     ocr_id = fields.Many2one('seisei.bank.statement.ocr', required=True, ondelete='cascade')

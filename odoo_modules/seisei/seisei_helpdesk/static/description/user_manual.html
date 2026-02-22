@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>Seisei Helpdesk - User Manual</title>
+<style>
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 960px; margin: 0 auto; padding: 20px; color: #333; line-height: 1.7; }
+h1 { border-bottom: 3px solid #0d6efd; padding-bottom: 10px; }
+h2 { color: #0d6efd; border-bottom: 1px solid #dee2e6; padding-bottom: 8px; margin-top: 40px; }
+h3 { color: #495057; }
+table { border-collapse: collapse; width: 100%; margin: 15px 0; }
+th, td { border: 1px solid #dee2e6; padding: 10px 14px; text-align: left; }
+th { background: #f8f9fa; font-weight: 600; }
+code { background: #f1f3f5; padding: 2px 6px; border-radius: 3px; font-size: 0.9em; }
+pre { background: #f8f9fa; padding: 16px; border-radius: 6px; overflow-x: auto; }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.85em; color: #fff; }
+.badge-blue { background: #0d6efd; }
+.badge-yellow { background: #ffc107; color: #333; }
+.badge-red { background: #dc3545; }
+.tip { background: #d1ecf1; border-left: 4px solid #0dcaf0; padding: 12px 16px; margin: 15px 0; border-radius: 4px; }
+.warn { background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px 16px; margin: 15px 0; border-radius: 4px; }
+.section-lang { color: #6c757d; font-size: 0.9em; }
+</style>
+</head>
+<body>
+
+<h1>Seisei Helpdesk 使用手册<br>
+<span class="section-lang">ヘルプデスク ユーザーマニュアル | User Manual</span></h1>
+
+<p><strong>Version:</strong> 18.0.1.1.0 &nbsp;|&nbsp; <strong>Last Updated:</strong> 2026-02-21</p>
+
+<hr>
+
+<h2>目录</h2>
+<ol>
+<li><a href="#overview">概述 / Overview</a></li>
+<li><a href="#setup">初始配置 / Initial Setup</a></li>
+<li><a href="#dashboard">仪表盘 / Dashboard</a></li>
+<li><a href="#tickets">工单管理 / Ticket Management</a></li>
+<li><a href="#teams">团队管理 / Team Management</a></li>
+<li><a href="#line">LINE 消息集成 / LINE Messaging</a></li>
+<li><a href="#sla">SLA 管理 / SLA Management</a></li>
+<li><a href="#faq">常见问题 / FAQ</a></li>
+</ol>
+
+<hr>
+
+<h2 id="overview">1. 概述</h2>
+
+<p>Seisei Helpdesk 是一套基于 Odoo 18 的智能客服工单系统，提供：</p>
+<ul>
+<li><strong>多团队工单管理</strong> — 支持看板、列表、表单多视图</li>
+<li><strong>自动分配算法</strong> — 手动、轮询、负载均衡、技能/标签匹配</li>
+<li><strong>可视化仪表盘</strong> — 实时统计我的工单、绩效、各团队情况</li>
+<li><strong>多渠道接入</strong> — LINE、微信、WhatsApp、邮件、网页表单</li>
+<li><strong>SLA 管理</strong>（可选模块）— 自定义响应/解决时限，自动追踪</li>
+</ul>
+
+<h2 id="setup">2. 初始配置</h2>
+
+<h3>2.1 模块一览</h3>
+<table>
+<tr><th>模块</th><th>功能</th><th>必须</th></tr>
+<tr><td><code>seisei_helpdesk</code></td><td>核心工单管理、仪表盘</td><td>是</td></tr>
+<tr><td><code>seisei_helpdesk_sla</code></td><td>SLA 策略与追踪</td><td>否</td></tr>
+<tr><td><code>seisei_helpdesk_portal</code></td><td>客户自助门户</td><td>否</td></tr>
+<tr><td><code>seisei_messaging</code></td><td>多渠道消息基础层</td><td>接入 LINE 时需要</td></tr>
+<tr><td><code>seisei_messaging_line</code></td><td>LINE Messaging API 适配器</td><td>接入 LINE 时需要</td></tr>
+</table>
+
+<h3>2.2 创建团队</h3>
+<ol>
+<li>进入 <strong>Helpdesk &rarr; Configuration &rarr; Teams</strong></li>
+<li>点击 <strong>New</strong></li>
+<li>填写：
+    <ul>
+    <li><strong>团队名称</strong>（例：客服一组）</li>
+    <li><strong>负责人</strong> — 团队管理者</li>
+    <li><strong>分配方式</strong>：
+        <table>
+        <tr><th>选项</th><th>说明</th></tr>
+        <tr><td>手动</td><td>工单不自动分配，需人工指定</td></tr>
+        <tr><td>轮询</td><td>按顺序依次分配给成员 A&rarr;B&rarr;C&rarr;A...</td></tr>
+        <tr><td>负载均衡</td><td>分配给当前打开工单最少的成员</td></tr>
+        <tr><td>技能/标签</td><td>根据工单标签匹配有对应技能的成员</td></tr>
+        </table>
+    </li>
+    <li><strong>成员</strong> — 添加团队成员</li>
+    </ul>
+</li>
+<li>切换到 <strong>Stages</strong> 页签 — 配置工作流阶段</li>
+<li>点击 <strong>Save</strong></li>
+</ol>
+
+<h3>2.3 配置阶段</h3>
+<p>进入 <strong>Configuration &rarr; Stages</strong>：</p>
+<table>
+<tr><th>字段</th><th>说明</th></tr>
+<tr><td>名称</td><td>阶段名称（如：新建、处理中、已解决）</td></tr>
+<tr><td>顺序</td><td>看板中的排列顺序</td></tr>
+<tr><td>折叠</td><td>是否在看板中默认折叠</td></tr>
+<tr><td>关闭阶段</td><td>勾选后，工单到达此阶段视为"已关闭"</td></tr>
+<tr><td>邮件模板</td><td>工单进入此阶段时自动发送的邮件通知</td></tr>
+</table>
+
+<h3>2.4 创建标签</h3>
+<p>进入 <strong>Configuration &rarr; Tags</strong>，创建分类标签（如：技术问题、计费问题、退货、咨询）。标签用于工单分类和技能分配。</p>
+
+<hr>
+
+<h2 id="dashboard">3. 仪表盘</h2>
+
+<p>仪表盘是 Helpdesk 的首页，点击 <strong>Helpdesk &rarr; Dashboard</strong> 即可进入。</p>
+
+<h3>3.1 我的工单（My Tickets）</h3>
+<p>显示三张 KPI 卡片：</p>
+<table>
+<tr><th>卡片</th><th>颜色</th><th>含义</th></tr>
+<tr><td><strong>所有工单</strong></td><td><span class="badge badge-blue">蓝色</span></td><td>分配给我的所有未关闭工单</td></tr>
+<tr><td><strong>高优先级</strong></td><td><span class="badge badge-yellow">黄色</span></td><td>优先级为"高"的工单</td></tr>
+<tr><td><strong>紧急</strong></td><td><span class="badge badge-red">红色</span></td><td>优先级为"紧急"的工单</td></tr>
+</table>
+<p>每张卡片还显示：</p>
+<ul>
+<li><strong>平均打开时长</strong> — 工单从创建到现在的平均小时数</li>
+<li><strong>SLA 超期</strong> — SLA 未达标的工单数量（需安装 SLA 模块后显示）</li>
+</ul>
+<div class="tip">点击任意卡片可跳转到对应的工单筛选列表。</div>
+
+<h3>3.2 我的绩效（My Performance）</h3>
+<table>
+<tr><th>指标</th><th>说明</th></tr>
+<tr><td>今日关闭</td><td>今天关闭的工单数量</td></tr>
+<tr><td>每日目标</td><td>进度条显示完成比例（默认目标：5件/天）</td></tr>
+<tr><td>SLA 达标率</td><td>今日已关闭工单中 SLA 达标的百分比</td></tr>
+<tr><td>最近7天关闭</td><td>过去7天关闭的工单总数</td></tr>
+<tr><td>日均</td><td>7天平均每天关闭数量</td></tr>
+<tr><td>7天SLA达标率</td><td>过去7天的 SLA 达成百分比</td></tr>
+</table>
+
+<h3>3.3 客户关怀（Customer Care）</h3>
+<p>按团队显示卡片，每张卡片包含四个关键数字：</p>
+<table>
+<tr><th>指标</th><th>说明</th><th>点击后</th></tr>
+<tr><td>打开</td><td>该团队当前未关闭工单数</td><td>跳转到该团队的打开工单列表</td></tr>
+<tr><td>未分配</td><td>未指派负责人的工单数</td><td>跳转到未分配工单列表</td></tr>
+<tr><td>紧急</td><td>紧急优先级工单数</td><td>跳转到紧急工单列表</td></tr>
+<tr><td>SLA超期</td><td>SLA 未达标工单数</td><td>需安装 SLA 模块后显示</td></tr>
+</table>
+
+<hr>
+
+<h2 id="tickets">4. 工单管理</h2>
+
+<h3>4.1 创建工单</h3>
+
+<p><strong>方法一：手动创建</strong></p>
+<ol>
+<li>进入 <strong>Helpdesk &rarr; Tickets &rarr; All Tickets</strong></li>
+<li>点击 <strong>New</strong></li>
+<li>填写：主题、团队、优先级、客户信息、描述</li>
+<li>保存后工单自动编号（如 HD-0001）</li>
+</ol>
+
+<p><strong>方法二：LINE/消息渠道自动创建</strong></p>
+<ul>
+<li>需安装桥接模块 <code>seisei_helpdesk_messaging</code></li>
+<li>客户通过 LINE 发送消息时可自动生成工单</li>
+</ul>
+
+<p><strong>方法三：邮件创建</strong></p>
+<ul>
+<li>配置团队的邮件别名</li>
+<li>客户发送邮件到该地址自动生成工单</li>
+</ul>
+
+<h3>4.2 工单视图</h3>
+<ul>
+<li><strong>看板视图</strong> — 按阶段分列显示，拖拽即可移动阶段</li>
+<li><strong>列表视图</strong> — 批量操作，支持排序、分组、筛选</li>
+<li><strong>表单视图</strong> — 工单详情，包含聊天记录、活动计划</li>
+</ul>
+
+<h3>4.3 常用操作</h3>
+<table>
+<tr><th>操作</th><th>说明</th></tr>
+<tr><td>分配给我</td><td>一键将工单分配给当前用户</td></tr>
+<tr><td>修改阶段</td><td>看板中拖拽 或 表单中选择下拉菜单</td></tr>
+<tr><td>修改优先级</td><td>低 / 中 / 高 / 紧急</td></tr>
+<tr><td>发送邮件</td><td>通过消息区域与客户沟通</td></tr>
+<tr><td>记录活动</td><td>安排待办事项和跟进</td></tr>
+</table>
+
+<h3>4.4 自动分配</h3>
+<p>当工单创建时，系统根据团队设置自动分配：</p>
+<ul>
+<li><strong>轮询</strong>：按固定顺序循环分配</li>
+<li><strong>负载均衡</strong>：分配给当前工单最少的成员</li>
+<li><strong>技能/标签</strong>：根据工单标签匹配成员，未匹配则回退到负载均衡</li>
+</ul>
+
+<hr>
+
+<h2 id="teams">5. 团队管理</h2>
+
+<p>进入 <strong>Configuration &rarr; Teams</strong>，选择团队编辑：</p>
+
+<table>
+<tr><th>设置项</th><th>说明</th></tr>
+<tr><td>成员</td><td>添加/删除团队成员</td></tr>
+<tr><td>分配方式</td><td>选择自动分配算法</td></tr>
+<tr><td>工作时间</td><td>关联工作日历（用于 SLA 计算）</td></tr>
+<tr><td>使用 SLA</td><td>启用后可配置 SLA 策略</td></tr>
+<tr><td>客户评价</td><td>启用后工单关闭时发送满意度调查</td></tr>
+<tr><td>自动关闭(天)</td><td>无活动 N 天后自动关闭工单（0=禁用）</td></tr>
+<tr><td>标签分配规则</td><td>技能模式下配置标签 &rarr; 成员映射</td></tr>
+</table>
+
+<hr>
+
+<h2 id="line">6. LINE 消息集成</h2>
+
+<h3>6.1 前提条件</h3>
+<ol>
+<li>拥有 <a href="https://developers.line.biz/">LINE Developers</a> 账号</li>
+<li>创建一个 <strong>Messaging API Channel</strong></li>
+<li>获取 <code>Channel Access Token</code> 和 <code>Channel Secret</code></li>
+</ol>
+
+<h3>6.2 配置步骤</h3>
+
+<h4>Step 1: 创建消息渠道</h4>
+<ol>
+<li>在 Odoo 中搜索进入 <strong>Messaging</strong> 菜单（安装 seisei_messaging 后可见）</li>
+<li>进入 <strong>Channels</strong>，点击 <strong>New</strong></li>
+<li>填写：
+    <ul>
+    <li><strong>名称</strong>：LINE 客服</li>
+    <li><strong>渠道类型</strong>：选择 <code>LINE</code></li>
+    <li><strong>配置 (JSON)</strong>：</li>
+    </ul>
+</li>
+</ol>
+<pre><code>{
+  "channel_access_token": "你的 LINE Channel Access Token",
+  "channel_secret": "你的 LINE Channel Secret"
+}</code></pre>
+
+<h4>Step 2: 生成 Webhook Token</h4>
+<ol>
+<li>在渠道表单中，点击 <strong>Generate Webhook Token</strong> 按钮</li>
+<li>系统自动生成 Webhook URL</li>
+<li>复制 URL（格式：<code>https://your-domain/seisei/messaging/line/{id}/webhook</code>）</li>
+</ol>
+
+<h4>Step 3: 配置 LINE Developers 后台</h4>
+<ol>
+<li>登录 <a href="https://developers.line.biz/console/">LINE Developers Console</a></li>
+<li>选择你的 Messaging API Channel</li>
+<li>设置：
+    <ul>
+    <li><strong>Webhook URL</strong>：粘贴步骤2的 URL</li>
+    <li><strong>Use webhook</strong>：开启</li>
+    <li><strong>Auto-reply messages</strong>：关闭（由 Odoo 接管回复）</li>
+    </ul>
+</li>
+</ol>
+
+<h4>Step 4: 验证</h4>
+<ol>
+<li>用 LINE 向你的 Bot 发送一条消息</li>
+<li>在 Odoo <strong>Messaging &rarr; Conversations</strong> 中应出现新的会话记录</li>
+</ol>
+
+<div class="warn">
+<strong>注意：</strong>Webhook URL 必须是公网可访问的 HTTPS 地址。LINE 服务器需要能连接到你的 Odoo 实例。
+</div>
+
+<h3>6.3 功能说明</h3>
+<table>
+<tr><th>功能</th><th>说明</th></tr>
+<tr><td>接收消息</td><td>LINE 用户发消息 &rarr; Webhook &rarr; Odoo 自动创建会话和消息记录</td></tr>
+<tr><td>发送消息</td><td>在会话中点击"发送消息" &rarr; 通过 LINE Push API 推送给用户</td></tr>
+<tr><td>用户识别</td><td>自动获取 LINE 用户名和头像</td></tr>
+<tr><td>消息类型</td><td>支持文字、图片、视频、音频、文件、位置、贴图</td></tr>
+<tr><td>AI 自动回复</td><td>配置 Dify App ID 后，可启用 AI 智能回复</td></tr>
+</table>
+
+<hr>
+
+<h2 id="sla">7. SLA 管理</h2>
+
+<div class="tip">需安装 <code>seisei_helpdesk_sla</code> 模块。</div>
+
+<h3>7.1 创建 SLA 策略</h3>
+<ol>
+<li>进入团队设置，启用 <strong>使用 SLA</strong></li>
+<li>配置 SLA 策略：
+    <ul>
+    <li><strong>名称</strong>：如"紧急工单24小时响应"</li>
+    <li><strong>优先级</strong>：指定适用的优先级等级</li>
+    <li><strong>目标阶段</strong>：工单需到达的阶段</li>
+    <li><strong>时限</strong>：小时数（基于工作日历计算）</li>
+    </ul>
+</li>
+</ol>
+
+<h3>7.2 SLA 追踪</h3>
+<ul>
+<li>系统自动计算每张工单的 SLA 状态：<strong>进行中</strong> / <strong>已达标</strong> / <strong>超期</strong></li>
+<li>仪表盘自动显示 SLA 达标率和超期数量</li>
+<li>工单表单中可查看每条 SLA 策略的截止时间和状态</li>
+</ul>
+
+<hr>
+
+<h2 id="faq">8. 常见问题 (FAQ)</h2>
+
+<h3>Q: 仪表盘显示"No teams configured"怎么办？</h3>
+<p><strong>A:</strong> 需先创建至少一个团队。进入 Configuration &rarr; Teams &rarr; New。</p>
+
+<h3>Q: LINE 消息收不到怎么排查？</h3>
+<p><strong>A:</strong></p>
+<ol>
+<li>检查 LINE Developers 后台的 Webhook URL 是否正确</li>
+<li>确认 Webhook 已开启 (Use webhook = ON)</li>
+<li>检查 Channel Access Token 和 Secret 是否正确粘贴到 JSON 配置中</li>
+<li>查看 Odoo 服务器日志中的 webhook 相关错误</li>
+<li>确认 Odoo 服务器域名可被外网访问（HTTPS）</li>
+</ol>
+
+<h3>Q: 工单自动分配不生效？</h3>
+<p><strong>A:</strong></p>
+<ol>
+<li>确认团队分配方式不是"手动"</li>
+<li>确认团队有至少一名成员</li>
+<li>技能/标签模式下，确认配置了标签 &rarr; 成员映射</li>
+</ol>
+
+<h3>Q: SLA 数据在仪表盘中不显示？</h3>
+<p><strong>A:</strong> 需安装 <code>seisei_helpdesk_sla</code> 模块。安装后，SLA 相关指标会自动出现在仪表盘中。</p>
+
+<h3>Q: 如何配置每日目标数？</h3>
+<p><strong>A:</strong> 当前版本每日目标固定为 5 件，后续版本将支持自定义设置。</p>
+
+<hr>
+<p style="text-align: center; color: #6c757d; font-size: 0.9em;">
+Seisei Helpdesk v18.0.1.1.0 &nbsp;|&nbsp; &copy; 2026 Seisei
+</p>
+
+</body>
+</html>

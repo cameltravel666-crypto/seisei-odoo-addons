@@ -11,7 +11,7 @@ _logger = logging.getLogger(__name__)
 class OcrFileUsage(models.Model):
     """Track OCR file processing usage per company per month"""
     _name = 'ocr.file.usage'
-    _description = 'OCR File Usage'
+    _description = 'AI File Usage'
     _rec_name = 'month_display'
     _order = 'year desc, month desc'
 

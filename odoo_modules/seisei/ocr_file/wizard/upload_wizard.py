@@ -10,7 +10,7 @@ _logger = logging.getLogger(__name__)
 class OcrFileUploadLine(models.TransientModel):
     """Transient model for individual file in batch upload"""
     _name = 'ocr.file.upload.line'
-    _description = 'OCR File Upload Line'
+    _description = 'AI File Upload Line'
 
     wizard_id = fields.Many2one('ocr.file.upload.wizard', string='Wizard', required=True, ondelete='cascade')
     file_data = fields.Binary(string='File', required=True, attachment=False)
@@ -20,7 +20,7 @@ class OcrFileUploadLine(models.TransientModel):
 class OcrFileUploadWizard(models.TransientModel):
     """Wizard for batch uploading multiple source files"""
     _name = 'ocr.file.upload.wizard'
-    _description = 'OCR File Upload Wizard'
+    _description = 'AI File Upload Wizard'
 
     task_id = fields.Many2one('ocr.file.task', string='Task', required=True)
     file_ids = fields.One2many('ocr.file.upload.line', 'wizard_id', string='Files')

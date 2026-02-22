@@ -1,0 +1,187 @@
+# Translation for seisei_helpdesk_sla
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo 18.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-02-22\n"
+"PO-Revision-Date: 2026-02-22\n"
+"Language: ja\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#. module: seisei_helpdesk_sla
+#: model:ir.model,name:seisei_helpdesk_sla.model_seisei_helpdesk_sla
+msgid "SLA Policy"
+msgstr "SLAポリシー"
+
+#. module: seisei_helpdesk_sla
+#: model:ir.model,name:seisei_helpdesk_sla.model_seisei_helpdesk_sla_status
+msgid "SLA Status"
+msgstr "SLAステータス"
+
+#. module: seisei_helpdesk_sla
+#: model:ir.model.fields,field_description:seisei_helpdesk_sla.field_seisei_helpdesk_sla__name
+msgid "SLA Policy Name"
+msgstr "SLAポリシー名"
+
+#. module: seisei_helpdesk_sla
+#: model:ir.model.fields,field_description:seisei_helpdesk_sla.field_seisei_helpdesk_sla__team_id
+msgid "Team"
+msgstr "チーム"
+
+#. module: seisei_helpdesk_sla
+#: model:ir.model.fields,field_description:seisei_helpdesk_sla.field_seisei_helpdesk_sla__stage_id
+msgid "Target Stage"
+msgstr "目標ステージ"
+
+#. module: seisei_helpdesk_sla
+#: model:ir.model.fields,field_description:seisei_helpdesk_sla.field_seisei_helpdesk_sla__priority
+msgid "Priority"
+msgstr "優先度"
+
+#. module: seisei_helpdesk_sla
+#: model:ir.model.fields,field_description:seisei_helpdesk_sla.field_seisei_helpdesk_sla__tag_ids
+msgid "Tags"
+msgstr "タグ"
+
+#. module: seisei_helpdesk_sla
+#: model:ir.model.fields,field_description:seisei_helpdesk_sla.field_seisei_helpdesk_sla__time_hours
+msgid "Time (hours)"
+msgstr "時間（時）"
+
+#. module: seisei_helpdesk_sla
+#: model:ir.model.fields,field_description:seisei_helpdesk_sla.field_seisei_helpdesk_sla__time_days
+msgid "Time (days)"
+msgstr "時間（日）"
+
+#. module: seisei_helpdesk_sla
+#: model:ir.model.fields,field_description:seisei_helpdesk_sla.field_seisei_helpdesk_sla__exclude_stage_ids
+msgid "Exclude Stages"
+msgstr "除外ステージ"
+
+#. module: seisei_helpdesk_sla
+#: model:ir.model.fields,field_description:seisei_helpdesk_sla.field_seisei_helpdesk_sla_status__ticket_id
+msgid "Ticket"
+msgstr "チケット"
+
+#. module: seisei_helpdesk_sla
+#: model:ir.model.fields,field_description:seisei_helpdesk_sla.field_seisei_helpdesk_sla_status__sla_id
+msgid "SLA"
+msgstr "SLA"
+
+#. module: seisei_helpdesk_sla
+#: model:ir.model.fields,field_description:seisei_helpdesk_sla.field_seisei_helpdesk_sla_status__deadline
+msgid "Deadline"
+msgstr "期限"
+
+#. module: seisei_helpdesk_sla
+#: model:ir.model.fields,field_description:seisei_helpdesk_sla.field_seisei_helpdesk_sla_status__reached_date
+msgid "Reached Date"
+msgstr "達成日"
+
+#. module: seisei_helpdesk_sla
+#: model:ir.model.fields,field_description:seisei_helpdesk_sla.field_seisei_helpdesk_sla_status__status
+msgid "Status"
+msgstr "ステータス"
+
+#. module: seisei_helpdesk_sla
+#: model:ir.model.fields.selection,name:seisei_helpdesk_sla.selection__seisei_helpdesk_sla_status__status__ongoing
+msgid "Ongoing"
+msgstr "進行中"
+
+#. module: seisei_helpdesk_sla
+#: model:ir.model.fields.selection,name:seisei_helpdesk_sla.selection__seisei_helpdesk_sla_status__status__reached
+msgid "Reached"
+msgstr "達成"
+
+#. module: seisei_helpdesk_sla
+#: model:ir.model.fields.selection,name:seisei_helpdesk_sla.selection__seisei_helpdesk_sla_status__status__failed
+msgid "Failed"
+msgstr "失敗"
+
+#. module: seisei_helpdesk_sla
+#: model:ir.model.fields,field_description:seisei_helpdesk_sla.field_seisei_helpdesk_ticket__sla_deadline
+msgid "SLA Deadline"
+msgstr "SLA期限"
+
+#. module: seisei_helpdesk_sla
+#: model:ir.model.fields,field_description:seisei_helpdesk_sla.field_seisei_helpdesk_ticket__sla_fail
+msgid "SLA Failed"
+msgstr "SLA超過"
+
+#. module: seisei_helpdesk_sla
+#: model:ir.model.fields,field_description:seisei_helpdesk_sla.field_seisei_helpdesk_ticket__sla_status_ids
+msgid "SLA Status IDs"
+msgstr "SLAステータス"
+
+#. module: seisei_helpdesk_sla
+#: model:ir.model.fields,field_description:seisei_helpdesk_sla.field_seisei_helpdesk_team__sla_count
+msgid "SLA Count"
+msgstr "SLA数"
+
+#. module: seisei_helpdesk_sla
+#: model:ir.actions.act_window,name:seisei_helpdesk_sla.action_seisei_helpdesk_sla
+msgid "SLA Policies"
+msgstr "SLAポリシー"
+
+#. module: seisei_helpdesk_sla
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk_sla.seisei_helpdesk_sla_view_form
+msgid "Target"
+msgstr "目標"
+
+#. module: seisei_helpdesk_sla
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk_sla.seisei_helpdesk_sla_view_form
+msgid "Escalation"
+msgstr "エスカレーション"
+
+#. module: seisei_helpdesk_sla
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk_sla.seisei_helpdesk_sla_view_form
+msgid "Matching Criteria"
+msgstr "マッチング条件"
+
+#. module: seisei_helpdesk_sla
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk_sla.seisei_helpdesk_team_view_form_sla
+msgid "SLA"
+msgstr "SLA"
+
+#. module: seisei_helpdesk_sla
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk_sla.seisei_helpdesk_ticket_view_search_sla
+msgid "SLA Failed"
+msgstr "SLA超過"
+
+#. module: seisei_helpdesk_sla
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk_sla.seisei_helpdesk_ticket_view_search_sla
+msgid "SLA Active"
+msgstr "SLA有効"
+
+#. module: seisei_helpdesk_sla
+#: model:ir.cron,name:seisei_helpdesk_sla.ir_cron_sla_check
+msgid "Helpdesk: SLA Breach Check"
+msgstr "ヘルプデスク: SLA違反チェック"
+
+#. module: seisei_helpdesk_sla
+#: model:ir.ui.menu,name:seisei_helpdesk_sla.menu_seisei_helpdesk_sla
+msgid "SLA Policies"
+msgstr "SLAポリシー"
+
+#. module: seisei_helpdesk_sla
+#: model:ir.model.fields,help:seisei_helpdesk_sla.field_seisei_helpdesk_sla__time_hours
+msgid "Time in hours to reach the target stage from ticket creation."
+msgstr "チケット作成から目標ステージに到達するまでの時間（時）。"
+
+#. module: seisei_helpdesk_sla
+#: model:ir.model.fields,help:seisei_helpdesk_sla.field_seisei_helpdesk_sla__time_days
+msgid "Time in business days."
+msgstr "営業日での時間。"
+
+#. module: seisei_helpdesk_sla
+#: model:ir.model.fields,help:seisei_helpdesk_sla.field_seisei_helpdesk_sla__priority
+msgid "If set, SLA only applies to tickets with this priority or higher."
+msgstr "設定すると、この優先度以上のチケットにのみSLAが適用されます。"
+
+#. module: seisei_helpdesk_sla
+#: model:ir.model.fields,help:seisei_helpdesk_sla.field_seisei_helpdesk_sla__exclude_stage_ids
+msgid "Stages where SLA timer is paused."
+msgstr "SLAタイマーが一時停止するステージ。"

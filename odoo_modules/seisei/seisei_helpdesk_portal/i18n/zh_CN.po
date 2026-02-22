@@ -1,0 +1,192 @@
+# Translation for seisei_helpdesk_portal
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo 18.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-02-22\n"
+"PO-Revision-Date: 2026-02-22\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#. module: seisei_helpdesk_portal
+#. odoo-python
+#: code:addons/seisei_helpdesk_portal/controllers/portal.py:0
+msgid "All"
+msgstr "全部"
+
+#. module: seisei_helpdesk_portal
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk_portal.portal_ticket_detail
+msgid "Assigned to:"
+msgstr "负责人:"
+
+#. module: seisei_helpdesk_portal
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk_portal.portal_submit_ticket
+msgid "Brief description of your issue"
+msgstr "简要描述您的问题"
+
+#. module: seisei_helpdesk_portal
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk_portal.portal_submit_ticket
+msgid "Cancel"
+msgstr "取消"
+
+#. module: seisei_helpdesk_portal
+#. odoo-python
+#: code:addons/seisei_helpdesk_portal/controllers/portal.py:0
+msgid "Closed"
+msgstr "已关闭"
+
+#. module: seisei_helpdesk_portal
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk_portal.portal_ticket_detail
+msgid "Comments"
+msgstr "评论"
+
+#. module: seisei_helpdesk_portal
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk_portal.portal_my_tickets
+msgid "Created"
+msgstr "创建日期"
+
+#. module: seisei_helpdesk_portal
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk_portal.portal_ticket_detail
+msgid "Created:"
+msgstr "创建日期:"
+
+#. module: seisei_helpdesk_portal
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk_portal.portal_ticket_detail
+msgid "Description"
+msgstr "描述"
+
+#. module: seisei_helpdesk_portal
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk_portal.portal_my_home_helpdesk
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk_portal.portal_my_tickets
+msgid "Helpdesk Tickets"
+msgstr "客服工单"
+
+#. module: seisei_helpdesk_portal
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk_portal.portal_my_tickets
+msgid "High"
+msgstr "高"
+
+#. module: seisei_helpdesk_portal
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk_portal.portal_my_tickets
+msgid "Low"
+msgstr "低"
+
+#. module: seisei_helpdesk_portal
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk_portal.portal_my_tickets
+msgid "Medium"
+msgstr "中"
+
+#. module: seisei_helpdesk_portal
+#. odoo-python
+#: code:addons/seisei_helpdesk_portal/controllers/portal.py:0
+msgid "Newest"
+msgstr "最新"
+
+#. module: seisei_helpdesk_portal
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk_portal.portal_ticket_detail
+msgid "No description provided."
+msgstr "未提供描述。"
+
+#. module: seisei_helpdesk_portal
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk_portal.portal_my_tickets
+msgid "No tickets found."
+msgstr "未找到工单。"
+
+#. module: seisei_helpdesk_portal
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk_portal.portal_my_tickets
+msgid "Number"
+msgstr "编号"
+
+#. module: seisei_helpdesk_portal
+#. odoo-python
+#: code:addons/seisei_helpdesk_portal/controllers/portal.py:0
+msgid "Open"
+msgstr "打开"
+
+#. module: seisei_helpdesk_portal
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk_portal.portal_submit_ticket
+msgid "Please provide details about your issue..."
+msgstr "请提供问题的详细信息..."
+
+#. module: seisei_helpdesk_portal
+#. odoo-python
+#: code:addons/seisei_helpdesk_portal/controllers/portal.py:0
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk_portal.portal_my_tickets
+msgid "Priority"
+msgstr "优先级"
+
+#. module: seisei_helpdesk_portal
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk_portal.portal_ticket_detail
+msgid "Priority:"
+msgstr "优先级:"
+
+#. module: seisei_helpdesk_portal
+#. odoo-python
+#: code:addons/seisei_helpdesk_portal/controllers/portal.py:0
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk_portal.portal_my_tickets
+msgid "Stage"
+msgstr "阶段"
+
+#. module: seisei_helpdesk_portal
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk_portal.portal_submit_ticket
+msgid "Submit Ticket"
+msgstr "提交工单"
+
+#. module: seisei_helpdesk_portal
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk_portal.portal_my_tickets
+msgid "Submit New Ticket"
+msgstr "提交新工单"
+
+#. module: seisei_helpdesk_portal
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk_portal.portal_submit_ticket
+msgid "Submit a Support Request"
+msgstr "提交支持请求"
+
+#. module: seisei_helpdesk_portal
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk_portal.portal_my_tickets
+msgid "Submit a new ticket"
+msgstr "提交新工单"
+
+#. module: seisei_helpdesk_portal
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk_portal.portal_my_tickets
+msgid "Subject"
+msgstr "主题"
+
+#. module: seisei_helpdesk_portal
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk_portal.portal_my_tickets
+msgid "Team"
+msgstr "团队"
+
+#. module: seisei_helpdesk_portal
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk_portal.portal_ticket_detail
+msgid "Team:"
+msgstr "团队:"
+
+#. module: seisei_helpdesk_portal
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk_portal.portal_ticket_detail
+msgid "Unassigned"
+msgstr "未分配"
+
+#. module: seisei_helpdesk_portal
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk_portal.portal_my_tickets
+msgid "Urgent"
+msgstr "紧急"
+
+#. module: seisei_helpdesk_portal
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk_portal.portal_my_home_helpdesk
+msgid "View and submit support requests"
+msgstr "查看和提交支持请求"
+
+#. module: seisei_helpdesk_portal
+#. odoo-python
+#: code:addons/seisei_helpdesk_portal/controllers/portal.py:0
+msgid "You do not have access to this ticket."
+msgstr "您无权访问此工单。"
+
+#. module: seisei_helpdesk_portal
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk_portal.portal_submit_ticket
+msgid "-- Select Team --"
+msgstr "-- 选择团队 --"

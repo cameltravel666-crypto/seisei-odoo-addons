@@ -8,7 +8,7 @@ _logger = logging.getLogger(__name__)
 
 class BankStatementOcrUpload(models.TransientModel):
     _name = 'seisei.bank.statement.ocr.upload'
-    _description = 'Bank Statement OCR Upload Wizard'
+    _description = 'AI Bank Statement Upload Wizard'
 
     journal_id = fields.Many2one(
         'account.journal',

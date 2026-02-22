@@ -29,27 +29,46 @@ def _era_to_western(era_year):
 def _parse_passbook_date(raw_date, fallback=None):
     """Parse Japanese bank passbook date formats into YYYY-MM-DD.
 
-    Japanese passbooks use era year (令和/平成). E.g.:
-      - "07-1225"  → 令和7年12月25日 → 2025-12-25
-      - "08-1-5"   → 令和8年1月5日   → 2026-01-05
-      - "08-113"   → 令和8年1月13日  → 2026-01-13
-      - "0.8-1-19" → OCR artifact    → 2026-01-19
-      - "2025-12-08" → ISO standard  → pass through
+    Supports both era dates and Western dates:
+      - "2025-01-05"  → ISO standard (from new prompt)
+      - "2025/1/5"    → Western date with slashes
+      - "2025 1 5"    → Western date with spaces
+      - "07-1225"     → 令和7年12月25日 → 2025-12-25
+      - "08-1-5"      → 令和8年1月5日   → 2026-01-05
+      - "08-113"      → 令和8年1月13日  → 2026-01-13
+      - "0.8-1-19"    → OCR artifact    → 2026-01-19
+      - "1/5"         → Month/day only (needs fallback year)
     """
     if not raw_date:
         return fallback or pydate.today().isoformat()
 
     s = str(raw_date).strip()
 
-    # Already valid ISO date
+    # Strip trailing time portion: "2025-12-01 18:27" → "2025-12-01"
+    s = re.sub(r'^(\d{4}-\d{1,2}-\d{1,2})\s+\d{1,2}:\d{2}.*$', r'\1', s)
+
+    # Already valid ISO date (YYYY-MM-DD)
     if re.match(r'^\d{4}-\d{2}-\d{2}$', s):
         return s
 
     # Clean OCR artifacts: dots in numbers (e.g. "0.8" -> "08")
     s = re.sub(r'(\d)\.(\d)', r'\1\2', s)
 
+    # Normalize: replace colons, spaces with dashes for uniform parsing
+    # "2025: 2:17" → "2025-2-17", "2025 1 5" → "2025-1-5"
+    s_normalized = re.sub(r'[\s:]+', '-', s)
+
+    # Format: YYYY-M-D or YYYY/M/D (Western date with year)
+    m = re.match(r'^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$', s_normalized)
+    if m:
+        y, mo, d = int(m.group(1)), int(m.group(2)), int(m.group(3))
+        try:
+            return pydate(y, mo, d).isoformat()
+        except ValueError:
+            pass
+
     # Format: YY-MMDD (compact, 4 digits after dash) e.g. "07-1225"
-    m = re.match(r'^(\d{1,2})-(\d{4})$', s)
+    m = re.match(r'^(\d{1,2})-(\d{4})$', s_normalized)
     if m:
         y = _era_to_western(int(m.group(1)))
         rest = m.group(2)
@@ -60,7 +79,7 @@ def _parse_passbook_date(raw_date, fallback=None):
             pass
 
     # Format: YY-MDD (compact, 3 digits after dash) e.g. "08-113" → month=1, day=13
-    m = re.match(r'^(\d{1,2})-(\d{3})$', s)
+    m = re.match(r'^(\d{1,2})-(\d{3})$', s_normalized)
     if m:
         y = _era_to_western(int(m.group(1)))
         rest = m.group(2)
@@ -70,8 +89,8 @@ def _parse_passbook_date(raw_date, fallback=None):
         except ValueError:
             pass
 
-    # Format: YY-M-D or YY-MM-DD (dashed) e.g. "08-1-5", "07-12-29"
-    m = re.match(r'^(\d{1,4})[/-](\d{1,2})[/-](\d{1,2})$', s)
+    # Format: YY-M-D (era year, 2-digit) e.g. "08-1-5", "07-12-29"
+    m = re.match(r'^(\d{1,2})[/-](\d{1,2})[/-](\d{1,2})$', s_normalized)
     if m:
         y, mo, d = int(m.group(1)), int(m.group(2)), int(m.group(3))
         if y < 100:
@@ -81,8 +100,24 @@ def _parse_passbook_date(raw_date, fallback=None):
         except ValueError:
             pass
 
+    # Format: M/D or M-D (month/day only, no year) e.g. "1/5", "12/31", "2 18"
+    m = re.match(r'^(\d{1,2})[/-](\d{1,2})$', s_normalized)
+    if m:
+        mo, d = int(m.group(1)), int(m.group(2))
+        # Infer year from fallback date
+        fallback_year = pydate.today().year
+        if fallback:
+            try:
+                fallback_year = pydate.fromisoformat(str(fallback)).year
+            except (ValueError, TypeError):
+                pass
+        try:
+            return pydate(fallback_year, mo, d).isoformat()
+        except ValueError:
+            pass
+
     # Compact format like "071225" (YYMMDD)
-    m = re.match(r'^(\d{2})(\d{2})(\d{2})$', s)
+    m = re.match(r'^(\d{2})(\d{2})(\d{2})$', s_normalized)
     if m:
         y = _era_to_western(int(m.group(1)))
         mo, d = int(m.group(2)), int(m.group(3))
@@ -98,7 +133,7 @@ def _parse_passbook_date(raw_date, fallback=None):
 class SeiseiBankStatementOcr(models.Model):
     _name = 'seisei.bank.statement.ocr'
     _inherit = ['mail.thread', 'mail.activity.mixin']
-    _description = 'Bank Statement OCR Record'
+    _description = 'AI Bank Statement Analysis Record'
     _order = 'create_date desc'
 
     name = fields.Char(
@@ -291,9 +326,11 @@ class SeiseiBankStatementOcr(models.Model):
         transactions.sort(key=lambda t: t.get('seq', 9999))
 
         OcrLine = self.env['seisei.bank.statement.ocr.line']
+        prev_date = str(self.statement_date) if self.statement_date else None
         for i, txn in enumerate(transactions):
-            fallback_date = str(self.statement_date) if self.statement_date else None
-            txn_date = _parse_passbook_date(txn.get('date'), fallback=fallback_date)
+            # Use previous transaction's date as fallback (for year inference)
+            txn_date = _parse_passbook_date(txn.get('date'), fallback=prev_date)
+            prev_date = txn_date  # carry forward for next iteration
             txn_desc = txn.get('description') or _('(No description)')
             OcrLine.create({
                 'ocr_id': self.id,

@@ -8,7 +8,7 @@ _logger = logging.getLogger(__name__)
 
 class OcrUploadWizard(models.TransientModel):
     _name = 'ocr.upload.wizard'
-    _description = 'OCR Upload Wizard'
+    _description = 'AI Upload Wizard'
 
     move_id = fields.Many2one('account.move', string='Invoice/Bill', required=True)
     file_data = fields.Binary(string='Invoice/Receipt File', required=True, attachment=False)

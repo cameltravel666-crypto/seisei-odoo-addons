@@ -1,5 +1,5 @@
 """
-OCR Usage Tracking Model
+AI Usage Tracking Model
 Tracks per-user monthly usage and billing
 Also notifies BizNexus for centralized billing
 """
@@ -21,7 +21,7 @@ BIZNEXUS_WEBHOOK_KEY = "seisei-ocr-webhook-2026"
 
 class OcrUsage(models.Model):
     _name = 'ocr.usage'
-    _description = 'OCR Usage Tracking'
+    _description = 'AI Usage Tracking'
     _order = 'month desc, user_id'
 
     user_id = fields.Many2one('res.users', string='User', required=True, index=True)
@@ -121,7 +121,7 @@ class OcrUsage(models.Model):
         # Update usage
         usage.write({'used_count': new_used})
 
-        _logger.info(f'[OCR Usage] User {user_id}: {usage.used_count - pages} -> {new_used} images, cost: JPY{cost_this_op}')
+        _logger.info(f'[AI Usage] User {user_id}: {usage.used_count - pages} -> {new_used} images, cost: JPY{cost_this_op}')
 
         # Notify BizNexus webhook (async, don't block on failure)
         self._notify_biznexus(pages, document_id, document_model, document_name)
@@ -157,13 +157,13 @@ class OcrUsage(models.Model):
 
             if response.status_code == 200:
                 result = response.json()
-                _logger.info(f'[OCR Usage] BizNexus webhook success: {result.get("data", {})}')
+                _logger.info(f'[AI Usage] BizNexus webhook success: {result.get("data", {})}')
             else:
-                _logger.warning(f'[OCR Usage] BizNexus webhook failed: {response.status_code}')
+                _logger.warning(f'[AI Usage] BizNexus webhook failed: {response.status_code}')
 
         except Exception as e:
             # Don't fail OCR if webhook fails - just log
-            _logger.warning(f'[OCR Usage] BizNexus webhook error (non-blocking): {e}')
+            _logger.warning(f'[AI Usage] BizNexus webhook error (non-blocking): {e}')
 
     @api.model
     def get_usage_summary(self, user_id=None):

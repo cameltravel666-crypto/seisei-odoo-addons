@@ -1,0 +1,58 @@
+# Translation for seisei_helpdesk_messaging
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo 18.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-02-22\n"
+"PO-Revision-Date: 2026-02-22\n"
+"Language: ja\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#. module: seisei_helpdesk_messaging
+#: model:ir.model.fields,field_description:seisei_helpdesk_messaging.field_seisei_helpdesk_ticket__source_conversation_id
+msgid "Source Conversation"
+msgstr "元の会話"
+
+#. module: seisei_helpdesk_messaging
+#: model:ir.model.fields,field_description:seisei_helpdesk_messaging.field_seisei_helpdesk_ticket__conversation_message_count
+msgid "Conversation Messages"
+msgstr "会話メッセージ数"
+
+#. module: seisei_helpdesk_messaging
+#: model:ir.model.fields,field_description:seisei_helpdesk_messaging.field_seisei_messaging_channel__helpdesk_team_id
+msgid "Helpdesk Team"
+msgstr "ヘルプデスクチーム"
+
+#. module: seisei_helpdesk_messaging
+#: model:ir.model.fields,field_description:seisei_helpdesk_messaging.field_seisei_messaging_channel__auto_create_ticket
+msgid "Auto Create Ticket"
+msgstr "チケット自動作成"
+
+#. module: seisei_helpdesk_messaging
+#: model:ir.model.fields,field_description:seisei_helpdesk_messaging.field_seisei_messaging_conversation__ticket_ids
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk_messaging.seisei_messaging_conversation_view_form_bridge
+msgid "Tickets"
+msgstr "チケット"
+
+#. module: seisei_helpdesk_messaging
+#: model:ir.model.fields,field_description:seisei_helpdesk_messaging.field_seisei_messaging_conversation__ticket_count
+msgid "Ticket Count"
+msgstr "チケット数"
+
+#. module: seisei_helpdesk_messaging
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk_messaging.seisei_helpdesk_ticket_view_form_messaging
+msgid "Reply via Channel"
+msgstr "チャネルで返信"
+
+#. module: seisei_helpdesk_messaging
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk_messaging.seisei_helpdesk_ticket_view_form_messaging
+msgid "Messages"
+msgstr "メッセージ"
+
+#. module: seisei_helpdesk_messaging
+#: model_terms:ir.ui.view,arch_db:seisei_helpdesk_messaging.seisei_messaging_conversation_view_form_bridge
+msgid "Create Ticket"
+msgstr "チケット作成"

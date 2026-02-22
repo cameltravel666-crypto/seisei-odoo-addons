@@ -8,7 +8,7 @@
     <record id="view_discuss_channel_form_inherit_ai_companion" model="ir.ui.view">
         <field name="name">discuss.channel.form.inherit.ai.companion</field>
         <field name="model">discuss.channel</field>
-        <field name="inherit_id" ref="mail.discuss_channel_view_form" optional="primary"/>
+        <field name="inherit_id" ref="mail.discuss_channel_view_form"/>
         <field name="arch" type="xml">
             <!-- 在 header 中添加按钮 -->
             <xpath expr="//header" position="inside">
@@ -29,7 +29,7 @@
     <record id="view_mail_channel_form_inherit_ai_companion" model="ir.ui.view">
         <field name="name">mail.channel.form.inherit.ai.companion</field>
         <field name="model">discuss.channel</field>
-        <field name="inherit_id" ref="mail.channel_view_form" optional="primary"/>
+        <field name="inherit_id" ref="mail.channel_view_form"/>
         <field name="arch" type="xml">
             <xpath expr="//header" position="inside">
                 <button name="action_add_ai_assistant" 
