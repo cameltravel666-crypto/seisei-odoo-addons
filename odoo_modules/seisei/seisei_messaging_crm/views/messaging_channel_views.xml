@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Extend channel form with CRM fields -->
+    <record id="seisei_messaging_channel_view_form_crm" model="ir.ui.view">
+        <field name="name">seisei.messaging.channel.form.crm</field>
+        <field name="model">seisei.messaging.channel</field>
+        <field name="inherit_id" ref="seisei_messaging.seisei_messaging_channel_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//group[@name='integration']" position="inside">
+                <field name="crm_team_id"/>
+                <field name="auto_create_lead"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Extend channel list -->
+    <record id="seisei_messaging_channel_view_list_crm" model="ir.ui.view">
+        <field name="name">seisei.messaging.channel.list.crm</field>
+        <field name="model">seisei.messaging.channel</field>
+        <field name="inherit_id" ref="seisei_messaging.seisei_messaging_channel_view_list"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='ai_enabled']" position="after">
+                <field name="auto_create_lead"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>
