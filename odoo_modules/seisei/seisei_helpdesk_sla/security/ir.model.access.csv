@@ -1,0 +1,5 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_helpdesk_sla_user,seisei.helpdesk.sla.user,model_seisei_helpdesk_sla,seisei_helpdesk.group_seisei_helpdesk_user,1,0,0,0
+access_helpdesk_sla_manager,seisei.helpdesk.sla.manager,model_seisei_helpdesk_sla,seisei_helpdesk.group_seisei_helpdesk_manager,1,1,1,1
+access_helpdesk_sla_status_user,seisei.helpdesk.sla.status.user,model_seisei_helpdesk_sla_status,seisei_helpdesk.group_seisei_helpdesk_user,1,0,0,0
+access_helpdesk_sla_status_manager,seisei.helpdesk.sla.status.manager,model_seisei_helpdesk_sla_status,seisei_helpdesk.group_seisei_helpdesk_manager,1,1,1,1

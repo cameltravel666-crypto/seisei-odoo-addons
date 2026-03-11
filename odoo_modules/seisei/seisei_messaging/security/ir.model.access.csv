@@ -1,0 +1,8 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_messaging_channel_user,seisei.messaging.channel.user,model_seisei_messaging_channel,group_seisei_messaging_user,1,0,0,0
+access_messaging_channel_manager,seisei.messaging.channel.manager,model_seisei_messaging_channel,group_seisei_messaging_manager,1,1,1,1
+access_messaging_conversation_user,seisei.messaging.conversation.user,model_seisei_messaging_conversation,group_seisei_messaging_user,1,1,1,0
+access_messaging_conversation_manager,seisei.messaging.conversation.manager,model_seisei_messaging_conversation,group_seisei_messaging_manager,1,1,1,1
+access_messaging_message_user,seisei.messaging.message.user,model_seisei_messaging_message,group_seisei_messaging_user,1,1,1,0
+access_messaging_message_manager,seisei.messaging.message.manager,model_seisei_messaging_message,group_seisei_messaging_manager,1,1,1,1
+access_messaging_send_wizard,seisei.messaging.send.wizard,model_seisei_messaging_send_wizard,group_seisei_messaging_user,1,1,1,1

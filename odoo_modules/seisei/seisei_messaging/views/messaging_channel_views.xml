@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="seisei_messaging_channel_view_form" model="ir.ui.view">
+        <field name="name">seisei.messaging.channel.form</field>
+        <field name="model">seisei.messaging.channel</field>
+        <field name="arch" type="xml">
+            <form string="Messaging Channel">
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_conversations"
+                                type="object"
+                                class="oe_stat_button"
+                                icon="fa-comments">
+                            <field name="conversation_count" widget="statinfo"
+                                   string="Conversations"/>
+                        </button>
+                    </div>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="e.g. WeChat Support"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="channel_type"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                        <group name="integration">
+                            <field name="ai_enabled"/>
+                            <field name="ai_dify_app_id" invisible="not ai_enabled"/>
+                        </group>
+                    </group>
+                    <group string="Webhook">
+                        <field name="webhook_url" widget="CopyClipboardChar"/>
+                        <field name="webhook_token"/>
+                        <button name="action_generate_webhook_token"
+                                type="object"
+                                string="Generate Token"
+                                class="btn-secondary"/>
+                    </group>
+                    <group string="Configuration">
+                        <field name="config_json" widget="ace"
+                               options="{'mode': 'json'}"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="seisei_messaging_channel_view_list" model="ir.ui.view">
+        <field name="name">seisei.messaging.channel.list</field>
+        <field name="model">seisei.messaging.channel</field>
+        <field name="arch" type="xml">
+            <list string="Messaging Channels">
+                <field name="name"/>
+                <field name="channel_type"/>
+                <field name="ai_enabled"/>
+                <field name="conversation_count" string="Conversations"/>
+                <field name="message_count" string="Messages"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_seisei_messaging_channel" model="ir.actions.act_window">
+        <field name="name">Channels</field>
+        <field name="res_model">seisei.messaging.channel</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

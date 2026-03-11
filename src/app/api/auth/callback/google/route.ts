@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
-import { createToken, setAuthCookie, decrypt } from '@/lib/auth';
-import { createOdooClient } from '@/lib/odoo';
-import { initializeTenantFeatures } from '@/lib/features';
-import { membershipService } from '@/lib/membership-service';
-import { entitlementsService } from '@/lib/entitlements-service';
-import { auditService } from '@/lib/audit-service';
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import { createToken, setAuthCookie, decrypt } from "@/lib/auth";
+import { createOdooClient } from "@/lib/odoo";
+import { initializeTenantFeatures } from "@/lib/features";
+import { membershipService } from "@/lib/membership-service";
+import { entitlementsService } from "@/lib/entitlements-service";
+import { auditService } from "@/lib/audit-service";
 
 interface GoogleTokenResponse {
   access_token: string;
@@ -32,15 +32,17 @@ interface GoogleUserInfo {
  */
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
-  const code = searchParams.get('code');
-  const state = searchParams.get('state');
-  const error = searchParams.get('error');
+  const code = searchParams.get("code");
+  const state = searchParams.get("state");
+  const error = searchParams.get("error");
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const forwardedProto = request.headers.get("x-forwarded-proto") || "https";
+  const host = request.headers.get("host") || "localhost:3000";
+  const baseUrl = `${forwardedProto}://${host}`;
 
   // Handle OAuth errors
   if (error) {
-    console.error('[Google OAuth] Error:', error);
+    console.error("[Google OAuth] Error:", error);
     return NextResponse.redirect(`${baseUrl}/login?error=oauth_denied`);
   }
 
@@ -49,47 +51,54 @@ export async function GET(request: NextRequest) {
   }
 
   // Verify state (CSRF protection)
-  const storedState = request.cookies.get('oauth_state')?.value;
+  const storedState = request.cookies.get("oauth_state")?.value;
   if (!storedState || storedState !== state) {
-    console.error('[Google OAuth] State mismatch');
+    console.error("[Google OAuth] State mismatch");
     return NextResponse.redirect(`${baseUrl}/login?error=invalid_state`);
   }
 
   try {
     // Exchange code for tokens
-    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
         code,
         client_id: process.env.GOOGLE_CLIENT_ID!,
         client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-        redirect_uri: process.env.GOOGLE_REDIRECT_URI || `${baseUrl}/api/auth/callback/google`,
-        grant_type: 'authorization_code',
+        redirect_uri:
+          process.env.GOOGLE_REDIRECT_URI ||
+          `${baseUrl}/api/auth/callback/google`,
+        grant_type: "authorization_code",
       }),
     });
 
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text();
-      console.error('[Google OAuth] Token exchange failed:', errorText);
-      return NextResponse.redirect(`${baseUrl}/login?error=token_exchange_failed`);
+      console.error("[Google OAuth] Token exchange failed:", errorText);
+      return NextResponse.redirect(
+        `${baseUrl}/login?error=token_exchange_failed`,
+      );
     }
 
     const tokens: GoogleTokenResponse = await tokenResponse.json();
 
     // Get user info from Google
-    const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-      headers: { Authorization: `Bearer ${tokens.access_token}` },
-    });
+    const userInfoResponse = await fetch(
+      "https://www.googleapis.com/oauth2/v2/userinfo",
+      {
+        headers: { Authorization: `Bearer ${tokens.access_token}` },
+      },
+    );
 
     if (!userInfoResponse.ok) {
-      console.error('[Google OAuth] Failed to get user info');
+      console.error("[Google OAuth] Failed to get user info");
       return NextResponse.redirect(`${baseUrl}/login?error=user_info_failed`);
     }
 
     const userInfo: GoogleUserInfo = await userInfoResponse.json();
 
-    console.log('[Google OAuth] User authenticated:', userInfo.email);
+    console.log("[Google OAuth] User authenticated:", userInfo.email);
 
     // Check if user already has a tenant (existing user)
     const existingTenant = await prisma.tenant.findFirst({
@@ -100,20 +109,30 @@ export async function GET(request: NextRequest) {
 
     if (existingTenant) {
       // Existing user - log them in directly via OAuth
-      console.log('[Google OAuth] Existing tenant found:', existingTenant.tenantCode);
+      console.log(
+        "[Google OAuth] Existing tenant found:",
+        existingTenant.tenantCode,
+      );
 
       // Check if tenant has stored password for OAuth login
       if (!existingTenant.opsPasswordEncrypted) {
-        console.warn('[Google OAuth] No stored password, redirecting to login page');
-        const response = NextResponse.redirect(`${baseUrl}/login?tenant=${existingTenant.tenantCode}&email=${userInfo.email}&oauth=google&error=no_password`);
-        response.cookies.delete('oauth_state');
+        console.warn(
+          "[Google OAuth] No stored password, redirecting to login page",
+        );
+        const response = NextResponse.redirect(
+          `${baseUrl}/login?tenant=${existingTenant.tenantCode}&email=${userInfo.email}&oauth=google&error=no_password`,
+        );
+        response.cookies.delete("oauth_state");
         return response;
       }
 
       // Check if tenant is still provisioning
-      if (existingTenant.provisionStatus === 'provisioning' || existingTenant.provisionStatus === 'pending') {
+      if (
+        existingTenant.provisionStatus === "provisioning" ||
+        existingTenant.provisionStatus === "pending"
+      ) {
         const response = NextResponse.redirect(`${baseUrl}/home`);
-        response.cookies.delete('oauth_state');
+        response.cookies.delete("oauth_state");
         // Set temporary session cookie for provisioning status page
         return response;
       }
@@ -128,7 +147,10 @@ export async function GET(request: NextRequest) {
           db: existingTenant.odooDb,
         });
 
-        const odooSession = await odooClient.authenticate(userInfo.email, password);
+        const odooSession = await odooClient.authenticate(
+          userInfo.email,
+          password,
+        );
 
         // Upsert user
         const user = await prisma.user.upsert({
@@ -170,26 +192,34 @@ export async function GET(request: NextRequest) {
           where: { tenantId: existingTenant.id },
         });
         if (featureCount === 0) {
-          await initializeTenantFeatures(existingTenant.id, existingTenant.planCode);
+          await initializeTenantFeatures(
+            existingTenant.id,
+            existingTenant.planCode,
+          );
         }
 
         // Ensure entitlements exist
         const entitlements = await prisma.entitlements.findUnique({
-          where: { tenantId: existingTenant.id }
+          where: { tenantId: existingTenant.id },
         });
         if (!entitlements) {
-          await entitlementsService.initialize(existingTenant.id, existingTenant.planCode);
+          await entitlementsService.initialize(
+            existingTenant.id,
+            existingTenant.planCode,
+          );
         }
 
         // Ensure membership exists
         const membership = await membershipService.ensureMembership(
           user.id,
           existingTenant.id,
-          user.isAdmin
+          user.isAdmin,
         );
 
         // Determine admin status from membership role
-        const isAdmin = membership?.role === 'ORG_ADMIN' || membership?.role === 'BILLING_ADMIN';
+        const isAdmin =
+          membership?.role === "ORG_ADMIN" ||
+          membership?.role === "BILLING_ADMIN";
 
         // Create JWT
         const token = await createToken({
@@ -209,19 +239,24 @@ export async function GET(request: NextRequest) {
           tenantId: existingTenant.id,
           userId: user.id,
           success: true,
-          method: 'oauth_google'
+          method: "oauth_google",
         });
 
-        console.log('[Google OAuth] Direct login successful for:', userInfo.email);
+        console.log(
+          "[Google OAuth] Direct login successful for:",
+          userInfo.email,
+        );
 
         const response = NextResponse.redirect(`${baseUrl}/home`);
-        response.cookies.delete('oauth_state');
+        response.cookies.delete("oauth_state");
         return response;
       } catch (authError) {
-        console.error('[Google OAuth] Direct login failed:', authError);
+        console.error("[Google OAuth] Direct login failed:", authError);
         // Fallback to login page with error
-        const response = NextResponse.redirect(`${baseUrl}/login?tenant=${existingTenant.tenantCode}&email=${userInfo.email}&oauth=google&error=auth_failed`);
-        response.cookies.delete('oauth_state');
+        const response = NextResponse.redirect(
+          `${baseUrl}/login?tenant=${existingTenant.tenantCode}&email=${userInfo.email}&oauth=google&error=auth_failed`,
+        );
+        response.cookies.delete("oauth_state");
         return response;
       }
     }
@@ -234,7 +269,7 @@ export async function GET(request: NextRequest) {
       update: {
         name: userInfo.name,
         avatarUrl: userInfo.picture,
-        provider: 'GOOGLE',
+        provider: "GOOGLE",
         providerId: userInfo.id,
         accessToken: tokens.access_token,
         refreshToken: tokens.refresh_token,
@@ -244,7 +279,7 @@ export async function GET(request: NextRequest) {
         email: userInfo.email,
         name: userInfo.name,
         avatarUrl: userInfo.picture,
-        provider: 'GOOGLE',
+        provider: "GOOGLE",
         providerId: userInfo.id,
         accessToken: tokens.access_token,
         refreshToken: tokens.refresh_token,
@@ -253,21 +288,23 @@ export async function GET(request: NextRequest) {
     });
 
     // Redirect to registration page to complete company info
-    const response = NextResponse.redirect(`${baseUrl}/register?email=${encodeURIComponent(userInfo.email)}&name=${encodeURIComponent(userInfo.name || '')}`);
-    response.cookies.delete('oauth_state');
+    const response = NextResponse.redirect(
+      `${baseUrl}/register?email=${encodeURIComponent(userInfo.email)}&name=${encodeURIComponent(userInfo.name || "")}`,
+    );
+    response.cookies.delete("oauth_state");
 
     // Set a temporary auth cookie for the registration process
-    response.cookies.set('pending_registration', userInfo.email, {
+    response.cookies.set("pending_registration", userInfo.email, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
       maxAge: 3600, // 1 hour
-      path: '/',
+      path: "/",
     });
 
     return response;
   } catch (error) {
-    console.error('[Google OAuth] Error:', error);
+    console.error("[Google OAuth] Error:", error);
     return NextResponse.redirect(`${baseUrl}/login?error=oauth_error`);
   }
 }

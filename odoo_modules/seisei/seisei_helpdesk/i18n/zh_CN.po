@@ -1,0 +1,303 @@
+# Simplified Chinese translation for seisei_helpdesk
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo 18.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-02-21\n"
+"PO-Revision-Date: 2026-02-21\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. module: seisei_helpdesk
+msgid "New"
+msgstr "新建"
+
+#. module: seisei_helpdesk
+msgid "In Progress"
+msgstr "处理中"
+
+#. module: seisei_helpdesk
+msgid "On Hold"
+msgstr "挂起"
+
+#. module: seisei_helpdesk
+msgid "Solved"
+msgstr "已解决"
+
+#. module: seisei_helpdesk
+msgid "Cancelled"
+msgstr "已取消"
+
+#. module: seisei_helpdesk
+msgid "Helpdesk Team"
+msgstr "客服团队"
+
+#. module: seisei_helpdesk
+msgid "Helpdesk Stage"
+msgstr "客服阶段"
+
+#. module: seisei_helpdesk
+msgid "Helpdesk Ticket"
+msgstr "客服工单"
+
+#. module: seisei_helpdesk
+msgid "Helpdesk Tag"
+msgstr "客服标签"
+
+#. module: seisei_helpdesk
+msgid "Subject"
+msgstr "主题"
+
+#. module: seisei_helpdesk
+msgid "Team"
+msgstr "团队"
+
+#. module: seisei_helpdesk
+msgid "Stage"
+msgstr "阶段"
+
+#. module: seisei_helpdesk
+msgid "Assigned to"
+msgstr "负责人"
+
+#. module: seisei_helpdesk
+msgid "Tags"
+msgstr "标签"
+
+#. module: seisei_helpdesk
+msgid "Customer"
+msgstr "客户"
+
+#. module: seisei_helpdesk
+msgid "Customer Name"
+msgstr "客户名称"
+
+#. module: seisei_helpdesk
+msgid "Customer Email"
+msgstr "客户邮箱"
+
+#. module: seisei_helpdesk
+msgid "Customer Phone"
+msgstr "客户电话"
+
+#. module: seisei_helpdesk
+msgid "Ticket Number"
+msgstr "工单编号"
+
+#. module: seisei_helpdesk
+msgid "Low"
+msgstr "低"
+
+#. module: seisei_helpdesk
+msgid "Medium"
+msgstr "中"
+
+#. module: seisei_helpdesk
+msgid "High"
+msgstr "高"
+
+#. module: seisei_helpdesk
+msgid "Urgent"
+msgstr "紧急"
+
+#. module: seisei_helpdesk
+msgid "Ready"
+msgstr "就绪"
+
+#. module: seisei_helpdesk
+msgid "Blocked"
+msgstr "受阻"
+
+#. module: seisei_helpdesk
+msgid "Manual"
+msgstr "手动分配"
+
+#. module: seisei_helpdesk
+msgid "Round Robin"
+msgstr "轮询分配"
+
+#. module: seisei_helpdesk
+msgid "Load Balanced"
+msgstr "负载均衡"
+
+#. module: seisei_helpdesk
+msgid "Skill / Tag Based"
+msgstr "技能/标签分配"
+
+#. module: seisei_helpdesk
+msgid "Assignment Method"
+msgstr "分配方式"
+
+#. module: seisei_helpdesk
+msgid "Team Members"
+msgstr "团队成员"
+
+#. module: seisei_helpdesk
+msgid "Team Leader"
+msgstr "团队负责人"
+
+#. module: seisei_helpdesk
+msgid "Working Hours"
+msgstr "工作时间"
+
+#. module: seisei_helpdesk
+msgid "SLA Policies"
+msgstr "SLA策略"
+
+#. module: seisei_helpdesk
+msgid "Customer Ratings"
+msgstr "客户评价"
+
+#. module: seisei_helpdesk
+msgid "Auto Close (days)"
+msgstr "自动关闭（天）"
+
+#. module: seisei_helpdesk
+msgid "Folded in Kanban"
+msgstr "看板中折叠"
+
+#. module: seisei_helpdesk
+msgid "Closing Stage"
+msgstr "关闭阶段"
+
+#. module: seisei_helpdesk
+msgid "Email Template"
+msgstr "邮件模板"
+
+#. module: seisei_helpdesk
+msgid "First Assigned"
+msgstr "首次分配时间"
+
+#. module: seisei_helpdesk
+msgid "Closed Date"
+msgstr "关闭时间"
+
+#. module: seisei_helpdesk
+msgid "Hours to Assign"
+msgstr "分配耗时（小时）"
+
+#. module: seisei_helpdesk
+msgid "Hours to Close"
+msgstr "关闭耗时（小时）"
+
+#. module: seisei_helpdesk
+msgid "Channel"
+msgstr "渠道"
+
+#. module: seisei_helpdesk
+msgid "Web Form"
+msgstr "网页表单"
+
+#. module: seisei_helpdesk
+msgid "Email"
+msgstr "邮件"
+
+#. module: seisei_helpdesk
+msgid "Live Chat"
+msgstr "在线聊天"
+
+#. module: seisei_helpdesk
+msgid "WeChat Work"
+msgstr "企业微信"
+
+#. module: seisei_helpdesk
+msgid "Phone"
+msgstr "电话"
+
+#. module: seisei_helpdesk
+msgid "Tickets"
+msgstr "工单"
+
+#. module: seisei_helpdesk
+msgid "My Tickets"
+msgstr "我的工单"
+
+#. module: seisei_helpdesk
+msgid "All Tickets"
+msgstr "所有工单"
+
+#. module: seisei_helpdesk
+msgid "Dashboard"
+msgstr "仪表盘"
+
+#. module: seisei_helpdesk
+msgid "Configuration"
+msgstr "配置"
+
+#. module: seisei_helpdesk
+msgid "Stages"
+msgstr "阶段"
+
+#. module: seisei_helpdesk
+msgid "Assign to Me"
+msgstr "分配给我"
+
+#. module: seisei_helpdesk
+msgid "Description"
+msgstr "描述"
+
+#. module: seisei_helpdesk
+msgid "Extra Info"
+msgstr "额外信息"
+
+#. module: seisei_helpdesk
+msgid "Question"
+msgstr "咨询"
+
+#. module: seisei_helpdesk
+msgid "Bug"
+msgstr "缺陷"
+
+#. module: seisei_helpdesk
+msgid "Feature Request"
+msgstr "功能需求"
+
+#. module: seisei_helpdesk
+msgid "Complaint"
+msgstr "投诉"
+
+#. module: seisei_helpdesk
+msgid "Agent"
+msgstr "客服"
+
+#. module: seisei_helpdesk
+msgid "Manager"
+msgstr "经理"
+
+#. module: seisei_helpdesk
+msgid "Helpdesk"
+msgstr "客服中心"
+
+#. module: seisei_helpdesk
+msgid "Unassigned"
+msgstr "未分配"
+
+#. module: seisei_helpdesk
+msgid "Open"
+msgstr "打开"
+
+#. module: seisei_helpdesk
+msgid "Closed"
+msgstr "已关闭"
+
+#. module: seisei_helpdesk
+msgid "High Priority"
+msgstr "高优先级"
+
+#. module: seisei_helpdesk
+msgid "Created Today"
+msgstr "今日创建"
+
+#. module: seisei_helpdesk
+msgid "Created This Week"
+msgstr "本周创建"
+
+#. module: seisei_helpdesk
+msgid "Tag Assignment Rules"
+msgstr "标签分配规则"
+
+#. module: seisei_helpdesk
+msgid "Agents"
+msgstr "客服人员"

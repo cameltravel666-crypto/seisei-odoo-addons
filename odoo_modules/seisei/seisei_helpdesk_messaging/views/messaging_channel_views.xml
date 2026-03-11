@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Extend channel form with helpdesk fields -->
+    <record id="seisei_messaging_channel_view_form_bridge" model="ir.ui.view">
+        <field name="name">seisei.messaging.channel.form.bridge</field>
+        <field name="model">seisei.messaging.channel</field>
+        <field name="inherit_id" ref="seisei_messaging.seisei_messaging_channel_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//group[@name='integration']" position="inside">
+                <field name="helpdesk_team_id"/>
+                <field name="auto_create_ticket"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Extend channel list -->
+    <record id="seisei_messaging_channel_view_list_bridge" model="ir.ui.view">
+        <field name="name">seisei.messaging.channel.list.bridge</field>
+        <field name="model">seisei.messaging.channel</field>
+        <field name="inherit_id" ref="seisei_messaging.seisei_messaging_channel_view_list"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='ai_enabled']" position="after">
+                <field name="auto_create_ticket"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ============================================================ -->
+    <!-- Tag: Form                                                    -->
+    <!-- ============================================================ -->
+    <record id="seisei_helpdesk_tag_view_form" model="ir.ui.view">
+        <field name="name">seisei.helpdesk.tag.form</field>
+        <field name="model">seisei.helpdesk.tag</field>
+        <field name="arch" type="xml">
+            <form string="Helpdesk Tag">
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="color" widget="color_picker"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ============================================================ -->
+    <!-- Tag: List                                                    -->
+    <!-- ============================================================ -->
+    <record id="seisei_helpdesk_tag_view_list" model="ir.ui.view">
+        <field name="name">seisei.helpdesk.tag.list</field>
+        <field name="model">seisei.helpdesk.tag</field>
+        <field name="arch" type="xml">
+            <list string="Helpdesk Tags" editable="bottom">
+                <field name="name"/>
+                <field name="color" widget="color_picker"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- ============================================================ -->
+    <!-- Tag: Action                                                  -->
+    <!-- ============================================================ -->
+    <record id="action_seisei_helpdesk_tag" model="ir.actions.act_window">
+        <field name="name">Tags</field>
+        <field name="res_model">seisei.helpdesk.tag</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>
