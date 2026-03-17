@@ -44,6 +44,7 @@ class OcrDocument(models.Model):
     tax_amount_8 = fields.Float('8%税额', digits=(16, 2))
     seller_name = fields.Char('开票方/销售方')
     buyer_name = fields.Char('收票方/购买方')
+    client_id = fields.Many2one('ocr.client', '客户')
     line_ids = fields.One2many('ocr.document.line', 'document_id', '商品明细')
     account_move_id = fields.Many2one('account.move', '关联账单')
     process_time = fields.Float('处理时间(秒)')
@@ -375,6 +376,16 @@ class OcrDocument(models.Model):
                     return
                 except:
                     pass
+
+    @api.onchange('client_id')
+    def _onchange_client_id(self):
+        """Apply client default accounts to existing lines without accounts."""
+        if self.client_id:
+            for line in self.line_ids:
+                if not line.debit_account and self.client_id.default_debit_account:
+                    line.debit_account = self.client_id.default_debit_account
+                if not line.credit_account and self.client_id.default_credit_account:
+                    line.credit_account = self.client_id.default_credit_account
 
     def action_create_bill(self):
         self.ensure_one()

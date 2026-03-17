@@ -16,9 +16,21 @@
               action="action_ocr_batch_import"
               sequence="20"/>
     
-    <menuitem id="menu_ocr_lines" 
-              name="📊 明细科目管理" 
+    <menuitem id="menu_ocr_lines"
+              name="📊 明细科目管理"
               parent="menu_ocr_root"
               action="action_ocr_document_line"
               sequence="30"/>
+
+    <menuitem id="menu_ocr_clients"
+              name="👥 客户管理"
+              parent="menu_ocr_root"
+              action="action_ocr_client"
+              sequence="40"/>
+
+    <menuitem id="menu_ocr_yayoi_export"
+              name="📤 弥生导出"
+              parent="menu_ocr_root"
+              action="action_yayoi_export"
+              sequence="50"/>
 </odoo>

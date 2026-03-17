@@ -5,3 +5,6 @@ access_ocr_document_line_user,ocr.document.line.user,model_ocr_document_line,bas
 access_ocr_document_line_manager,ocr.document.line.manager,model_ocr_document_line,account.group_account_manager,1,1,1,1
 access_ocr_batch_import_user,ocr.batch.import.user,model_ocr_batch_import,base.group_user,1,1,1,0
 access_ocr_batch_import_line_user,ocr.batch.import.line.user,model_ocr_batch_import_line,base.group_user,1,1,1,0
+access_ocr_client_user,ocr.client.user,model_ocr_client,base.group_user,1,1,1,0
+access_ocr_client_manager,ocr.client.manager,model_ocr_client,account.group_account_manager,1,1,1,1
+access_ocr_yayoi_export_user,ocr.yayoi.export.user,model_ocr_yayoi_export,base.group_user,1,1,1,0
