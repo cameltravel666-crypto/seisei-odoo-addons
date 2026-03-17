@@ -6,7 +6,7 @@ DEBIT_ACCOUNTS = [
     ('shoumouhin', '消耗品費（消耗品费）'),
     ('jimu', '事務用品費（办公用品费）'),
     ('kousai', '交際費（交际费）'),
-    ('fukuri', '福利厚生費（福利费）'),
+    ('kaigi', '会議費（会议费）'),
     ('ryohi', '旅費交通費（交通费）'),
     ('tsuushin', '通信費（通信费）'),
     ('suido', '水道光熱費（水电费）'),
@@ -23,34 +23,35 @@ CREDIT_ACCOUNTS = [
     ('card', 'クレジットカード（信用卡）'),
 ]
 
-# 商品关键词 -> 科目映射
+TAX_RATES = [
+    ('0', '非課税'),
+    ('8', '8%（軽減税率）'),
+    ('10', '10%'),
+]
+
+# 商品关键词 -> 科目映射 (lowest priority fallback)
 KEYWORD_ACCOUNT_MAP = {
     # 食材类 -> 仕入高
     '牛肉': 'shiire', '豚肉': 'shiire', '鶏肉': 'shiire', '肉': 'shiire',
     '魚': 'shiire', '野菜': 'shiire', '米': 'shiire', '食材': 'shiire',
     '調味料': 'shiire', '油': 'shiire', '醤油': 'shiire', '塩': 'shiire',
-    
     # 消耗品
     '割りばし': 'shoumouhin', 'はし': 'shoumouhin', '箸': 'shoumouhin',
     'ナプキン': 'shoumouhin', '紙': 'shoumouhin', 'ラップ': 'shoumouhin',
     '洗剤': 'shoumouhin', 'ゴミ袋': 'shoumouhin', '袋': 'shoumouhin',
-    
     # 办公用品
     'ペン': 'jimu', 'ノート': 'jimu', 'ファイル': 'jimu',
     'コピー': 'jimu', '印刷': 'jimu', '文具': 'jimu',
-    
     # 交际费
     '贈答': 'kousai', 'ギフト': 'kousai', 'お歳暮': 'kousai',
-    
-    # 福利费
-    '飲料': 'fukuri', 'コーヒー': 'fukuri', 'お茶': 'fukuri',
-    
-    # CD/书籍等
+    # 会议费 (饮食类)
+    '飲料': 'kaigi', 'コーヒー': 'kaigi', 'お茶': 'kaigi',
+    '飲食': 'kaigi', '飲食代': 'kaigi',
+    # 交通费
+    '運賃': 'ryohi', 'タクシー': 'ryohi', '交通': 'ryohi',
+    # 其他
     'CD': 'zappi', 'DVD': 'zappi', '本': 'zappi', 'ブック': 'zappi',
-    
-    # 其他消耗品
     'カード': 'shoumouhin', 'セット': 'shoumouhin',
-    'ハンカチ': 'shoumouhin', 'ブランケット': 'shoumouhin',
 }
 
 
@@ -64,39 +65,98 @@ class OcrDocumentLine(models.Model):
     name = fields.Char('商品名称')
     quantity = fields.Float('数量', digits=(16, 2), default=1)
     unit = fields.Char('单位')
-    unit_price = fields.Float('单价', digits=(16, 2))
-    amount = fields.Float('金额', digits=(16, 2))
-    tax_rate = fields.Char('税率')
-    note = fields.Char('备注')
-    
+
+    # --- Tax-split amounts ---
+    gross_amount = fields.Float('税込金額', digits=(16, 2))
+    tax_rate = fields.Selection(TAX_RATES, '税率', default='10')
+    net_amount = fields.Float('税抜金額', digits=(16, 2), compute='_compute_amounts', store=True)
+    tax_amount = fields.Float('消費税額', digits=(16, 2), compute='_compute_amounts', store=True)
+
     # 会计科目
     debit_account = fields.Selection(DEBIT_ACCOUNTS, '借方科目')
     credit_account = fields.Selection(CREDIT_ACCOUNTS, '贷方科目', default='genkin')
-    
-    @api.model
-    def create(self, vals):
-        """创建时自动推断借方科目"""
-        record = super().create(vals)
-        if not record.debit_account and record.name:
-            record.debit_account = record._guess_debit_account()
-        return record
-    
+
+    # OCR snapshot (for learning: detect user corrections)
+    ocr_debit_account = fields.Selection(DEBIT_ACCOUNTS, '识别借方', readonly=True)
+    ocr_credit_account = fields.Selection(CREDIT_ACCOUNTS, '识别贷方', readonly=True)
+
+    # 弥生摘要
+    memo = fields.Char('摘要', compute='_compute_memo', store=True)
+    note = fields.Char('备注')
+
+    @api.depends('gross_amount', 'tax_rate')
+    def _compute_amounts(self):
+        for line in self:
+            rate = int(line.tax_rate or '0')
+            gross = line.gross_amount or 0
+            if rate > 0 and gross:
+                line.tax_amount = round(gross * rate / (100 + rate))
+                line.net_amount = gross - line.tax_amount
+            else:
+                line.tax_amount = 0
+                line.net_amount = gross
+
+    @api.depends('name', 'document_id.seller_name')
+    def _compute_memo(self):
+        for line in self:
+            parts = []
+            if line.document_id.seller_name:
+                parts.append(line.document_id.seller_name)
+            if line.name:
+                parts.append(line.name)
+            line.memo = ' '.join(parts) if parts else ''
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        records = super().create(vals_list)
+        for record in records:
+            if not record.debit_account and record.name:
+                record.debit_account = record._guess_debit_account()
+            # Snapshot OCR-assigned accounts
+            record.ocr_debit_account = record.debit_account
+            record.ocr_credit_account = record.credit_account
+        return records
+
     def _guess_debit_account(self):
-        """根据商品名称推断借方科目"""
+        """Guess debit account: learned rules first, then keyword map."""
         if not self.name:
             return 'zappi'
-        
-        name = self.name
-        
-        # 检查关键词
+
+        # 1. Check learned rules (if document has client)
+        if self.document_id.client_id:
+            Rule = self.env['ocr.account.rule']
+            # Item exact match
+            rule = Rule.search([
+                ('client_id', '=', self.document_id.client_id.id),
+                ('match_type', '=', 'item'),
+                ('match_value', '=', self.name),
+                ('debit_account', '!=', False),
+                ('hit_count', '>=', 2),
+                ('active', '=', True),
+            ], limit=1)
+            if rule:
+                return rule.debit_account
+
+            # Seller match
+            if self.document_id.seller_name:
+                rule = Rule.search([
+                    ('client_id', '=', self.document_id.client_id.id),
+                    ('match_type', '=', 'seller'),
+                    ('match_value', '=', self.document_id.seller_name),
+                    ('debit_account', '!=', False),
+                    ('hit_count', '>=', 2),
+                    ('active', '=', True),
+                ], limit=1)
+                if rule:
+                    return rule.debit_account
+
+        # 2. Keyword fallback
         for keyword, account in KEYWORD_ACCOUNT_MAP.items():
-            if keyword in name:
+            if keyword in self.name:
                 return account
-        
-        # 默认归类为杂费
+
         return 'zappi'
-    
+
     def action_auto_classify(self):
-        """批量自动分类"""
         for record in self:
             record.debit_account = record._guess_debit_account()

@@ -12,11 +12,25 @@
                         <field name="date_from"/>
                         <field name="date_to"/>
                     </group>
-                    <group string="预览统计">
+                    <group string="导出设置">
+                        <field name="export_mode" widget="radio"/>
                         <field name="document_count"/>
                         <field name="line_count"/>
                         <field name="total_amount"/>
                     </group>
+                </group>
+                <separator string="摘要规则说明"/>
+                <group>
+                    <div class="text-muted" invisible="export_mode != 'summary'">
+                        <p><strong>汇总模式摘要格式：</strong><code>No.{序号}--{MM/DD}-{店铺名}</code></p>
+                        <p>示例：<code>No.0122--12/31-青ゆず</code></p>
+                        <p>每张票据按税率拆分行（非課税 / 8% / 10%），与 Excel 领收书整理表格式一致。</p>
+                    </div>
+                    <div class="text-muted" invisible="export_mode != 'detail'">
+                        <p><strong>明细模式摘要格式：</strong><code>{店铺名} {商品名}</code></p>
+                        <p>示例：<code>株式会社ライフコーポレーション 牛肉</code></p>
+                        <p>每个商品一行，适合需要逐项核对的场景。</p>
+                    </div>
                 </group>
                 <group invisible="not document_ids">
                     <field name="document_ids" nolabel="1">

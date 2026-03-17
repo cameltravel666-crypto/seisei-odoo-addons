@@ -30,7 +30,7 @@ DEBIT_ACCOUNT_NAMES = {
     'shoumouhin': '消耗品費',
     'jimu': '事務用品費',
     'kousai': '交際費',
-    'fukuri': '福利厚生費',
+    'kaigi': '会議費',
     'ryohi': '旅費交通費',
     'tsuushin': '通信費',
     'suido': '水道光熱費',

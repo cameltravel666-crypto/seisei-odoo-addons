@@ -1,6 +1,6 @@
 {
     'name': '智能票据识别',
-    'version': '18.0.2.0.0',
+    'version': '18.0.3.0.0',
     'category': 'Accounting',
     'summary': '使用 AI 批量识别发票、收据、采购单',
     'description': '''
@@ -24,6 +24,11 @@
         'views/ocr_views.xml',
         'views/menu_views.xml',
     ],
+    'assets': {
+        'web.assets_backend': [
+            'invoice_ocr/static/src/css/ocr_form.css',
+        ],
+    },
     'installable': True,
     'application': True,
     'license': 'LGPL-3',

@@ -8,3 +8,5 @@ access_ocr_batch_import_line_user,ocr.batch.import.line.user,model_ocr_batch_imp
 access_ocr_client_user,ocr.client.user,model_ocr_client,base.group_user,1,1,1,0
 access_ocr_client_manager,ocr.client.manager,model_ocr_client,account.group_account_manager,1,1,1,1
 access_ocr_yayoi_export_user,ocr.yayoi.export.user,model_ocr_yayoi_export,base.group_user,1,1,1,0
+access_ocr_account_rule_user,ocr.account.rule.user,model_ocr_account_rule,base.group_user,1,1,1,0
+access_ocr_account_rule_manager,ocr.account.rule.manager,model_ocr_account_rule,account.group_account_manager,1,1,1,1

@@ -7,85 +7,85 @@
         <field name="arch" type="xml">
             <form string="票据识别">
                 <header>
-                    <button name="action_recognize" type="object" 
-                            string="🔍 开始识别" class="btn-primary"
+                    <button name="action_recognize" type="object"
+                            string="开始识别" class="btn-primary"
                             invisible="state != 'draft'"/>
-                    <button name="action_recognize" type="object" 
-                            string="🔄 重新识别" class="btn-secondary"
+                    <button name="action_confirm" type="object"
+                            string="确认" class="btn-primary"
+                            invisible="state != 'done'"/>
+                    <button name="action_recognize" type="object"
+                            string="重新识别" class="btn-secondary"
                             invisible="state == 'draft'"/>
                     <button name="action_auto_classify_all" type="object"
-                            string="🏷️ 自动分类科目" class="btn-info"
-                            invisible="state != 'done'"/>
+                            string="自动分类科目" class="btn-info"
+                            invisible="state not in ('done', 'confirmed')"/>
                     <button name="action_create_bill" type="object"
-                            string="📄 创建账单" class="btn-success"
-                            invisible="state != 'done'"/>
+                            string="创建账单" class="btn-success"
+                            invisible="state not in ('done', 'confirmed')"/>
                     <button name="action_reset" type="object"
-                            string="↩️ 重置" class="btn-warning"
+                            string="重置" class="btn-warning"
                             invisible="state == 'draft'"/>
-                    <field name="state" widget="statusbar" statusbar_visible="draft,done"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,done,confirmed"/>
                 </header>
                 <sheet>
-                    <div class="oe_title">
-                        <h1><field name="name" placeholder="票据名称"/></h1>
-                    </div>
-                    <group>
-                        <group string="票据信息">
-                            <field name="doc_type"/>
-                            <field name="image" widget="image" class="oe_avatar"/>
-                            <field name="image_filename" invisible="1"/>
-                        </group>
-                        <group string="基本信息">
-                            <field name="client_id"/>
-                            <field name="invoice_number"/>
-                            <field name="invoice_date"/>
-                            <field name="seller_name"/>
-                            <field name="buyer_name"/>
-                        </group>
-                    </group>
-                    <group string="金额信息">
-                        <group>
-                            <field name="subtotal"/>
-                            <field name="amount"/>
-                        </group>
-                        <group>
-                            <field name="tax_amount"/>
-                            <field name="tax_amount_10" string="10%税额"/>
-                            <field name="tax_amount_8" string="8%税额"/>
-                        </group>
-                    </group>
-                    <notebook>
-                        <page string="商品明细 &amp; 会计科目">
+                    <field name="image_filename" invisible="1"/>
+                    <div class="ocr_split_layout">
+                        <!-- Left: data + line items -->
+                        <div class="ocr_data_panel">
+                            <div class="oe_title">
+                                <h1><field name="name" placeholder="票据名称"/></h1>
+                            </div>
+                            <group>
+                                <group string="基本信息">
+                                    <field name="client_id"/>
+                                    <field name="doc_type"/>
+                                    <field name="invoice_number"/>
+                                    <field name="invoice_date"/>
+                                    <field name="seller_name"/>
+                                    <field name="buyer_name"/>
+                                </group>
+                                <group string="合计（自动汇总）">
+                                    <field name="amount" string="税込合計"/>
+                                    <field name="subtotal" string="税抜合計"/>
+                                    <field name="tax_amount" string="消費税"/>
+                                </group>
+                            </group>
+                            <separator string="明细 &amp; 分录"/>
                             <field name="line_ids">
                                 <list editable="bottom">
                                     <field name="sequence" widget="handle"/>
-                                    <field name="name"/>
-                                    <field name="quantity"/>
-                                    <field name="unit"/>
-                                    <field name="amount" sum="合计"/>
-                                    <field name="debit_account" string="借方科目"/>
-                                    <field name="credit_account" string="贷方科目"/>
-                                    <field name="note"/>
+                                    <field name="name" string="品名"/>
+                                    <field name="quantity" string="数量" optional="hide"/>
+                                    <field name="gross_amount" string="税込" sum="税込合計"/>
+                                    <field name="tax_rate" string="税率"/>
+                                    <field name="net_amount" string="税抜"/>
+                                    <field name="tax_amount" string="税額"/>
+                                    <field name="debit_account" string="借方"/>
+                                    <field name="credit_account" string="贷方"/>
+                                    <field name="memo" string="摘要" optional="show"/>
+                                    <field name="note" string="备注" optional="hide"/>
                                 </list>
                             </field>
-                            <group>
-                                <p class="text-muted">
-                                    💡 提示：可以在列表中直接编辑科目，或勾选多行后使用批量操作
-                                </p>
-                            </group>
-                        </page>
-                        <page string="识别原文">
-                            <field name="ocr_result" readonly="1"/>
-                        </page>
-                        <page string="错误信息" invisible="state != 'error'">
-                            <field name="error_message" readonly="1"/>
-                        </page>
-                        <page string="关联信息">
-                            <group>
-                                <field name="account_move_id"/>
-                                <field name="process_time"/>
-                            </group>
-                        </page>
-                    </notebook>
+                            <notebook>
+                                <page string="识别原文">
+                                    <field name="ocr_result" readonly="1"/>
+                                </page>
+                                <page string="错误信息" invisible="state != 'error'">
+                                    <field name="error_message" readonly="1"/>
+                                </page>
+                                <page string="关联信息">
+                                    <group>
+                                        <field name="account_move_id"/>
+                                        <field name="process_time"/>
+                                    </group>
+                                </page>
+                            </notebook>
+                        </div>
+                        <!-- Right: large image preview, sticky -->
+                        <div class="ocr_image_panel">
+                            <field name="image" widget="image"/>
+                        </div>
+                    </div>
                 </sheet>
             </form>
         </field>
@@ -98,14 +98,17 @@
         <field name="arch" type="xml">
             <list string="票据明细" editable="bottom" multi_edit="1">
                 <header>
-                    <button name="action_auto_classify" type="object" string="🏷️ 自动分类"/>
+                    <button name="action_auto_classify" type="object" string="自动分类"/>
                 </header>
                 <field name="document_id"/>
                 <field name="name"/>
-                <field name="quantity"/>
-                <field name="amount" sum="总金额"/>
+                <field name="gross_amount" sum="税込合計"/>
+                <field name="tax_rate"/>
+                <field name="net_amount"/>
+                <field name="tax_amount"/>
                 <field name="debit_account"/>
                 <field name="credit_account"/>
+                <field name="memo"/>
             </list>
         </field>
     </record>
@@ -115,22 +118,23 @@
         <field name="name">ocr.document.list</field>
         <field name="model">ocr.document</field>
         <field name="arch" type="xml">
-            <list string="票据识别" 
-                  decoration-success="state=='done'" 
+            <list string="票据识别"
+                  decoration-success="state=='done'"
                   decoration-danger="state=='error'"
-                  decoration-info="state=='draft'">
+                  decoration-info="state=='draft'"
+                  decoration-muted="state=='confirmed'">
                 <header>
-                    <button name="action_recognize" type="object" string="🔍 批量识别"/>
-                    <button name="action_auto_classify_all" type="object" string="🏷️ 批量分类科目"/>
+                    <button name="action_recognize" type="object" string="批量识别"/>
+                    <button name="action_confirm" type="object" string="批量确认"/>
+                    <button name="action_auto_classify_all" type="object" string="批量分类科目"/>
                 </header>
                 <field name="name"/>
                 <field name="client_id" optional="show"/>
                 <field name="doc_type"/>
-                <field name="invoice_number"/>
                 <field name="seller_name"/>
-                <field name="amount" sum="总金额"/>
-                <field name="tax_amount" sum="总税额"/>
                 <field name="invoice_date"/>
+                <field name="amount" string="税込" sum="总金额"/>
+                <field name="tax_amount" string="税額" sum="总税额"/>
                 <field name="state"/>
             </list>
         </field>
@@ -146,8 +150,10 @@
                 <field name="invoice_number"/>
                 <field name="seller_name"/>
                 <field name="client_id"/>
+                <filter string="待处理" name="pending" domain="[('state','in',['draft','done'])]"/>
                 <filter string="待识别" name="draft" domain="[('state','=','draft')]"/>
                 <filter string="已识别" name="done" domain="[('state','=','done')]"/>
+                <filter string="已确认" name="confirmed" domain="[('state','=','confirmed')]"/>
                 <filter string="识别失败" name="error" domain="[('state','=','error')]"/>
                 <separator/>
                 <filter string="零售小票" name="retail" domain="[('doc_type','=','retail_receipt')]"/>
@@ -166,6 +172,7 @@
         <field name="name">票据识别</field>
         <field name="res_model">ocr.document</field>
         <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_pending': 1}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">开始使用智能票据识别</p>
         </field>
@@ -195,7 +202,7 @@
                         <field name="note" placeholder="备注信息"/>
                     </group>
                     <notebook>
-                        <page string="关联票据">
+                        <page string="关联票据" badge="document_count">
                             <field name="document_ids" readonly="1">
                                 <list>
                                     <field name="name"/>
@@ -203,6 +210,19 @@
                                     <field name="invoice_date"/>
                                     <field name="amount" sum="合计"/>
                                     <field name="state"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="学习规则" badge="rule_count">
+                            <field name="rule_ids">
+                                <list editable="bottom">
+                                    <field name="match_type"/>
+                                    <field name="match_value"/>
+                                    <field name="debit_account"/>
+                                    <field name="credit_account"/>
+                                    <field name="hit_count"/>
+                                    <field name="last_used"/>
+                                    <field name="active"/>
                                 </list>
                             </field>
                         </page>
@@ -223,6 +243,7 @@
                 <field name="default_debit_account"/>
                 <field name="default_credit_account"/>
                 <field name="document_count"/>
+                <field name="rule_count"/>
             </list>
         </field>
     </record>
