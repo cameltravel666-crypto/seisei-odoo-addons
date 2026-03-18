@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- Server actions (must be defined before crons that reference them) -->
+        <record id="action_ocr_recognize_queue" model="ir.actions.server">
+            <field name="name">OCR: 后台识别队列</field>
+            <field name="model_id" ref="model_ocr_document"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_recognize_queue(batch_size=5)</field>
+        </record>
+
+        <record id="action_ocr_scan_inbox" model="ir.actions.server">
+            <field name="name">OCR: 扫描导入文件夹</field>
+            <field name="model_id" ref="model_ocr_document"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_scan_inbox()</field>
+        </record>
+
+        <!-- Cron jobs -->
+        <record id="cron_ocr_recognize_queue" model="ir.cron">
+            <field name="cron_name">OCR: 后台识别队列</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">minutes</field>
+            <field name="active">True</field>
+            <field name="priority">5</field>
+            <field name="ir_actions_server_id" ref="action_ocr_recognize_queue"/>
+        </record>
+
+        <record id="cron_ocr_scan_inbox" model="ir.cron">
+            <field name="cron_name">OCR: 扫描导入文件夹</field>
+            <field name="interval_number">2</field>
+            <field name="interval_type">minutes</field>
+            <field name="active">True</field>
+            <field name="priority">5</field>
+            <field name="ir_actions_server_id" ref="action_ocr_scan_inbox"/>
+        </record>
+    </data>
+</odoo>
