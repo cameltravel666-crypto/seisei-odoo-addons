@@ -458,19 +458,63 @@ class OcrDocument(models.Model):
                 findings.append(f'税率强制修正: → {forced_rate}%')
 
         # --- Amount field correction (net→gross) ---
-        if rule.amount_field_is == 'net' and rule.force_tax_rate:
+        if rule.force_tax_rate:
             rate = int(rule.force_tax_rate)
-            for line in self.line_ids:
-                # The stored gross_amount is actually net; recalculate true gross
-                net_val = line.gross_amount
-                true_gross = round(net_val * (100 + rate) / 100)
-                if abs(true_gross - net_val) > 1:
-                    line.gross_amount = true_gross
-                    findings.append(
-                        f'金额税抜→税込修正: {net_val} → {true_gross} (+{rate}%)'
-                    )
+            should_fix = rule.amount_field_is == 'net'
+
+            if rule.amount_field_is == 'auto':
+                # Smart detection: check OCR totals for clues
+                # If OCR returned both total_gross and total_net, compare with line sum
+                # Also: 請求書 (monthly invoice) lines often named 納品額/合計
+                should_fix = self._detect_net_as_gross(ocr_data, rate, findings)
+
+            if should_fix:
+                for line in self.line_ids:
+                    net_val = line.gross_amount
+                    true_gross = round(net_val * (100 + rate) / 100)
+                    if abs(true_gross - net_val) > 1:
+                        line.gross_amount = true_gross
+                        findings.append(
+                            f'金额税抜→税込修正: {net_val} → {true_gross} (+{rate}%)'
+                        )
 
         return rule
+
+    def _detect_net_as_gross(self, ocr_data, tax_rate, findings):
+        """Detect if gross_amount field actually holds net (tax-excluded) value.
+
+        Heuristic: compare OCR totals. If the OCR reported a total_gross that is
+        larger than the line sum by ~tax_rate%, the lines hold net values.
+
+        Also skip conversion for 請求書-style docs where line name suggests
+        it's already a tax-inclusive summary (e.g. 納品額, 御請求額, 合計).
+        """
+        totals = ocr_data.get('totals_on_doc') or {}
+        ocr_gross = self._safe_float(totals.get('total_gross'))
+        ocr_net = self._safe_float(totals.get('total_net'))
+
+        line_sum = sum(l.gross_amount for l in self.line_ids if l.gross_amount)
+        if line_sum <= 0:
+            return False
+
+        # Check if line names suggest this is a monthly summary invoice (請求書)
+        # These already have tax-inclusive amounts
+        summary_keywords = ('納品額', '請求額', '御請求', '合計額')
+        for line in self.line_ids:
+            if line.name and any(kw in line.name for kw in summary_keywords):
+                findings.append(f'請求書形式検出(品名="{line.name}"): 金額修正スキップ')
+                return False
+
+        # If OCR returned a larger total_gross, lines are probably net
+        if ocr_gross > 0 and line_sum > 0:
+            ratio = ocr_gross / line_sum
+            expected_ratio = (100 + tax_rate) / 100  # e.g. 1.08
+            if abs(ratio - expected_ratio) < 0.02:
+                findings.append(f'金額分析: OCR_gross/line_sum={ratio:.3f}≈{expected_ratio} → 税抜と判定')
+                return True
+
+        # Default for 'auto': don't convert (safer)
+        return False
 
     def _try_fix_era_date(self, d, today, vendor_rule, findings):
         """Try to fix dates that look like misinterpreted Japanese era years.
