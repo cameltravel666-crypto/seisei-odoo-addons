@@ -9,6 +9,8 @@ import time
 from odoo import models, fields, api
 from odoo.exceptions import UserError
 
+from ..utils.image import compress_image
+
 _logger = logging.getLogger(__name__)
 
 OCR_SERVICE_URL = os.getenv("OCR_SERVICE_URL", "http://ocr:8868")
@@ -33,6 +35,7 @@ class OcrDocument(models.Model):
 
     state = fields.Selection([
         ('draft', '待识别'),
+        ('processing', '识别中'),
         ('done', '已识别'),
         ('confirmed', '已确认'),
         ('error', '识别失败'),
@@ -55,6 +58,29 @@ class OcrDocument(models.Model):
     account_move_id = fields.Many2one('account.move', '关联账单')
     process_time = fields.Float('处理时间(秒)')
     error_message = fields.Text('错误信息')
+
+    # Duplicate detection
+    is_duplicate = fields.Boolean('疑似重复', default=False, readonly=True)
+    duplicate_ids = fields.Many2many(
+        'ocr.document', 'ocr_document_duplicate_rel', 'doc_id', 'dup_doc_id',
+        string='重复票据', readonly=True,
+    )
+    duplicate_reason = fields.Char('重复原因', readonly=True)
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if vals.get('image'):
+                vals['image'] = compress_image(
+                    vals['image'], vals.get('image_filename', ''),
+                )
+        return super().create(vals_list)
+
+    def write(self, vals):
+        if vals.get('image'):
+            fname = vals.get('image_filename') or (self[:1].image_filename if len(self) == 1 else '')
+            vals['image'] = compress_image(vals['image'], fname)
+        return super().write(vals)
 
     @api.depends('line_ids.gross_amount', 'line_ids.tax_amount', 'line_ids.net_amount')
     def _compute_totals(self):
@@ -241,7 +267,11 @@ class OcrDocument(models.Model):
                     else:
                         record._extract_retail_receipt(texts)
 
+                # Post-OCR audit: validate & auto-correct
+                record._post_ocr_audit(parsed or {})
+
                 record.state = 'done'
+                record._check_duplicate()
                 done_count += 1
 
             except Exception as e:
@@ -275,12 +305,266 @@ class OcrDocument(models.Model):
     # Central OCR structured data → lines
     # ------------------------------------------------------------------
 
+    # Invalid invoice number patterns (OCR placeholders / failures)
+    _INVALID_INV_PATTERNS = re.compile(
+        r'^(0{5,}|N/?A|なし|ナシ|不明|該当なし|対象外|-+)$', re.IGNORECASE
+    )
+
+    @classmethod
+    def _is_valid_invoice_number(cls, inv_no):
+        """Check if invoice number is meaningful (not a placeholder)."""
+        if not inv_no or not inv_no.strip():
+            return False
+        inv_no = inv_no.strip()
+        if cls._INVALID_INV_PATTERNS.match(inv_no):
+            return False
+        # All same digit repeated (e.g. 0000000, 1111111)
+        if len(set(inv_no)) == 1 and inv_no[0].isdigit():
+            return False
+        return True
+
+    @staticmethod
+    def _verify_corporate_number(t_number):
+        """Verify Japanese T-number check digit (法人番号の検査用数字).
+
+        T-number format: T + 13 digits where digit[0] is check digit.
+        Check digit algorithm (MOD method per 法人番号の基本3法令):
+          check = 9 - (sum of (P[i] * Q[i]) for i=1..12) % 9
+          where P = [2,1,2,1,...] (even index from left gets 1, odd gets 2)
+        Returns True if valid, False if invalid or wrong format.
+        """
+        if not t_number or not re.match(r'^T\d{13}$', t_number):
+            return False
+        digits = t_number[1:]  # remove T prefix
+        check_digit = int(digits[0])
+        body = [int(d) for d in digits[1:]]  # 12 digits
+        weights = [2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1]
+        total = sum(w * d for w, d in zip(weights, body))
+        remainder = total % 9
+        expected = 9 - remainder  # range: 1-9 (never 0)
+        return check_digit == expected
+
+    # ------------------------------------------------------------------
+    # Post-OCR Audit
+    # ------------------------------------------------------------------
+
+    def _post_ocr_audit(self, ocr_data):
+        """Run validation checks on OCR results and auto-correct where possible.
+
+        Checks performed:
+        0. Vendor rules (force tax rate, date era, amount correction)
+        1. T-number check digit verification
+        2. Date sanity (Reiwa year conversion, future date, too old)
+        3. Tax math: gross = net + tax (±2 JPY)
+        4. Seller name normalization via T-number registry (local cache)
+        5. Amount sanity (negative, zero gross with lines)
+
+        Returns list of audit findings (warnings/corrections applied).
+        """
+        self.ensure_one()
+        findings = []
+
+        # --- 0. Vendor rules ---
+        vendor_rule = self._apply_vendor_rules(ocr_data, findings)
+
+        # --- 1. T-number check digit ---
+        if self.invoice_number and re.match(r'^T\d{13}$', self.invoice_number):
+            if not self._verify_corporate_number(self.invoice_number):
+                findings.append(f'T号校验码不通过: {self.invoice_number}')
+                # Don't clear it — might still be useful for manual review
+            else:
+                # Valid T-number: normalize seller name from local registry
+                self._normalize_seller_by_t_number(findings)
+
+        # --- 2. Date sanity ---
+        if self.invoice_date:
+            from datetime import date as dt_date
+            today = dt_date.today()
+            d = self.invoice_date
+
+            # Reiwa year misparse: year < 100 means likely Reiwa year
+            if d.year < 100:
+                reiwa_year = d.year + 2018  # Reiwa 1 = 2019
+                if 2019 <= reiwa_year <= today.year + 1:
+                    corrected = d.replace(year=reiwa_year)
+                    findings.append(f'日期令和补正: {d} → {corrected}')
+                    self.invoice_date = corrected
+                else:
+                    findings.append(f'日期异常(年份过小): {d}')
+
+            elif d > today:
+                # Allow up to 30 days in future (pre-dated invoices)
+                from datetime import timedelta
+                if d > today + timedelta(days=30):
+                    findings.append(f'日期异常(未来): {d}')
+
+            elif d.year < 2020:
+                # Additional check: could be a misinterpreted Reiwa date
+                # e.g. "7年" → Gemini guessed 2015 instead of 令和7=2025
+                self._try_fix_era_date(d, today, vendor_rule, findings)
+
+        # --- 3. Tax math verification ---
+        totals = ocr_data.get('totals_on_doc') or {}
+        ocr_gross = self._safe_float(totals.get('total_gross'))
+        ocr_tax = self._safe_float(totals.get('total_tax'))
+        if ocr_gross > 0 and self.amount > 0:
+            if abs(self.amount - ocr_gross) > 2:
+                findings.append(
+                    f'金额偏差: OCR gross={ocr_gross} vs computed={self.amount}'
+                )
+        if self.subtotal > 0 and self.tax_amount > 0 and self.amount > 0:
+            expected = self.subtotal + self.tax_amount
+            if abs(self.amount - expected) > 2:
+                findings.append(
+                    f'税金计算不匹配: {self.amount} != {self.subtotal}+{self.tax_amount}={expected}'
+                )
+
+        # --- 4. Amount sanity ---
+        if self.amount < 0:
+            findings.append(f'金额为负: {self.amount}')
+        if self.amount == 0 and self.line_ids:
+            findings.append('金额为0但有明细行')
+
+        # --- 5. Log findings ---
+        if findings:
+            audit_text = '\n'.join(f'• {f}' for f in findings)
+            _logger.info('OCR audit [%s] %s:\n%s', self.id, self.name, audit_text)
+
+        return findings
+
+    def _apply_vendor_rules(self, ocr_data, findings):
+        """Apply vendor-specific correction rules after OCR.
+
+        Returns the matched vendor rule (or empty recordset).
+        """
+        VendorRule = self.env['ocr.vendor.rule']
+        client_id = self.client_id.id if self.client_id else False
+        rule = VendorRule.match_vendor(client_id, self.seller_name)
+        if not rule:
+            return rule
+
+        findings.append(f'匹配供应商规则: {rule.vendor_pattern}')
+
+        # --- Force tax rate ---
+        if rule.force_tax_rate:
+            forced_rate = rule.force_tax_rate
+            changed = False
+            for line in self.line_ids:
+                if line.tax_rate != forced_rate:
+                    old_rate = line.tax_rate
+                    line.tax_rate = forced_rate
+                    changed = True
+            if changed:
+                findings.append(f'税率强制修正: → {forced_rate}%')
+
+        # --- Amount field correction (net→gross) ---
+        if rule.amount_field_is == 'net' and rule.force_tax_rate:
+            rate = int(rule.force_tax_rate)
+            for line in self.line_ids:
+                # The stored gross_amount is actually net; recalculate true gross
+                net_val = line.gross_amount
+                true_gross = round(net_val * (100 + rate) / 100)
+                if abs(true_gross - net_val) > 1:
+                    line.gross_amount = true_gross
+                    findings.append(
+                        f'金额税抜→税込修正: {net_val} → {true_gross} (+{rate}%)'
+                    )
+
+        return rule
+
+    def _try_fix_era_date(self, d, today, vendor_rule, findings):
+        """Try to fix dates that look like misinterpreted Japanese era years.
+
+        Common patterns where Gemini misreads era years:
+        - "7年10月18日" (令和7年=2025) → Gemini outputs 2015 or 2007
+        - "6年3月" (令和6年=2024) → Gemini outputs 2006
+
+        Strategy: try multiple Reiwa interpretations and pick the most plausible.
+        """
+        from datetime import date as dt_date
+
+        era_hint = vendor_rule.date_era if vendor_rule else 'auto'
+
+        # Build candidate Reiwa years from various Gemini misparse patterns
+        candidates = set()
+
+        # Pattern 1: year itself is the Reiwa number (e.g. 7 → R7=2025)
+        # This is caught earlier by year<100, but just in case
+        if d.year < 100:
+            candidates.add(d.year + 2018)
+
+        # Pattern 2: Gemini added 2000 (e.g. R7 → 2007)
+        if 2001 <= d.year <= 2020:
+            candidates.add((d.year - 2000) + 2018)
+
+        # Pattern 3: Gemini did some other mapping (e.g. R7 → 2015)
+        # Try reverse: what Reiwa year would give this date if we assume
+        # the document was created recently (within last ~3 years)?
+        # Brute force: check if any single-digit Reiwa year maps here
+        for reiwa_n in range(1, 20):  # R1~R19 (2019~2037)
+            western = reiwa_n + 2018
+            if 2019 <= western <= today.year + 1:
+                candidates.add(western)
+
+        # If vendor explicitly says Reiwa, be aggressive:
+        # These are recent business receipts, so year should be near today
+        # Prefer past dates: try last year first, then current year
+        if era_hint == 'reiwa':
+            for try_year in [today.year - 1, today.year]:
+                try:
+                    corrected = d.replace(year=try_year)
+                    # Accept if in the past or at most 30 days in the future
+                    delta = (corrected - today).days
+                    if -730 <= delta <= 30:
+                        findings.append(f'日期年号修正(令和): {d} → {corrected}')
+                        self.invoice_date = corrected
+                        return
+                except ValueError:
+                    continue
+
+        # Auto mode: only correct if pattern 2 gives a plausible recent year
+        if 2001 <= d.year <= 2020:
+            reiwa_guess = (d.year - 2000) + 2018
+            if 2019 <= reiwa_guess <= today.year + 1:
+                try:
+                    corrected = d.replace(year=reiwa_guess)
+                    findings.append(f'日期疑似令和误判: {d} → {corrected} (自动修正)')
+                    self.invoice_date = corrected
+                    return
+                except ValueError:
+                    pass
+
+        # If none of the corrections apply, just flag it
+        findings.append(f'日期异常(过旧): {d}')
+
+    def _normalize_seller_by_t_number(self, findings):
+        """If same T-number exists with a more complete seller name, use it."""
+        if not self.invoice_number or not self.seller_name:
+            return
+        existing = self.search([
+            ('invoice_number', '=', self.invoice_number),
+            ('id', '!=', self.id),
+            ('seller_name', '!=', False),
+            ('state', 'in', ['done', 'confirmed']),
+        ], limit=10)
+        if not existing:
+            return
+        # Pick the longest (most complete) seller name
+        names = [r.seller_name for r in existing if r.seller_name]
+        if not names:
+            return
+        best = max(names, key=len)
+        if len(best) > len(self.seller_name) and self.seller_name in best:
+            findings.append(f'店名标准化: "{self.seller_name}" → "{best}"')
+            self.seller_name = best
+
     def _apply_extracted(self, data):
         """Apply structured data from central OCR service into line items."""
         # --- Issuer ---
         issuer = data.get('issuer') or {}
         self.seller_name = issuer.get('issuer_name') or ''
-        self.invoice_number = issuer.get('invoice_reg_no') or ''
+        raw_inv = issuer.get('invoice_reg_no') or ''
+        self.invoice_number = raw_inv if self._is_valid_invoice_number(raw_inv) else ''
 
         # --- Document ---
         doc = data.get('document') or {}
@@ -311,7 +595,7 @@ class OcrDocument(models.Model):
         # --- Account name → selection key ---
         account_name_to_key = {
             '仕入高': 'shiire', '消耗品費': 'shoumouhin', '事務用品費': 'jimu',
-            '交際費': 'kousai', '福利厚生費': 'fukuri', '旅費交通費': 'ryohi',
+            '交際費': 'kousai', '会議費': 'kaigi', '福利厚生費': 'kaigi', '旅費交通費': 'ryohi',
             '通信費': 'tsuushin', '水道光熱費': 'suido', '租税公課': 'sozei',
             '雑費': 'zappi',
         }
@@ -534,6 +818,59 @@ class OcrDocument(models.Model):
             self.env['ocr.document.line'].create(data)
 
     # ------------------------------------------------------------------
+    # Duplicate detection
+    # ------------------------------------------------------------------
+
+    def _check_duplicate(self):
+        """Check for duplicate documents after recognition.
+
+        Match criteria (any hit marks as duplicate):
+        1. Same invoice_number (must be valid, not a placeholder)
+        2. Same seller_name + invoice_date + amount (all non-empty)
+        """
+        self.ensure_one()
+        Doc = self.env['ocr.document']
+        duplicates = Doc
+        reason = ''
+
+        # 1. Invoice number match — only if valid (skip placeholders like 0000000)
+        if self.invoice_number and self._is_valid_invoice_number(self.invoice_number):
+            dups = Doc.search([
+                ('id', '!=', self.id),
+                ('invoice_number', '=', self.invoice_number),
+                ('state', '!=', 'draft'),
+            ])
+            if dups:
+                duplicates |= dups
+                reason = f'发票号重复: {self.invoice_number}'
+
+        # 2. Seller + date + amount match
+        if self.seller_name and self.invoice_date and self.amount > 0:
+            dups = Doc.search([
+                ('id', '!=', self.id),
+                ('seller_name', '=', self.seller_name),
+                ('invoice_date', '=', self.invoice_date),
+                ('amount', '=', self.amount),
+                ('state', '!=', 'draft'),
+            ])
+            if dups:
+                duplicates |= dups
+                reason = f'店铺+日期+金额重复: {self.seller_name} {self.invoice_date} ¥{self.amount}'
+
+        if duplicates:
+            self.write({
+                'is_duplicate': True,
+                'duplicate_ids': [(6, 0, duplicates.ids)],
+                'duplicate_reason': reason,
+            })
+        else:
+            self.write({
+                'is_duplicate': False,
+                'duplicate_ids': [(5,)],
+                'duplicate_reason': False,
+            })
+
+    # ------------------------------------------------------------------
     # Actions
     # ------------------------------------------------------------------
 
@@ -670,3 +1007,181 @@ class OcrDocument(models.Model):
             'tag': 'display_notification',
             'params': {'message': f'已自动分类 {sum(len(r.line_ids) for r in self)} 条明细', 'type': 'success'}
         }
+
+    # ------------------------------------------------------------------
+    # Cron: background recognition queue
+    # ------------------------------------------------------------------
+
+    @api.model
+    def _cron_recognize_queue(self, batch_size=5):
+        """Process pending documents in background (called by ir.cron).
+
+        Uses SELECT ... FOR UPDATE SKIP LOCKED to allow safe concurrent
+        execution from multiple workers without duplicate processing.
+        """
+        # Grab a batch with row-level locking (skip rows locked by other workers)
+        self.env.cr.execute("""
+            SELECT id FROM ocr_document
+            WHERE state = 'draft'
+            ORDER BY create_date
+            LIMIT %s
+            FOR UPDATE SKIP LOCKED
+        """, (batch_size,))
+        ids = [r[0] for r in self.env.cr.fetchall()]
+
+        if not ids:
+            return
+
+        # Mark as processing and commit so other workers skip these
+        self.env.cr.execute("""
+            UPDATE ocr_document SET state = 'processing'
+            WHERE id = ANY(%s)
+        """, (ids,))
+        self.env.cr.commit()
+
+        docs = self.browse(ids)
+        _logger.info('OCR queue: processing %d documents (IDs %s)', len(docs), ids[:3])
+        done = 0
+        fail = 0
+
+        for doc in docs:
+            try:
+                doc.action_recognize()
+                if doc.state == 'done':
+                    done += 1
+                else:
+                    fail += 1
+            except Exception as e:
+                doc.state = 'error'
+                doc.error_message = str(e)
+                fail += 1
+                _logger.exception('OCR queue error on doc %s: %s', doc.id, e)
+            self.env.cr.commit()
+
+        _logger.info('OCR queue complete: %d done, %d failed', done, fail)
+
+    @api.model
+    def _recover_stuck_processing(self):
+        """Reset documents stuck in 'processing' state for >15 minutes."""
+        self.env.cr.execute("""
+            UPDATE ocr_document SET state = 'draft'
+            WHERE state = 'processing'
+              AND write_date < now() - interval '15 minutes'
+            RETURNING id
+        """)
+        recovered = self.env.cr.fetchall()
+        if recovered:
+            self.env.cr.commit()
+            _logger.warning('OCR: recovered %d stuck processing docs', len(recovered))
+
+    # ------------------------------------------------------------------
+    # Server-side folder import
+    # ------------------------------------------------------------------
+
+    INBOX_DIR = '/var/lib/odoo/ocr_inbox'
+    ARCHIVE_DIR = '/var/lib/odoo/ocr_inbox/_done'
+    ALLOWED_EXT = {'.jpg', '.jpeg', '.png', '.webp', '.bmp', '.gif', '.pdf'}
+
+    @api.model
+    def _cron_scan_inbox(self):
+        """Scan server inbox folder and import images as draft documents.
+
+        Supported folder structures:
+          /var/lib/odoo/ocr_inbox/
+            客户名称/              ← auto-create ocr.client if not found
+              2026-03/            ← optional month subfolder (ignored for matching)
+                image1.jpg
+              image2.png          ← files directly under client folder also work
+            loose_image.jpg       ← no client assigned
+
+        After import, files are moved to _done/ subfolder.
+        """
+        import pathlib
+        import shutil
+
+        inbox = pathlib.Path(self.INBOX_DIR)
+        if not inbox.exists():
+            inbox.mkdir(parents=True, exist_ok=True)
+            _logger.info('OCR inbox created: %s', inbox)
+            return
+
+        archive = pathlib.Path(self.ARCHIVE_DIR)
+        archive.mkdir(parents=True, exist_ok=True)
+
+        Client = self.env['ocr.client']
+        client_cache = {}  # folder_name -> ocr.client record
+        count = 0
+
+        for path in sorted(inbox.rglob('*')):
+            if path.is_dir():
+                continue
+            if path.suffix.lower() not in self.ALLOWED_EXT:
+                continue
+            # Skip _done archive folder
+            rel = path.relative_to(inbox)
+            if '_done' in rel.parts:
+                continue
+
+            # Determine client from top-level subfolder name
+            # Structure: inbox/client_name/[month/]file.jpg
+            client = False
+            parts = rel.parts  # e.g. ('永代商事', '2026-03', 'file.jpg')
+            if len(parts) >= 2:
+                client_folder = parts[0]
+                if client_folder not in client_cache:
+                    found = Client.search([
+                        '|', ('code', '=', client_folder),
+                        ('name', '=', client_folder),
+                    ], limit=1)
+                    if not found:
+                        # Auto-create client from folder name
+                        found = Client.create({'name': client_folder})
+                        _logger.info('OCR inbox: auto-created client "%s"', client_folder)
+                    client_cache[client_folder] = found
+                client = client_cache[client_folder]
+
+            # --- Dedup: skip if same filename + client already exists ---
+            dup_domain = [('image_filename', '=', path.name)]
+            if client:
+                dup_domain.append(('client_id', '=', client.id))
+            else:
+                dup_domain.append(('client_id', '=', False))
+            if self.search_count(dup_domain, limit=1):
+                _logger.info('OCR inbox: skip duplicate %s (client=%s)',
+                             path.name, client.name if client else 'none')
+                # Still move to archive so it doesn't re-scan
+                dest = archive / rel
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                shutil.move(str(path), str(dest))
+                continue
+
+            try:
+                raw = path.read_bytes()
+                b64_data = base64.b64encode(raw)
+
+                vals = {
+                    'name': path.name,
+                    'image': b64_data,
+                    'image_filename': path.name,
+                }
+                if client:
+                    vals['client_id'] = client.id
+
+                self.create(vals)
+                count += 1
+
+                # Move to archive
+                dest = archive / rel
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                shutil.move(str(path), str(dest))
+
+            except Exception as e:
+                _logger.exception('OCR inbox import failed for %s: %s', path, e)
+
+            # Commit every 10 files
+            if count % 10 == 0:
+                self.env.cr.commit()
+
+        if count:
+            self.env.cr.commit()
+            _logger.info('OCR inbox: imported %d files', count)

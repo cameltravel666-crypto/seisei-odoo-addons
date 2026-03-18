@@ -29,6 +29,13 @@
                 </header>
                 <sheet>
                     <field name="image_filename" invisible="1"/>
+                    <div class="alert alert-warning" role="alert"
+                         invisible="not is_duplicate">
+                        <strong>⚠ 疑似重复票据：</strong>
+                        <field name="duplicate_reason" readonly="1"/>
+                        <span> — 相关票据：</span>
+                        <field name="duplicate_ids" widget="many2many_tags" readonly="1"/>
+                    </div>
                     <div class="ocr_split_layout">
                         <!-- Left: data + line items -->
                         <div class="ocr_data_panel">
@@ -120,7 +127,7 @@
         <field name="arch" type="xml">
             <list string="票据识别"
                   decoration-success="state=='done'"
-                  decoration-danger="state=='error'"
+                  decoration-danger="state=='error' or is_duplicate"
                   decoration-info="state=='draft'"
                   decoration-muted="state=='confirmed'">
                 <header>
@@ -135,6 +142,7 @@
                 <field name="invoice_date"/>
                 <field name="amount" string="税込" sum="总金额"/>
                 <field name="tax_amount" string="税額" sum="总税额"/>
+                <field name="is_duplicate" string="重复" widget="boolean" optional="show"/>
                 <field name="state"/>
             </list>
         </field>
@@ -155,6 +163,7 @@
                 <filter string="已识别" name="done" domain="[('state','=','done')]"/>
                 <filter string="已确认" name="confirmed" domain="[('state','=','confirmed')]"/>
                 <filter string="识别失败" name="error" domain="[('state','=','error')]"/>
+                <filter string="疑似重复" name="duplicate" domain="[('is_duplicate','=',True)]"/>
                 <separator/>
                 <filter string="零售小票" name="retail" domain="[('doc_type','=','retail_receipt')]"/>
                 <filter string="适格请求书" name="qualified" domain="[('doc_type','=','qualified_invoice')]"/>
@@ -222,6 +231,19 @@
                                     <field name="credit_account"/>
                                     <field name="hit_count"/>
                                     <field name="last_used"/>
+                                    <field name="active"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="供应商识别规则">
+                            <field name="vendor_rule_ids">
+                                <list editable="bottom">
+                                    <field name="vendor_pattern"/>
+                                    <field name="priority"/>
+                                    <field name="force_tax_rate"/>
+                                    <field name="date_era"/>
+                                    <field name="amount_field_is"/>
+                                    <field name="ocr_hints"/>
                                     <field name="active"/>
                                 </list>
                             </field>

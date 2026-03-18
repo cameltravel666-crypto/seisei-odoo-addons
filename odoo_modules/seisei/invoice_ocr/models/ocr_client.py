@@ -24,6 +24,7 @@ class OcrClient(models.Model):
     )
     rule_ids = fields.One2many('ocr.account.rule', 'client_id', '学习规则')
     rule_count = fields.Integer('规则数', compute='_compute_document_count')
+    vendor_rule_ids = fields.One2many('ocr.vendor.rule', 'client_id', '供应商识别规则')
 
     def _compute_document_count(self):
         for rec in self:
