@@ -801,8 +801,8 @@ class OcrDocument(models.Model):
         # --- Line items ---
         # Filter out tax summary lines that Gemini sometimes includes as items
         _SUMMARY_PATTERNS = re.compile(
-            r'(小計|合計|税込|税抜金額|税抜対象|消費税|内税|外税|対象額|税額|'
-            r'税率\s*\d|内消費税|\d+%税抜|\d+%税込|お預り|お釣り|現計)'
+            r'^(小計|合計|税込合計|税抜金額|税抜対象|税抜御買上額|消費税|内税|外税|対象額|税額|税抜|'
+            r'税率\s*\d.*|内消費税|\d+%税抜(金額|対象額?|合計)|\d+%税込(金額|対象額?|合計)|お預り|お釣り|現計)$'
         )
         # Payment method lines: skip only when there are other real item lines
         _PAYMENT_PATTERNS = re.compile(
@@ -818,7 +818,7 @@ class OcrDocument(models.Model):
             payment_items = []
             for item in lines:
                 name = item.get('name') or item.get('description') or ''
-                if _SUMMARY_PATTERNS.search(name):
+                if _SUMMARY_PATTERNS.match(name.strip()):
                     continue  # always skip tax subtotals
                 if _PAYMENT_PATTERNS.match(name.strip()):
                     payment_items.append(item)
