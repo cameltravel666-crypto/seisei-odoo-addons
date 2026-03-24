@@ -10,6 +10,7 @@ from odoo import models, fields, api
 from odoo.exceptions import UserError
 
 from ..utils.image import compress_image
+from .ocr_document_line import _resolve_account
 
 _logger = logging.getLogger(__name__)
 
@@ -19,53 +20,90 @@ OCR_SERVICE_KEY = os.getenv("OCR_SERVICE_KEY", "")
 
 class OcrDocument(models.Model):
     _name = 'ocr.document'
-    _description = '票据识别'
+    _description = 'OCR Document'
     _order = 'create_date desc'
 
-    name = fields.Char('名称', required=True, default='新票据')
-    image = fields.Binary('票据图片', required=True)
-    image_filename = fields.Char('文件名')
+    name = fields.Char('Name', required=True, default='New Document')
+    image = fields.Binary('Document Image', required=True)
+    image_filename = fields.Char('Filename')
 
     doc_type = fields.Selection([
-        ('retail_receipt', '零售小票'),
-        ('qualified_invoice', '适格请求书'),
-        ('vat_invoice', '增值税发票'),
-        ('other', '其他'),
-    ], string='票据类型', default='other')
+        ('retail_receipt', 'Retail Receipt'),
+        ('qualified_invoice', 'Qualified Invoice'),
+        ('vat_invoice', 'VAT Invoice'),
+        ('other', 'Other'),
+    ], string='Document Type', default='other')
 
     state = fields.Selection([
-        ('draft', '待识别'),
-        ('processing', '识别中'),
-        ('done', '已识别'),
-        ('confirmed', '已确认'),
-        ('error', '识别失败'),
-    ], string='状态', default='draft')
+        ('draft', 'Pending'),
+        ('processing', 'Processing'),
+        ('done', 'Recognized'),
+        ('reviewed', 'Reviewed'),
+        ('confirmed', 'Confirmed'),
+        ('error', 'Error'),
+    ], string='Status', default='draft')
 
-    ocr_result = fields.Text('识别原文')
-    invoice_number = fields.Char('发票号码/登录番号')
-    invoice_date = fields.Date('开票日期')
-    seller_name = fields.Char('开票方/销售方')
-    buyer_name = fields.Char('收票方/购买方')
-    client_id = fields.Many2one('ocr.client', '客户')
+    ocr_result = fields.Text('OCR Raw Result')
+    invoice_number = fields.Char('Invoice Number')
+    invoice_date = fields.Date('Invoice Date')
+    seller_name = fields.Char('Seller')
+    buyer_name = fields.Char('Buyer')
+    client_id = fields.Many2one('ocr.client', 'Client')
 
-    line_ids = fields.One2many('ocr.document.line', 'document_id', '商品明细')
+    # --- BPO operator tracking ---
+    scan_operator_id = fields.Many2one(
+        'res.users', 'Scanner',
+        help='Operator who scanned the physical document',
+    )
+    scan_date = fields.Datetime('Scan Time')
+    upload_operator_id = fields.Many2one(
+        'res.users', 'Uploader',
+        help='Operator who uploaded the file (recorded automatically)',
+        default=lambda self: self.env.uid,
+    )
+    upload_date = fields.Datetime(
+        'Upload Time', default=fields.Datetime.now, readonly=True,
+    )
+    review_operator_id = fields.Many2one(
+        'res.users', 'Reviewer',
+        help='Operator who reviewed and verified the OCR result',
+    )
+    review_date = fields.Datetime('Review Time')
+    confirm_operator_id = fields.Many2one(
+        'res.users', 'Approver',
+        help='Operator who gave final approval (before export)',
+    )
+    confirm_date = fields.Datetime('Approval Time')
+    has_correction = fields.Boolean(
+        'Has Correction', default=False,
+        help='Whether the OCR result was manually corrected during review',
+    )
+
+    line_ids = fields.One2many('ocr.document.line', 'document_id', 'Line Items')
 
     # Computed from lines
-    amount = fields.Float('税込合計', digits=(16, 2), compute='_compute_totals', store=True)
-    tax_amount = fields.Float('消費税合計', digits=(16, 2), compute='_compute_totals', store=True)
-    subtotal = fields.Float('税抜合計', digits=(16, 2), compute='_compute_totals', store=True)
+    amount = fields.Float('Total (Tax-incl.)', digits=(16, 2), compute='_compute_totals', store=True)
+    tax_amount = fields.Float('Total Tax', digits=(16, 2), compute='_compute_totals', store=True)
+    subtotal = fields.Float('Total (Tax-excl.)', digits=(16, 2), compute='_compute_totals', store=True)
 
-    account_move_id = fields.Many2one('account.move', '关联账单')
-    process_time = fields.Float('处理时间(秒)')
-    error_message = fields.Text('错误信息')
-
-    # Duplicate detection
-    is_duplicate = fields.Boolean('疑似重复', default=False, readonly=True)
-    duplicate_ids = fields.Many2many(
-        'ocr.document', 'ocr_document_duplicate_rel', 'doc_id', 'dup_doc_id',
-        string='重复票据', readonly=True,
+    summary = fields.Char(
+        'Summary', readonly=True, copy=False,
+        help='摘要: No.{seq}--{MM/DD}-{seller}, assigned during Yayoi export',
     )
-    duplicate_reason = fields.Char('重复原因', readonly=True)
+
+    # Multi-receipt splitting
+    source_document_id = fields.Many2one(
+        'ocr.document', 'Source (Multi-receipt)', readonly=True,
+        ondelete='set null', copy=False,
+    )
+    split_document_ids = fields.One2many(
+        'ocr.document', 'source_document_id', 'Split Documents',
+    )
+    receipt_index = fields.Integer('Receipt # on Page', readonly=True, default=0)
+
+    account_move_id = fields.Many2one('account.move', 'Related Bill')
+    process_time = fields.Float('Process Time (sec)')
+    error_message = fields.Text('Error Message')
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -182,7 +220,7 @@ class OcrDocument(models.Model):
             self.env['bus.bus']._sendone(
                 self.env.user.partner_id,
                 'simple_notification',
-                {'title': '票据识别', 'message': message, 'type': 'info', 'sticky': sticky},
+                {'title': 'OCR Recognition', 'message': message, 'type': 'info', 'sticky': sticky},
             )
             self.env.cr.commit()
         except Exception:
@@ -196,12 +234,12 @@ class OcrDocument(models.Model):
         for idx, record in enumerate(self, 1):
             if not record.image:
                 record.state = 'error'
-                record.error_message = '无票据图片'
+                record.error_message = 'No document image'
                 fail_count += 1
                 continue
 
             if total > 1:
-                record._notify_progress(f'正在识别 {idx}/{total}: {record.name}')
+                record._notify_progress(f'Recognizing {idx}/{total}: {record.name}')
 
             start = time.time()
             try:
@@ -227,14 +265,14 @@ class OcrDocument(models.Model):
 
                 if response.status_code != 200:
                     record.state = 'error'
-                    record.error_message = f'API 错误: {response.status_code}'
+                    record.error_message = f'API error: {response.status_code}'
                     continue
 
                 result = response.json()
 
                 if not result.get('success'):
                     record.state = 'error'
-                    record.error_message = result.get('error_code', '识别失败')
+                    record.error_message = result.get('error_code', 'Recognition failed')
                     continue
 
                 raw = result.get('raw_response', '')
@@ -257,8 +295,26 @@ class OcrDocument(models.Model):
                 elif raw:
                     record.ocr_result = raw
 
-                if parsed and ('totals_on_doc' in parsed or 'issuer' in parsed):
+                # Multi-receipt: if OCR returned receipts array with >1 items
+                receipts = parsed.get('receipts') if parsed else None
+                if receipts and len(receipts) > 1:
+                    split_docs = record._split_multi_receipt(receipts)
+                    done_count += 1
+                elif receipts and len(receipts) == 1:
+                    # Single receipt in new array format — unwrap
+                    single = receipts[0]
+                    record._apply_extracted(single)
+                    record._post_ocr_audit(single)
+                    record.state = 'done'
+
+                    done_count += 1
+                elif parsed and ('totals_on_doc' in parsed or 'issuer' in parsed):
+                    # Old single-receipt format (backward compat)
                     record._apply_extracted(parsed)
+                    record._post_ocr_audit(parsed)
+                    record.state = 'done'
+
+                    done_count += 1
                 elif raw and isinstance(raw, str) and not raw.strip().startswith('{'):
                     texts = raw.split('\n')
                     record.doc_type = record._detect_doc_type(texts)
@@ -266,13 +322,10 @@ class OcrDocument(models.Model):
                         record._extract_qualified_invoice(texts)
                     else:
                         record._extract_retail_receipt(texts)
+                    record._post_ocr_audit({})
+                    record.state = 'done'
 
-                # Post-OCR audit: validate & auto-correct
-                record._post_ocr_audit(parsed or {})
-
-                record.state = 'done'
-                record._check_duplicate()
-                done_count += 1
+                    done_count += 1
 
             except Exception as e:
                 record.state = 'error'
@@ -286,18 +339,113 @@ class OcrDocument(models.Model):
                 self.env.cr.commit()
 
         if total > 1:
-            msg = f'识别完成: {done_count} 成功'
+            msg = f'Recognition complete: {done_count} success'
             if fail_count:
-                msg += f', {fail_count} 失败'
+                msg += f', {fail_count} failed'
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
                 'params': {
-                    'title': '批量识别',
+                    'title': 'Batch Recognition',
                     'message': msg,
                     'type': 'success' if fail_count == 0 else 'warning',
                     'sticky': False,
                     'next': {'type': 'ir.actions.act_window_close'},
+                },
+            }
+
+    # ------------------------------------------------------------------
+    # Multi-receipt splitting
+    # ------------------------------------------------------------------
+
+    def _split_multi_receipt(self, receipts):
+        """Split a multi-receipt image into separate ocr.document records.
+
+        The original document becomes a container (state='done') and
+        new documents are created for each detected receipt.
+        """
+        self.ensure_one()
+        created = self.env['ocr.document']
+
+        # Sort by position (row, col) if available for left-right top-down order
+        def _sort_key(r):
+            pos = r.get('position') or {}
+            return (pos.get('row', 99), pos.get('col', 99))
+        receipts_sorted = sorted(receipts, key=_sort_key)
+
+        for i, receipt_data in enumerate(receipts_sorted, 1):
+            pos = receipt_data.get('position') or {}
+            pos_label = f'R{pos["row"]}C{pos["col"]}' if pos.get('row') else f'#{i}'
+            new_doc = self.env['ocr.document'].create({
+                'name': f'{self.name} {pos_label}',
+                'image': self.image,
+                'image_filename': self.image_filename or '',
+                'client_id': self.client_id.id if self.client_id else False,
+                'source_document_id': self.id,
+                'receipt_index': i,
+                'scan_operator_id': self.scan_operator_id.id if self.scan_operator_id else False,
+                'upload_operator_id': self.upload_operator_id.id if self.upload_operator_id else False,
+                'upload_date': self.upload_date,
+                'state': 'draft',
+                'ocr_result': json.dumps(receipt_data, indent=2, ensure_ascii=False),
+            })
+            try:
+                new_doc._apply_extracted(receipt_data)
+                new_doc._post_ocr_audit(receipt_data)
+                new_doc.state = 'done'
+            except Exception as e:
+                new_doc.state = 'error'
+                new_doc.error_message = str(e)
+                _logger.exception('Multi-receipt split error on #%d: %s', i, e)
+            created |= new_doc
+
+        # Mark original as container
+        self.state = 'done'
+        self.error_message = f'Multi-receipt: split into {len(receipts)} documents'
+        return created
+
+    # ------------------------------------------------------------------
+    # Re-apply: regenerate lines from stored ocr_result
+    # ------------------------------------------------------------------
+
+    def action_reapply_ocr_data(self):
+        """Re-generate line items from stored OCR result JSON.
+
+        Useful when OCR result exists but lines were not created
+        (e.g. due to earlier bugs or format changes).
+        """
+        count = 0
+        for record in self:
+            if not record.ocr_result:
+                continue
+            try:
+                parsed = json.loads(record.ocr_result)
+            except (ValueError, TypeError):
+                continue
+            if not isinstance(parsed, dict):
+                continue
+            # Handle multi-receipt format
+            receipts = parsed.get('receipts')
+            if receipts and len(receipts) > 1:
+                record._split_multi_receipt(receipts)
+                count += 1
+            elif receipts and len(receipts) == 1:
+                record._apply_extracted(receipts[0])
+                record._post_ocr_audit(receipts[0])
+                count += 1
+            elif parsed.get('lines') or parsed.get('totals_on_doc') or parsed.get('issuer'):
+                record._apply_extracted(parsed)
+                record._post_ocr_audit(parsed)
+                count += 1
+
+        if len(self) > 1:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': f'Re-applied OCR data: {count}/{len(self)} documents updated',
+                    'type': 'success',
+                    'sticky': False,
                 },
             }
 
@@ -636,29 +784,64 @@ class OcrDocument(models.Model):
         # --- Default tax rate from document-level data ---
         default_rate = self._infer_tax_rate(data)
 
-        # --- Account name → selection key ---
-        account_name_to_key = {
-            '仕入高': 'shiire', '消耗品費': 'shoumouhin', '事務用品費': 'jimu',
-            '交際費': 'kousai', '会議費': 'kaigi', '福利厚生費': 'kaigi', '旅費交通費': 'ryohi',
-            '通信費': 'tsuushin', '水道光熱費': 'suido', '租税公課': 'sozei',
-            '雑費': 'zappi',
-        }
+        # --- Account name → ocr.account id lookup ---
+        OcrAccount = self.env['ocr.account']
+        all_debit_accounts = OcrAccount.search([('account_type', '=', 'debit'), ('active', '=', True)])
+        account_name_to_id = {a.name: a.id for a in all_debit_accounts}
+        # Also support yayoi_name as alias
+        for a in all_debit_accounts:
+            if a.yayoi_name and a.yayoi_name not in account_name_to_id:
+                account_name_to_id[a.yayoi_name] = a.id
+        # Legacy hardcoded aliases
+        _legacy_aliases = {'福利厚生費': '会議費'}
+        for alias, target in _legacy_aliases.items():
+            if alias not in account_name_to_id and target in account_name_to_id:
+                account_name_to_id[alias] = account_name_to_id[target]
 
         # --- Line items ---
+        # Filter out tax summary lines that Gemini sometimes includes as items
+        _SUMMARY_PATTERNS = re.compile(
+            r'(小計|合計|税込|税抜金額|税抜対象|消費税|内税|外税|対象額|税額|'
+            r'税率\s*\d|内消費税|\d+%税抜|\d+%税込|お預り|お釣り|現計)'
+        )
+        # Payment method lines: skip only when there are other real item lines
+        _PAYMENT_PATTERNS = re.compile(
+            r'^(クレジット|現金|電子マネー|PayPay|Suica|交通系IC|QR決済)$'
+        )
+
         lines = data.get('lines') or []
         if lines:
             self.line_ids.unlink()
-            for i, item in enumerate(lines):
+
+            # Separate real items from summary/payment lines
+            real_items = []
+            payment_items = []
+            for item in lines:
+                name = item.get('name') or item.get('description') or ''
+                if _SUMMARY_PATTERNS.search(name):
+                    continue  # always skip tax subtotals
+                if _PAYMENT_PATTERNS.match(name.strip()):
+                    payment_items.append(item)
+                else:
+                    real_items.append(item)
+
+            # If only payment lines remain (no real items), treat them as items
+            items_to_create = real_items if real_items else payment_items
+
+            seq = 0
+            for item in items_to_create:
+                name = item.get('name') or item.get('description') or ''
+                seq += 1
                 raw_rate = str(item.get('tax_rate') or '').replace('%', '').strip()
                 tax_rate = raw_rate if raw_rate in ('0', '8', '10') else default_rate
 
                 suggested = item.get('suggested_account') or ''
-                debit_key = account_name_to_key.get(suggested, '')
+                debit_id = account_name_to_id.get(suggested, False)
 
                 vals = {
                     'document_id': self.id,
-                    'sequence': (i + 1) * 10,
-                    'name': item.get('name') or item.get('description') or '',
+                    'sequence': seq * 10,
+                    'name': name,
                     'quantity': self._safe_float(item.get('qty'), default=1),
                     'unit': item.get('unit') or '',
                     'gross_amount': self._safe_float(
@@ -666,12 +849,17 @@ class OcrDocument(models.Model):
                     ),
                     'tax_rate': tax_rate,
                 }
-                if debit_key:
-                    vals['debit_account'] = debit_key
+                if debit_id:
+                    vals['debit_account'] = debit_id
                 self.env['ocr.document.line'].create(vals)
 
-        # Fallback: if no lines from OCR but we have totals, create a single line
-        if not lines:
+            # Auto-detect: if line amounts are actually net (税抜/外税)
+            # Compare line sum vs OCR total_gross to detect
+            if self.line_ids:
+                self._auto_fix_net_as_gross(data)
+
+        # Fallback: if no lines created (OCR had no lines, or all were filtered)
+        if not self.line_ids:
             totals = data.get('totals_on_doc') or {}
             total_gross = self._safe_float(totals.get('total_gross'))
             if total_gross > 0:
@@ -684,6 +872,86 @@ class OcrDocument(models.Model):
                     'gross_amount': total_gross,
                     'tax_rate': default_rate,
                 })
+
+    def _auto_fix_net_as_gross(self, data):
+        """Auto-detect and fix when line gross_amount actually holds net (税抜) values.
+
+        Common on Japanese receipts with 外税 (outside tax) pricing.
+
+        Detection strategy (in order):
+        1. line_sum vs ocr_total_gross: if line_sum × (1+rate) ≈ total_gross
+        2. by_rate cross-check: if line_sum ≈ by_rate net sum but != by_rate gross sum
+        3. Tax math: compute tax both ways, see which matches OCR tax better
+        """
+        totals = data.get('totals_on_doc') or {}
+        by_rate = totals.get('by_rate') or {}
+
+        line_sum = sum(l.gross_amount for l in self.line_ids if l.gross_amount)
+        if line_sum <= 0:
+            return
+
+        # --- Strategy 1: line_sum vs total_gross (simple single-rate case) ---
+        ocr_gross = self._safe_float(totals.get('total_gross'))
+        if ocr_gross > 0 and abs(line_sum - ocr_gross) > 2:
+            for rate in (10, 8):
+                expected_gross = round(line_sum * (100 + rate) / 100)
+                if abs(expected_gross - ocr_gross) <= 2:
+                    self._convert_lines_net_to_gross()
+                    _logger.info('net→gross fix [%s] strategy=1: line_sum=%s, total_gross=%s',
+                                 self.name, line_sum, ocr_gross)
+                    return
+
+        # --- Strategy 2: by_rate cross-check (handles mixed 8%+10%) ---
+        if by_rate:
+            by_rate_net_sum = 0
+            by_rate_gross_sum = 0
+            for rate_key, rate_data in by_rate.items():
+                if rate_key in ('exempt', '0%'):
+                    continue
+                by_rate_net_sum += self._safe_float((rate_data or {}).get('net'))
+                by_rate_gross_sum += self._safe_float((rate_data or {}).get('gross'))
+
+            if by_rate_gross_sum > 0 and by_rate_net_sum > 0:
+                # line_sum ≈ by_rate net sum → lines are net values
+                # Tolerance: 1% of line_sum or min 20 yen (handles ポイント/レジ袋 差異)
+                tol = max(20, line_sum * 0.01)
+                if (abs(line_sum - by_rate_net_sum) <= tol
+                        and abs(line_sum - by_rate_gross_sum) > tol):
+                    self._convert_lines_net_to_gross()
+                    _logger.info('net→gross fix [%s] strategy=2: line_sum=%s≈net=%s, gross=%s',
+                                 self.name, line_sum, by_rate_net_sum, by_rate_gross_sum)
+                    return
+
+        # --- Strategy 3: tax math comparison (fallback) ---
+        ocr_tax = self._safe_float(totals.get('total_tax'))
+        if ocr_tax > 0:
+            # Compute tax assuming lines are net vs gross
+            tax_if_net = 0
+            tax_if_gross = 0
+            for line in self.line_ids:
+                if line.gross_amount == 0:
+                    continue
+                rate = int(line.tax_rate or '0') if line.tax_rate in ('0', '8', '10') else 10
+                if rate > 0:
+                    tax_if_net += abs(line.gross_amount) * rate / 100
+                    tax_if_gross += abs(line.gross_amount) * rate / (100 + rate)
+
+            diff_net = abs(tax_if_net - ocr_tax)
+            diff_gross = abs(tax_if_gross - ocr_tax)
+            if diff_net < diff_gross and diff_net < 10:
+                self._convert_lines_net_to_gross()
+                _logger.info('net→gross fix [%s] strategy=3: tax_if_net=%.0f≈ocr_tax=%.0f',
+                             self.name, tax_if_net, ocr_tax)
+
+    def _convert_lines_net_to_gross(self):
+        """Convert all line gross_amount from net (税抜) to gross (税込)."""
+        for line in self.line_ids:
+            if line.gross_amount == 0:
+                continue
+            rate = int(line.tax_rate or '0') if line.tax_rate in ('0', '8', '10') else 0
+            if rate > 0:
+                sign = 1 if line.gross_amount >= 0 else -1
+                line.gross_amount = sign * round(abs(line.gross_amount) * (100 + rate) / 100)
 
     # ------------------------------------------------------------------
     # Legacy text-based extraction (fallback)
@@ -862,59 +1130,6 @@ class OcrDocument(models.Model):
             self.env['ocr.document.line'].create(data)
 
     # ------------------------------------------------------------------
-    # Duplicate detection
-    # ------------------------------------------------------------------
-
-    def _check_duplicate(self):
-        """Check for duplicate documents after recognition.
-
-        Match criteria (any hit marks as duplicate):
-        1. Same invoice_number (must be valid, not a placeholder)
-        2. Same seller_name + invoice_date + amount (all non-empty)
-        """
-        self.ensure_one()
-        Doc = self.env['ocr.document']
-        duplicates = Doc
-        reason = ''
-
-        # 1. Invoice number match — only if valid (skip placeholders like 0000000)
-        if self.invoice_number and self._is_valid_invoice_number(self.invoice_number):
-            dups = Doc.search([
-                ('id', '!=', self.id),
-                ('invoice_number', '=', self.invoice_number),
-                ('state', '!=', 'draft'),
-            ])
-            if dups:
-                duplicates |= dups
-                reason = f'发票号重复: {self.invoice_number}'
-
-        # 2. Seller + date + amount match
-        if self.seller_name and self.invoice_date and self.amount > 0:
-            dups = Doc.search([
-                ('id', '!=', self.id),
-                ('seller_name', '=', self.seller_name),
-                ('invoice_date', '=', self.invoice_date),
-                ('amount', '=', self.amount),
-                ('state', '!=', 'draft'),
-            ])
-            if dups:
-                duplicates |= dups
-                reason = f'店铺+日期+金额重复: {self.seller_name} {self.invoice_date} ¥{self.amount}'
-
-        if duplicates:
-            self.write({
-                'is_duplicate': True,
-                'duplicate_ids': [(6, 0, duplicates.ids)],
-                'duplicate_reason': reason,
-            })
-        else:
-            self.write({
-                'is_duplicate': False,
-                'duplicate_ids': [(5,)],
-                'duplicate_reason': False,
-            })
-
-    # ------------------------------------------------------------------
     # Actions
     # ------------------------------------------------------------------
 
@@ -929,8 +1144,8 @@ class OcrDocument(models.Model):
 
     def action_create_bill(self):
         self.ensure_one()
-        if self.state not in ('done', 'confirmed'):
-            raise UserError('请先完成票据识别！')
+        if self.state != 'reviewed':
+            raise UserError('Please complete review first!')
         move = self.env['account.move'].create({
             'move_type': 'in_invoice',
             'ref': self.invoice_number or self.name,
@@ -962,26 +1177,99 @@ class OcrDocument(models.Model):
             'seller_name': False, 'buyer_name': False, 'error_message': False,
         })
 
-    def action_confirm(self):
-        to_confirm = self.filtered(lambda r: r.state == 'done')
-        if not to_confirm:
-            raise UserError('没有可确认的票据（需要状态为"已识别"）')
+    def action_review(self):
+        """复核完成：自动分类未填科目 → 检测修正 → 标记为已复核。"""
+        to_review = self.filtered(lambda r: r.state == 'done')
+        if not to_review:
+            raise UserError('No documents to review (status must be "Recognized")')
 
-        # Learn from user corrections before confirming
+        # Auto-classify empty accounts before review
+        for doc in to_review:
+            for line in doc.line_ids:
+                if not line.debit_account:
+                    line.debit_account = line._guess_debit_account()
+                if not line.credit_account:
+                    line.credit_account = _resolve_account(
+                        self.env, 'genkin', 'credit')
+
+        # Detect if user made corrections (compare line amounts/accounts with OCR snapshot)
+        for doc in to_review:
+            doc._detect_corrections()
+            doc._learn_from_corrections()
+
+        to_review.write({
+            'state': 'reviewed',
+            'review_operator_id': self.env.uid,
+            'review_date': fields.Datetime.now(),
+        })
+        # Navigate to next pending document
+        next_doc = self.search(
+            [('state', '=', 'done'), ('client_id', '=', to_review[0].client_id.id)],
+            order='create_date', limit=1,
+        )
+        if not next_doc:
+            next_doc = self.search(
+                [('state', '=', 'done')],
+                order='create_date', limit=1,
+            )
+        if next_doc:
+            return {
+                'type': 'ir.actions.act_window',
+                'res_model': 'ocr.document',
+                'res_id': next_doc.id,
+                'view_mode': 'form',
+                'target': 'current',
+            }
+        # No more pending — back to list
+        return {
+            'type': 'ir.actions.act_window',
+            'res_model': 'ocr.document',
+            'view_mode': 'list,form',
+            'target': 'current',
+            'context': {'search_default_done': 1},
+        }
+
+    def action_confirm(self):
+        to_confirm = self.filtered(lambda r: r.state == 'reviewed')
+        if not to_confirm:
+            raise UserError('No documents to confirm (status must be "Reviewed")')
+
         for doc in to_confirm:
             doc._learn_from_corrections()
 
-        to_confirm.write({'state': 'confirmed'})
-        if len(to_confirm) > 1:
+        to_confirm.write({
+            'state': 'confirmed',
+            'confirm_operator_id': self.env.uid,
+            'confirm_date': fields.Datetime.now(),
+        })
+        count = len(to_confirm)
+        if count == 1:
             return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'message': f'已确认 {len(to_confirm)} 张票据',
-                    'type': 'success',
-                    'sticky': False,
-                },
+                'type': 'ir.actions.act_window',
+                'res_model': 'ocr.document',
+                'res_id': to_confirm.id,
+                'view_mode': 'form',
+                'target': 'current',
             }
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'message': f'{count} documents confirmed',
+                'type': 'success',
+                'sticky': False,
+            },
+        }
+
+    def _detect_corrections(self):
+        """Check if user modified OCR results (for BPO quality tracking)."""
+        for line in self.line_ids:
+            if (line.debit_account != line.ocr_debit_account or
+                    line.credit_account != line.ocr_credit_account):
+                self.has_correction = True
+                return
+        # Could also check seller_name, date, amounts vs ocr_result
+        # but account changes are the primary correction type
 
     def _learn_from_corrections(self):
         """Compare current accounts vs OCR snapshot, create/update rules."""
@@ -1023,9 +1311,9 @@ class OcrDocument(models.Model):
 
         vals = {'last_used': now}
         if debit:
-            vals['debit_account'] = debit
+            vals['debit_account'] = debit.id if hasattr(debit, 'id') else debit
         if credit:
-            vals['credit_account'] = credit
+            vals['credit_account'] = credit.id if hasattr(credit, 'id') else credit
 
         if existing:
             vals['hit_count'] = existing.hit_count + 1
@@ -1045,11 +1333,25 @@ class OcrDocument(models.Model):
                 if not line.debit_account:
                     line.debit_account = line._guess_debit_account()
                 if not line.credit_account:
-                    line.credit_account = 'genkin'
+                    line.credit_account = _resolve_account(
+                        self.env, 'genkin', 'credit')
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',
-            'params': {'message': f'已自动分类 {sum(len(r.line_ids) for r in self)} 条明细', 'type': 'success'}
+            'params': {'message': f'Auto-classified {sum(len(r.line_ids) for r in self)} line items', 'type': 'success'}
+        }
+
+    def action_batch_credit_account(self):
+        """Open the batch credit account wizard with selected documents."""
+        return {
+            'type': 'ir.actions.act_window',
+            'res_model': 'ocr.batch.credit.account',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'default_document_ids': self.ids,
+                'default_scope': 'selected',
+            },
         }
 
     # ------------------------------------------------------------------

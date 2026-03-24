@@ -10,35 +10,40 @@ from odoo.exceptions import UserError
 from ..utils.yayoi import (
     to_halfwidth_kana,
     truncate_yayoi,
-    DEBIT_ACCOUNT_NAMES,
-    CREDIT_ACCOUNT_NAMES,
 )
 
 _logger = logging.getLogger(__name__)
 
 
+def _account_yayoi_name(account, fallback='雑費'):
+    """Get Yayoi export name from an ocr.account record."""
+    if not account:
+        return fallback
+    return account.yayoi_name or account.name or fallback
+
+
 class YayoiExportWizard(models.TransientModel):
     _name = 'ocr.yayoi.export'
-    _description = '弥生導出向導'
+    _description = 'Yayoi Export Wizard'
 
     client_id = fields.Many2one(
-        'ocr.client', '客户', required=True,
+        'ocr.client', 'Client', required=True,
     )
-    date_from = fields.Date('开始日期')
-    date_to = fields.Date('结束日期')
+    date_from = fields.Date('Date From')
+    date_to = fields.Date('Date To')
     export_mode = fields.Selection([
-        ('summary', '按票据汇总（每张票据一行）'),
-        ('detail', '按商品明细（每个商品一行）'),
-    ], string='导出模式', default='summary')
+        ('summary', 'Summary (one row per document)'),
+        ('detail', 'Detail (one row per line item)'),
+    ], string='Export Mode', default='summary')
     document_ids = fields.Many2many(
-        'ocr.document', string='预览票据', readonly=True,
+        'ocr.document', string='Preview Documents', readonly=True,
     )
-    document_count = fields.Integer('票据数', compute='_compute_documents')
-    line_count = fields.Integer('明细行数', compute='_compute_documents')
-    total_amount = fields.Float('合计金额', compute='_compute_documents')
+    document_count = fields.Integer('Document Count', compute='_compute_documents')
+    line_count = fields.Integer('Line Count', compute='_compute_documents')
+    total_amount = fields.Float('Total Amount', compute='_compute_documents')
 
-    export_data = fields.Binary('导出文件', readonly=True)
-    export_filename = fields.Char('文件名')
+    export_data = fields.Binary('Export File', readonly=True)
+    export_filename = fields.Char('Filename')
 
     @api.depends('client_id', 'date_from', 'date_to')
     def _compute_documents(self):
@@ -52,7 +57,7 @@ class YayoiExportWizard(models.TransientModel):
     def _get_documents(self):
         domain = [
             ('client_id', '=', self.client_id.id),
-            ('state', 'in', ('done', 'confirmed')),
+            ('state', 'in', ('done', 'reviewed')),
         ]
         if self.date_from:
             domain.append(('invoice_date', '>=', self.date_from))
@@ -98,7 +103,7 @@ class YayoiExportWizard(models.TransientModel):
     # ------------------------------------------------------------------
 
     def _build_row(self, seq, date_str, debit_name, debit_tax_cat,
-                   amount, tax_amount, credit_name, memo):
+                   amount, tax_amount, credit_name, memo, filename=''):
         t = truncate_yayoi
         h = to_halfwidth_kana
         return [
@@ -123,7 +128,7 @@ class YayoiExportWizard(models.TransientModel):
             '',                             # Col19: 期日
             0,                              # Col20: タイプ (0=仕訳)
             '',                             # Col21: 生成元
-            t(h(memo), 64),                 # Col22: 仕訳メモ
+            t(h(filename), 64),             # Col22: 仕訳メモ → 文件名
             '0',                            # Col23: 付箋1
             '0',                            # Col24: 付箋2
             'no',                           # Col25: 調整
@@ -134,10 +139,8 @@ class YayoiExportWizard(models.TransientModel):
     # ------------------------------------------------------------------
 
     def _export_summary(self, docs, writer, client):
-        default_credit_key = client.default_credit_account or 'genkin'
-        default_credit_name = CREDIT_ACCOUNT_NAMES.get(default_credit_key, '現金')
-        default_debit_key = client.default_debit_account or 'shiire'
-        default_debit_name = DEBIT_ACCOUNT_NAMES.get(default_debit_key, '仕入高')
+        default_credit_name = _account_yayoi_name(client.default_credit_account, '現金')
+        default_debit_name = _account_yayoi_name(client.default_debit_account, '仕入高')
 
         seq = 0
         for doc in docs:
@@ -150,6 +153,7 @@ class YayoiExportWizard(models.TransientModel):
             date_str = f'{d.year}/{d.month}/{d.day}'
 
             memo = self._build_summary_memo(seq, doc)
+            doc.summary = memo
             credit_name = default_credit_name
 
             # Aggregate line amounts by tax rate
@@ -172,10 +176,11 @@ class YayoiExportWizard(models.TransientModel):
                 acct_totals = defaultdict(float)
                 for line in doc.line_ids:
                     if line.debit_account:
-                        acct_totals[line.debit_account] += line.gross_amount
+                        acct_totals[line.debit_account.id] += line.gross_amount
                 if acct_totals:
-                    top_key = max(acct_totals, key=acct_totals.get)
-                    debit_name = DEBIT_ACCOUNT_NAMES.get(top_key, default_debit_name)
+                    top_id = max(acct_totals, key=acct_totals.get)
+                    top_acct = self.env['ocr.account'].browse(top_id)
+                    debit_name = _account_yayoi_name(top_acct, default_debit_name)
 
             # Write rows: one per tax rate bucket
             for rate in sorted(rate_amounts.keys()):
@@ -187,6 +192,7 @@ class YayoiExportWizard(models.TransientModel):
                 writer.writerow(self._build_row(
                     seq, date_str, debit_name, tax_cat,
                     amount, tax_amt, credit_name, memo,
+                    filename=doc.image_filename or doc.name or '',
                 ))
 
     # ------------------------------------------------------------------
@@ -194,8 +200,7 @@ class YayoiExportWizard(models.TransientModel):
     # ------------------------------------------------------------------
 
     def _export_detail(self, docs, writer, client):
-        default_credit_key = client.default_credit_account or 'genkin'
-        default_credit_name = CREDIT_ACCOUNT_NAMES.get(default_credit_key, '現金')
+        default_credit_name = _account_yayoi_name(client.default_credit_account, '現金')
 
         seq = 0
         for doc in docs:
@@ -205,23 +210,34 @@ class YayoiExportWizard(models.TransientModel):
             d = doc.invoice_date
             date_str = f'{d.year}/{d.month}/{d.day}'
 
+            # Collect lines first to determine first_seq for memo
+            lines_data = []
+            first_seq = None
             for line in doc.line_ids.sorted(lambda l: (l.sequence, l.id)):
                 if not line.debit_account:
                     continue
-
                 seq += 1
+                if first_seq is None:
+                    first_seq = seq
+                lines_data.append((seq, line))
 
-                debit_name = DEBIT_ACCOUNT_NAMES.get(line.debit_account, '雑費')
-                credit_key = line.credit_account or default_credit_key
-                credit_name = CREDIT_ACCOUNT_NAMES.get(credit_key, default_credit_name)
+            if not lines_data:
+                continue
 
+            memo = self._build_summary_memo(first_seq, doc)
+            doc.summary = memo
+
+            for line_seq, line in lines_data:
+                debit_name = _account_yayoi_name(line.debit_account, '雑費')
+                credit_name = _account_yayoi_name(
+                    line.credit_account, default_credit_name)
                 rate = self._line_tax_rate_int(line)
                 tax_cat = self._tax_category(rate)
-                memo = line.memo or ''
 
                 writer.writerow(self._build_row(
-                    seq, date_str, debit_name, tax_cat,
+                    line_seq, date_str, debit_name, tax_cat,
                     line.gross_amount, line.tax_amount, credit_name, memo,
+                    filename=doc.image_filename or doc.name or '',
                 ))
 
     # ------------------------------------------------------------------
@@ -232,7 +248,7 @@ class YayoiExportWizard(models.TransientModel):
         self.ensure_one()
         docs = self._get_documents()
         if not docs:
-            raise UserError(_('没有符合条件的已识别票据。'))
+            raise UserError(_('No recognized documents matching criteria.'))
 
         client = self.client_id
 

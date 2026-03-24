@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <!-- ===== Debit Accounts (借方 - 費用類) ===== -->
+    <record id="account_debit_shiire" model="ocr.account">
+        <field name="name">仕入高</field>
+        <field name="code">shiire</field>
+        <field name="account_type">debit</field>
+        <field name="yayoi_name">仕入高</field>
+        <field name="sequence">10</field>
+    </record>
+    <record id="account_debit_shoumouhin" model="ocr.account">
+        <field name="name">消耗品費</field>
+        <field name="code">shoumouhin</field>
+        <field name="account_type">debit</field>
+        <field name="yayoi_name">消耗品費</field>
+        <field name="sequence">20</field>
+    </record>
+    <record id="account_debit_jimu" model="ocr.account">
+        <field name="name">事務用品費</field>
+        <field name="code">jimu</field>
+        <field name="account_type">debit</field>
+        <field name="yayoi_name">事務用品費</field>
+        <field name="sequence">30</field>
+    </record>
+    <record id="account_debit_kousai" model="ocr.account">
+        <field name="name">交際費</field>
+        <field name="code">kousai</field>
+        <field name="account_type">debit</field>
+        <field name="yayoi_name">交際費</field>
+        <field name="sequence">40</field>
+    </record>
+    <record id="account_debit_kaigi" model="ocr.account">
+        <field name="name">会議費</field>
+        <field name="code">kaigi</field>
+        <field name="account_type">debit</field>
+        <field name="yayoi_name">会議費</field>
+        <field name="sequence">50</field>
+    </record>
+    <record id="account_debit_ryohi" model="ocr.account">
+        <field name="name">旅費交通費</field>
+        <field name="code">ryohi</field>
+        <field name="account_type">debit</field>
+        <field name="yayoi_name">旅費交通費</field>
+        <field name="sequence">60</field>
+    </record>
+    <record id="account_debit_tsuushin" model="ocr.account">
+        <field name="name">通信費</field>
+        <field name="code">tsuushin</field>
+        <field name="account_type">debit</field>
+        <field name="yayoi_name">通信費</field>
+        <field name="sequence">70</field>
+    </record>
+    <record id="account_debit_suido" model="ocr.account">
+        <field name="name">水道光熱費</field>
+        <field name="code">suido</field>
+        <field name="account_type">debit</field>
+        <field name="yayoi_name">水道光熱費</field>
+        <field name="sequence">80</field>
+    </record>
+    <record id="account_debit_sozei" model="ocr.account">
+        <field name="name">租税公課</field>
+        <field name="code">sozei</field>
+        <field name="account_type">debit</field>
+        <field name="yayoi_name">租税公課</field>
+        <field name="sequence">90</field>
+    </record>
+    <record id="account_debit_zappi" model="ocr.account">
+        <field name="name">雑費</field>
+        <field name="code">zappi</field>
+        <field name="account_type">debit</field>
+        <field name="yayoi_name">雑費</field>
+        <field name="sequence">100</field>
+    </record>
+
+    <!-- ===== Credit Accounts (貸方 - 資産/負債類) ===== -->
+    <record id="account_credit_genkin" model="ocr.account">
+        <field name="name">現金</field>
+        <field name="code">genkin</field>
+        <field name="account_type">credit</field>
+        <field name="yayoi_name">現金</field>
+        <field name="sequence">10</field>
+    </record>
+    <record id="account_credit_yokin" model="ocr.account">
+        <field name="name">普通預金</field>
+        <field name="code">yokin</field>
+        <field name="account_type">credit</field>
+        <field name="yayoi_name">普通預金</field>
+        <field name="sequence">20</field>
+    </record>
+    <record id="account_credit_kaikake" model="ocr.account">
+        <field name="name">買掛金</field>
+        <field name="code">kaikake</field>
+        <field name="account_type">credit</field>
+        <field name="yayoi_name">買掛金</field>
+        <field name="sequence">30</field>
+    </record>
+    <record id="account_credit_miharai" model="ocr.account">
+        <field name="name">未払金</field>
+        <field name="code">miharai</field>
+        <field name="account_type">credit</field>
+        <field name="yayoi_name">未払金</field>
+        <field name="sequence">40</field>
+    </record>
+    <record id="account_credit_card" model="ocr.account">
+        <field name="name">クレジットカード</field>
+        <field name="code">card</field>
+        <field name="account_type">credit</field>
+        <field name="yayoi_name">クレジットカード</field>
+        <field name="sequence">50</field>
+    </record>
+</odoo>

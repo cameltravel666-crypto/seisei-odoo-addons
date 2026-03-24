@@ -1,35 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- 弥生导出向导表单 -->
+    <!-- 弥生エクスポートウィザード -->
     <record id="view_yayoi_export_wizard_form" model="ir.ui.view">
         <field name="name">ocr.yayoi.export.form</field>
         <field name="model">ocr.yayoi.export</field>
         <field name="arch" type="xml">
-            <form string="弥生导出">
+            <form string="弥生エクスポート">
                 <group>
-                    <group string="筛选条件">
+                    <group string="絞り込み">
                         <field name="client_id"/>
                         <field name="date_from"/>
                         <field name="date_to"/>
                     </group>
-                    <group string="导出设置">
+                    <group string="エクスポート設定">
                         <field name="export_mode" widget="radio"/>
                         <field name="document_count"/>
                         <field name="line_count"/>
                         <field name="total_amount"/>
                     </group>
                 </group>
-                <separator string="摘要规则说明"/>
+                <separator string="摘要フォーマット"/>
                 <group>
                     <div class="text-muted" invisible="export_mode != 'summary'">
-                        <p><strong>汇总模式摘要格式：</strong><code>No.{序号}--{MM/DD}-{店铺名}</code></p>
-                        <p>示例：<code>No.0122--12/31-青ゆず</code></p>
-                        <p>每张票据按税率拆分行（非課税 / 8% / 10%），与 Excel 领收书整理表格式一致。</p>
+                        <p><strong>集計モードの摘要形式：</strong><code>No.{連番}--{MM/DD}-{店舗名}</code></p>
+                        <p>例：<code>No.0122--12/31-青ゆず</code></p>
+                        <p>各証憑を税率別（非課税／8%／10%）に分割し、レシート集計Excelの形式に対応します。</p>
                     </div>
                     <div class="text-muted" invisible="export_mode != 'detail'">
-                        <p><strong>明细模式摘要格式：</strong><code>{店铺名} {商品名}</code></p>
-                        <p>示例：<code>株式会社ライフコーポレーション 牛肉</code></p>
-                        <p>每个商品一行，适合需要逐项核对的场景。</p>
+                        <p><strong>明細モードの摘要形式：</strong><code>{店舗名} {商品名}</code></p>
+                        <p>例：<code>株式会社ライフコーポレーション 牛肉</code></p>
+                        <p>明細行ごとに1行出力。項目別の照合に適しています。</p>
                     </div>
                 </group>
                 <group invisible="not document_ids">
@@ -38,24 +38,24 @@
                             <field name="name"/>
                             <field name="seller_name"/>
                             <field name="invoice_date"/>
-                            <field name="amount" sum="合计"/>
+                            <field name="amount" sum="合計"/>
                             <field name="doc_type"/>
                         </list>
                     </field>
                 </group>
                 <footer>
                     <button name="action_export" type="object"
-                            string="导出弥生TXT" class="btn-primary"
+                            string="弥生TXTエクスポート" class="btn-primary"
                             invisible="document_count == 0"/>
-                    <button string="取消" class="btn-secondary" special="cancel"/>
+                    <button string="キャンセル" class="btn-secondary" special="cancel"/>
                 </footer>
             </form>
         </field>
     </record>
 
-    <!-- 弥生导出动作 -->
+    <!-- 弥生エクスポートアクション -->
     <record id="action_yayoi_export" model="ir.actions.act_window">
-        <field name="name">弥生导出</field>
+        <field name="name">弥生エクスポート</field>
         <field name="res_model">ocr.yayoi.export</field>
         <field name="view_mode">form</field>
         <field name="target">new</field>

@@ -3,14 +3,14 @@
     <data noupdate="1">
         <!-- Server actions (must be defined before crons that reference them) -->
         <record id="action_ocr_recognize_queue" model="ir.actions.server">
-            <field name="name">OCR: 后台识别队列</field>
+            <field name="name">OCR: Recognition Queue</field>
             <field name="model_id" ref="model_ocr_document"/>
             <field name="state">code</field>
             <field name="code">model._cron_recognize_queue(batch_size=5)</field>
         </record>
 
         <record id="action_ocr_scan_inbox" model="ir.actions.server">
-            <field name="name">OCR: 扫描导入文件夹</field>
+            <field name="name">OCR: Scan Inbox Folder</field>
             <field name="model_id" ref="model_ocr_document"/>
             <field name="state">code</field>
             <field name="code">model._cron_scan_inbox()</field>
@@ -18,7 +18,7 @@
 
         <!-- Cron jobs -->
         <record id="cron_ocr_recognize_queue" model="ir.cron">
-            <field name="cron_name">OCR: 后台识别队列</field>
+            <field name="cron_name">OCR: Recognition Queue</field>
             <field name="interval_number">1</field>
             <field name="interval_type">minutes</field>
             <field name="active">True</field>
@@ -27,7 +27,7 @@
         </record>
 
         <record id="cron_ocr_scan_inbox" model="ir.cron">
-            <field name="cron_name">OCR: 扫描导入文件夹</field>
+            <field name="cron_name">OCR: Scan Inbox Folder</field>
             <field name="interval_number">2</field>
             <field name="interval_type">minutes</field>
             <field name="active">True</field>
