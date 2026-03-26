@@ -17,7 +17,7 @@ from typing import Optional, List, Dict, Any, Literal
 from contextlib import asynccontextmanager
 
 import httpx
-from fastapi import FastAPI, HTTPException, Header, Depends
+from fastapi import FastAPI, HTTPException, Header, Depends, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import asyncpg
@@ -507,7 +507,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Central OCR Service",
     description="Centralized OCR service with backward compatible parameter support (output_level + prompt_version)",
-    version="1.4.1",
+    version="2.0.0",
     lifespan=lifespan
 )
 
@@ -910,6 +910,198 @@ async def list_all_usage(
             for row in rows
         ]
     }
+
+
+# ============== V2 ENDPOINTS ==============
+# P1: Quota pre-check helper
+
+
+async def check_quota(tenant_id: str) -> Dict[str, Any]:
+    """Check if tenant has remaining quota. Returns usage info."""
+    if not db_pool:
+        return {'allowed': True, 'reason': 'no_db'}
+
+    year_month = datetime.now().strftime('%Y-%m')
+    async with db_pool.acquire() as conn:
+        row = await conn.fetchrow('''
+            SELECT image_count, billable_count, total_cost
+            FROM ocr_usage WHERE tenant_id = $1 AND year_month = $2
+        ''', tenant_id, year_month)
+
+    if not row:
+        return {
+            'allowed': True,
+            'image_count': 0,
+            'free_remaining': FREE_QUOTA_PER_MONTH,
+        }
+
+    return {
+        'allowed': True,  # Always allow for now (overage billing)
+        'image_count': row['image_count'],
+        'free_remaining': max(0, FREE_QUOTA_PER_MONTH - row['image_count']),
+        'billable_count': row['billable_count'],
+        'total_cost': float(row['total_cost']),
+    }
+
+
+@app.get("/api/v2/quota/{tenant_id}")
+async def get_quota(
+    tenant_id: str,
+    _: bool = Depends(verify_service_key),
+):
+    """P1: Pre-check quota before sending image data."""
+    return await check_quota(tenant_id)
+
+
+# P3: Multipart upload endpoint (saves 33% bandwidth vs base64)
+
+@app.post("/api/v2/ocr/process")
+async def process_ocr_v2(
+    file: UploadFile = File(...),
+    tenant_id: str = Form('default'),
+    doc_type: str = Form('invoice'),
+    output_level: str = Form('accounting'),
+    x_service_key: Optional[str] = Header(None),
+):
+    """V2: Multipart upload — accepts raw file bytes, no base64 overhead.
+
+    doc_type: invoice | expense | bank_statement
+    output_level: summary | accounting | bank_statement
+    """
+    if SERVICE_KEY and x_service_key != SERVICE_KEY:
+        raise HTTPException(status_code=401, detail="Invalid service key")
+
+    start_time = time.time()
+    file_data = await file.read()
+    file_size = len(file_data)
+    mime_type = file.content_type or 'image/jpeg'
+
+    # Map doc_type to prompt mode
+    mode_map = {
+        'invoice': 'full' if output_level == 'accounting' else 'fast',
+        'expense': 'full' if output_level == 'accounting' else 'fast',
+        'bank_statement': 'bank_statement',
+    }
+    prompt_mode = mode_map.get(doc_type, 'fast')
+
+    # P2: Server-side PDF splitting
+    is_pdf = mime_type == 'application/pdf' or file_data[:5] == b'%PDF-'
+
+    if is_pdf:
+        pages = _pdf_to_images_server(file_data)
+        if not pages:
+            return {"success": False, "error_code": "pdf_conversion_failed"}
+    else:
+        pages = [file_data]
+
+    logger.info(f"V2 OCR: tenant={tenant_id}, doc_type={doc_type}, mode={prompt_mode}, pages={len(pages)}")
+
+    # P0: Parallel processing for multi-page documents
+    if len(pages) == 1:
+        b64 = base64.standard_b64encode(pages[0]).decode('utf-8')
+        result = await call_gemini_api(b64, 'image/jpeg' if is_pdf else mime_type, prompt_mode)
+        page_results = [result]
+    else:
+        # Parallel Gemini calls for all pages
+        tasks = []
+        for page_data in pages:
+            b64 = base64.standard_b64encode(page_data).decode('utf-8')
+            tasks.append(call_gemini_api(b64, 'image/jpeg', prompt_mode))
+        page_results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    # Merge results
+    all_transactions = []
+    first_header = {}
+    last_header = {}
+    errors = []
+
+    for i, res in enumerate(page_results):
+        if isinstance(res, Exception):
+            errors.append(f'Page {i+1}: {str(res)}')
+            continue
+        if res.get('success'):
+            extracted = res.get('extracted', {})
+            txns = extracted.get('transactions', [])
+            offset = len(all_transactions)
+            for t in txns:
+                t['seq'] = offset + t.get('seq', 1)
+            all_transactions.extend(txns)
+            if not first_header:
+                first_header = extracted
+            last_header = extracted
+        else:
+            errors.append(f'Page {i+1}: {res.get("error_code", "unknown")}')
+
+    processing_time_ms = int((time.time() - start_time) * 1000)
+
+    # Track usage (count each page as one image)
+    for _ in range(len(pages)):
+        await update_usage(tenant_id, True, processing_time_ms // len(pages), file_size // len(pages), prompt_mode)
+
+    if doc_type == 'bank_statement' and len(pages) > 1:
+        # Merge multi-page bank statement
+        merged = {
+            'bank_name': first_header.get('bank_name', ''),
+            'branch_name': first_header.get('branch_name', ''),
+            'account_type': first_header.get('account_type', ''),
+            'account_number': first_header.get('account_number', ''),
+            'account_holder': first_header.get('account_holder', ''),
+            'statement_period': first_header.get('statement_period', ''),
+            'balance_start': first_header.get('balance_start', 0),
+            'balance_end': last_header.get('balance_end', 0),
+            'transactions': all_transactions,
+        }
+        return {
+            "success": True,
+            "extracted": merged,
+            "pages": len(pages),
+            "processing_time_ms": processing_time_ms,
+            "errors": errors if errors else None,
+        }
+    elif len(pages) == 1 and page_results and not isinstance(page_results[0], Exception):
+        res = page_results[0]
+        return {
+            "success": res.get('success', False),
+            "extracted": res.get('extracted'),
+            "raw_response": res.get('raw_response'),
+            "pages": 1,
+            "processing_time_ms": processing_time_ms,
+            "prompt_version": prompt_mode,
+        }
+    else:
+        # Multi-page non-bank (just return first successful result)
+        for res in page_results:
+            if not isinstance(res, Exception) and res.get('success'):
+                return {
+                    "success": True,
+                    "extracted": res.get('extracted'),
+                    "pages": len(pages),
+                    "processing_time_ms": processing_time_ms,
+                }
+        return {"success": False, "error_code": '; '.join(errors) if errors else "all_pages_failed"}
+
+
+def _pdf_to_images_server(pdf_data: bytes, dpi: int = 150) -> list:
+    """P2: Server-side PDF to images conversion."""
+    try:
+        import fitz  # PyMuPDF
+    except ImportError:
+        logger.error('[OCR-V2] PyMuPDF not installed in service container')
+        return []
+
+    images = []
+    try:
+        doc = fitz.open(stream=pdf_data, filetype='pdf')
+        for page_num in range(len(doc)):
+            page = doc[page_num]
+            mat = fitz.Matrix(dpi / 72, dpi / 72)
+            pix = page.get_pixmap(matrix=mat)
+            images.append(pix.tobytes('jpeg'))
+        doc.close()
+        logger.info(f'[OCR-V2] PDF converted: {len(images)} pages')
+    except Exception as e:
+        logger.exception(f'[OCR-V2] PDF conversion failed: {e}')
+    return images
 
 
 if __name__ == '__main__':
