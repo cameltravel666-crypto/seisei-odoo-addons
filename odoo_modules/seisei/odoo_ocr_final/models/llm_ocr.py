@@ -20,8 +20,10 @@ _logger = logging.getLogger(__name__)
 # Note: Read at function call time to avoid caching issues with module imports
 def _get_ocr_config():
     """Get OCR service configuration at runtime to avoid caching issues."""
+    base_url = os.getenv('OCR_SERVICE_URL', 'http://172.17.0.1:8180/api/v1')
     return {
-        'url': os.getenv('OCR_SERVICE_URL', 'http://172.17.0.1:8180/api/v1'),
+        'url': base_url,
+        'url_v2': base_url.replace('/api/v1', '/api/v2'),
         'key': os.getenv('OCR_SERVICE_KEY', ''),
     }
 
@@ -201,6 +203,10 @@ BANK_STATEMENT_OCR_PROMPT = '''あなたは日本の銀行通帳（普通預金�
 - ⚠️ 日付は通帳に印字された形式のまま出力（自分で西暦変換しない）
   例: 通帳に「06-1223」→ "date": "06-1223"（そのまま）
   ※ 令和→西暦の変換はシステム側で自動処理
+- ⚠️ 日付の前に「D」等のマークがある場合は除去して日付のみ出力
+  例: 「D 7-4-1」→ "date": "7-4-1"
+- ⚠️ 各行の日付は必ずその行自身の年月日を読み取る。前後の行から推測しない
+- ⚠️ 年が変わる行（例: 6→7、7→8）に注意。正確に読み取ること
 - 金額のカンマは除去して数値で返す
 - 入金はdeposit、出金はwithdrawal
 - ★マーク付き残高は★¥を除去して数値のみ
@@ -282,7 +288,9 @@ def _normalize_reiwa_date(date_str: str) -> str:
     """
     if not date_str:
         return date_str
-    m = re.match(r'^(\d{1,4})[/-](\d{1,2})[/-](\d{1,2})$', date_str.strip())
+    # Strip common prefixes: "D" (debit marker in passbooks), spaces
+    cleaned = re.sub(r'^[D\s]+', '', date_str.strip())
+    m = re.match(r'^(\d{1,4})[/-](\d{1,2})[/-](\d{1,2})$', cleaned)
     if not m:
         return date_str
     year, month, day = int(m.group(1)), int(m.group(2)), int(m.group(3))
@@ -309,7 +317,7 @@ def _fix_reference_supplement(transactions: list) -> list:
     Detect this pattern and move the text to description.
     """
     for txn in transactions:
-        ref = txn.get('reference', '')
+        ref = txn.get('reference') or ''
         m = _REF_WITH_SUPPLEMENT_RE.match(ref)
         if m:
             txn['reference'] = m.group(1)
@@ -332,8 +340,9 @@ def _normalize_bank_transactions(transactions: list) -> list:
 def process_bank_statement(file_data: bytes, mimetype: str, tenant_id: str = 'default') -> Dict[str, Any]:
     """Process bank statement document (image or multi-page PDF).
 
-    For multi-page PDFs: each page is OCR'd separately, results are merged,
-    and duplicate transactions are removed.
+    V2 path: sends raw file to central service for server-side PDF splitting
+    and parallel Gemini calls (N× speedup for multi-page).
+    Falls back to V1 sequential processing if V2 is unavailable.
 
     Returns:
         Dict with keys: success, extracted (bank_name, transactions[], etc.), pages
@@ -342,7 +351,31 @@ def process_bank_statement(file_data: bytes, mimetype: str, tenant_id: str = 'de
     if not config['url']:
         return {'success': False, 'error': 'OCRサービスが利用できません。'}
 
-    # Convert PDF to images if needed
+    # Try V2 first (multipart + parallel)
+    _logger.info(f'[OCR-BankStmt] Trying V2 (parallel) for {len(file_data)} bytes')
+    result = _call_ocr_v2(file_data, mimetype, tenant_id,
+                          doc_type='bank_statement', output_level='bank_statement')
+
+    if result.get('success'):
+        extracted = result.get('extracted', {})
+        txns = extracted.get('transactions', [])
+        # Apply client-side normalization (date conversion, dedup)
+        extracted['transactions'] = _normalize_bank_transactions(
+            _deduplicate_bank_transactions(txns)
+        )
+        return {
+            'success': True,
+            'extracted': extracted,
+            'pages': result.get('pages', 1),
+        }
+
+    # V2 failed — fall back to V1 (sequential, local PDF split)
+    _logger.warning(f'[OCR-BankStmt] V2 failed ({result.get("error")}), falling back to V1')
+    return _process_bank_statement_v1(file_data, mimetype, tenant_id)
+
+
+def _process_bank_statement_v1(file_data: bytes, mimetype: str, tenant_id: str) -> Dict[str, Any]:
+    """V1 fallback: local PDF splitting + sequential API calls."""
     is_pdf = mimetype == 'application/pdf' or (
         isinstance(file_data, bytes) and file_data[:5] == b'%PDF-'
     )
@@ -362,7 +395,7 @@ def process_bank_statement(file_data: bytes, mimetype: str, tenant_id: str = 'de
     errors = []
 
     for i, img_data in enumerate(page_images):
-        _logger.info(f'[OCR-BankStmt] Processing page {i + 1}/{len(page_images)}')
+        _logger.info(f'[OCR-BankStmt-V1] Processing page {i + 1}/{len(page_images)}')
         result = _call_ocr_service_raw(
             img_data, 'image/jpeg' if is_pdf else mimetype,
             tenant_id, BANK_STATEMENT_TEMPLATE_FIELDS, 'bank_statement',
@@ -370,7 +403,6 @@ def process_bank_statement(file_data: bytes, mimetype: str, tenant_id: str = 'de
         if result.get('success'):
             extracted = result.get('extracted', {})
             txns = extracted.get('transactions', [])
-            # Offset per-page seq so multi-page PDFs get continuous numbering
             offset = len(all_transactions)
             for t in txns:
                 t['seq'] = offset + t.get('seq', 1)
@@ -384,7 +416,6 @@ def process_bank_statement(file_data: bytes, mimetype: str, tenant_id: str = 'de
     if not all_transactions and errors:
         return {'success': False, 'error': '; '.join(errors)}
 
-    # Merge: header from first page, balance_end from last page
     merged = {
         'bank_name': first_page_header.get('bank_name', ''),
         'branch_name': first_page_header.get('branch_name', ''),
@@ -481,11 +512,58 @@ def _call_ocr_service_raw(file_data: bytes, mimetype: str, tenant_id: str,
         return {'success': False, 'error': str(e)}
 
 
+def _call_ocr_v2(file_data: bytes, mimetype: str, tenant_id: str,
+                  doc_type: str = 'invoice', output_level: str = 'accounting') -> Dict[str, Any]:
+    """V2: Multipart upload with server-side PDF handling and parallel page processing.
+
+    Benefits over v1:
+    - No base64 overhead (saves 33% bandwidth)
+    - Server-side PDF splitting (no PyMuPDF needed locally)
+    - Parallel Gemini calls for multi-page docs (N× speedup)
+    """
+    config = _get_ocr_config()
+    url_v2 = config['url_v2']
+
+    headers = {}
+    if config['key']:
+        headers['X-Service-Key'] = config['key']
+
+    try:
+        response = requests.post(
+            f'{url_v2}/ocr/process',
+            files={'file': ('scan', file_data, mimetype)},
+            data={
+                'tenant_id': tenant_id,
+                'doc_type': doc_type,
+                'output_level': output_level,
+            },
+            headers=headers,
+            timeout=180,  # Longer timeout for multi-page parallel
+        )
+
+        if response.status_code == 402:
+            return {'success': False, 'error': 'OCR quota exceeded'}
+        if response.status_code == 401:
+            return {'success': False, 'error': 'Invalid API key'}
+        if response.status_code != 200:
+            body = response.text[:500] if response.text else 'no body'
+            _logger.error(f'[OCR-V2] HTTP {response.status_code}: {body}')
+            return {'success': False, 'error': f'OCR service error {response.status_code}'}
+
+        return response.json()
+
+    except requests.exceptions.Timeout:
+        return {'success': False, 'error': 'OCR service timeout'}
+    except Exception as e:
+        _logger.exception(f'[OCR-V2] Service call error: {e}')
+        return {'success': False, 'error': str(e)}
+
+
 def _process_with_template(file_data: bytes, mimetype: str, tenant_id: str, doc_type: str, output_level: str = 'accounting') -> Dict[str, Any]:
     """Process document with specific document type
 
     All OCR processing is handled by the central OCR service.
-    No direct API calls are made from this module.
+    Tries V2 (multipart + server-side PDF + parallel) first, falls back to V1.
 
     Args:
         output_level: 'summary' (quick preview, partial items) or 'accounting' (full line-by-line extraction)
@@ -496,6 +574,18 @@ def _process_with_template(file_data: bytes, mimetype: str, tenant_id: str, doc_
         _logger.error('[OCR] OCR_SERVICE_URL not configured')
         return {'success': False, 'error': 'OCRサービスが利用できません。システム管理者にお問い合わせください。'}
 
+    # Try V2 first (multipart upload, server-side PDF, parallel processing)
+    if config.get('url_v2'):
+        try:
+            result = _call_ocr_v2(file_data, mimetype, tenant_id, doc_type, output_level)
+            if result.get('success'):
+                _logger.info('[OCR-V2] Invoice/expense processed successfully via V2')
+                return result
+            _logger.warning(f'[OCR-V2] Failed, falling back to V1: {result.get("error")}')
+        except Exception as e:
+            _logger.warning(f'[OCR-V2] Exception, falling back to V1: {e}')
+
+    # V1 fallback
     template_fields = EXPENSE_TEMPLATE_FIELDS if doc_type == 'expense' else INVOICE_TEMPLATE_FIELDS
     result = _call_ocr_service(file_data, mimetype, tenant_id, template_fields, output_level)
 
