@@ -228,7 +228,7 @@
                 <field name="upload_date" type="row" interval="month"/>
                 <field name="scan_operator_id" type="row"/>
                 <field name="state" type="col"/>
-                <field name="id" type="measure" string="件数"/>
+                <field name="__count" type="measure" string="件数"/>
                 <field name="amount" type="measure" string="金額"/>
             </pivot>
         </field>
@@ -241,7 +241,7 @@
         <field name="arch" type="xml">
             <graph string="BPO実績" type="bar">
                 <field name="review_operator_id"/>
-                <field name="id" type="measure" string="確認件数"/>
+                <field name="__count" type="measure" string="確認件数"/>
             </graph>
         </field>
     </record>
