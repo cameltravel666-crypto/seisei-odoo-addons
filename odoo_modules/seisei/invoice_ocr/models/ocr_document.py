@@ -198,8 +198,34 @@ class OcrDocument(models.Model):
     # ------------------------------------------------------------------
 
     def _infer_tax_rate(self, ocr_data=None):
-        """Infer dominant tax rate from OCR data or text patterns."""
+        """Infer dominant tax rate from OCR data or text patterns.
+
+        Cross-validates r8_gross/r10_gross against gross_amount to detect
+        mislabeled tax rates (e.g., OCR reports r8_gross but items are 10%).
+        """
         if ocr_data:
+            # New unified format (v2.0+)
+            r10_gross = self._safe_float(ocr_data.get('r10_gross'))
+            r8_gross = self._safe_float(ocr_data.get('r8_gross'))
+            total_gross = self._safe_float(
+                ocr_data.get('gross_amount')
+                or (ocr_data.get('totals_on_doc') or {}).get('total_gross')
+            )
+
+            if r10_gross > 0 or r8_gross > 0:
+                # Cross-validate: if OCR says r8_gross but net*1.10 ≈ total_gross,
+                # the items are actually 10% (OCR mislabeled)
+                if r8_gross > 0 and r10_gross == 0 and total_gross > 0:
+                    expected_at_8 = round(r8_gross * 1.08)
+                    expected_at_10 = round(r8_gross * 1.10)
+                    if (abs(expected_at_10 - total_gross) < abs(expected_at_8 - total_gross)
+                            and abs(expected_at_10 - total_gross) <= max(3, total_gross * 0.005)):
+                        _logger.info('Tax rate correction: r8_gross=%s but total=%s matches 10%%',
+                                     r8_gross, total_gross)
+                        return '10'
+                return '10' if r10_gross >= r8_gross else '8'
+
+            # Old structured format
             totals = ocr_data.get('totals_on_doc') or {}
             by_rate = totals.get('by_rate') or {}
             rate_10 = self._safe_float((by_rate.get('10%') or {}).get('gross'))
@@ -250,6 +276,11 @@ class OcrDocument(models.Model):
                     'output_level': 'accounting',
                     'tenant_id': self.env.cr.dbname,
                 }
+                # Send vendor hints for central learning context
+                if record.seller_name:
+                    payload['vendor_hint'] = record.seller_name
+                if record.invoice_number:
+                    payload['reg_no_hint'] = record.invoice_number
                 headers = {'Content-Type': 'application/json'}
                 if OCR_SERVICE_KEY:
                     headers['x-service-key'] = OCR_SERVICE_KEY
@@ -310,6 +341,13 @@ class OcrDocument(models.Model):
                     done_count += 1
                 elif parsed and ('totals_on_doc' in parsed or 'issuer' in parsed):
                     # Old single-receipt format (backward compat)
+                    record._apply_extracted(parsed)
+                    record._post_ocr_audit(parsed)
+                    record.state = 'done'
+
+                    done_count += 1
+                elif parsed and ('vendor_name' in parsed or 'gross_amount' in parsed):
+                    # New unified OCR format (v2.0+)
                     record._apply_extracted(parsed)
                     record._post_ocr_audit(parsed)
                     record.state = 'done'
@@ -752,15 +790,25 @@ class OcrDocument(models.Model):
 
     def _apply_extracted(self, data):
         """Apply structured data from central OCR service into line items."""
+        # --- Detect format: new unified (v2.0+) vs old structured ---
+        is_new_format = 'vendor_name' in data or ('gross_amount' in data and 'issuer' not in data)
+
         # --- Issuer ---
-        issuer = data.get('issuer') or {}
-        self.seller_name = issuer.get('issuer_name') or ''
-        raw_inv = issuer.get('invoice_reg_no') or ''
+        if is_new_format:
+            self.seller_name = data.get('vendor_name') or ''
+            raw_inv = data.get('invoice_reg_no') or ''
+        else:
+            issuer = data.get('issuer') or {}
+            self.seller_name = issuer.get('issuer_name') or ''
+            raw_inv = issuer.get('invoice_reg_no') or ''
         self.invoice_number = raw_inv if self._is_valid_invoice_number(raw_inv) else ''
 
         # --- Document ---
-        doc = data.get('document') or {}
-        date_str = doc.get('doc_date') or ''
+        if is_new_format:
+            date_str = data.get('document_date') or ''
+        else:
+            doc = data.get('document') or {}
+            date_str = doc.get('doc_date') or ''
         if date_str:
             try:
                 clean = date_str.replace('/', '-').strip()[:10]
@@ -771,18 +819,39 @@ class OcrDocument(models.Model):
             except (ValueError, IndexError):
                 pass
 
-        doc_type = doc.get('doc_type') or ''
+        if is_new_format:
+            doc_type = data.get('document_category') or ''
+        else:
+            doc_type = doc.get('doc_type') or ''
         type_map = {
             'receipt': 'retail_receipt',
             'retail_receipt': 'retail_receipt',
             'qualified_invoice': 'qualified_invoice',
             'invoice': 'qualified_invoice',
             'vat_invoice': 'vat_invoice',
+            # New unified format (v2.0+) document_category values
+            'purchase': 'retail_receipt',
+            'expense': 'retail_receipt',
+            'sale': 'qualified_invoice',
         }
         self.doc_type = type_map.get(doc_type.lower(), 'other') if doc_type else 'other'
 
         # --- Default tax rate from document-level data ---
         default_rate = self._infer_tax_rate(data)
+
+        # Detect if OCR line rates are uniformly wrong vs document-level rate
+        # (e.g., all lines say 8% but document total proves 10%)
+        _force_rate = False
+        lines_preview = data.get('lines') or data.get('line_items') or []
+        if lines_preview and default_rate:
+            line_rates = set()
+            for item in lines_preview:
+                lr = str(item.get('tax_rate') or '').replace('%', '').strip()
+                if lr in ('8', '10'):
+                    line_rates.add(lr)
+            # All lines have same rate but document-level says different
+            if len(line_rates) == 1 and line_rates.pop() != default_rate:
+                _force_rate = True
 
         # --- Account name → ocr.account id lookup ---
         OcrAccount = self.env['ocr.account']
@@ -801,15 +870,18 @@ class OcrDocument(models.Model):
         # --- Line items ---
         # Filter out tax summary lines that Gemini sometimes includes as items
         _SUMMARY_PATTERNS = re.compile(
-            r'^(小計|合計|税込合計|税抜金額|税抜対象|税抜御買上額|消費税|内税|外税|対象額|税額|税抜|'
-            r'税率\s*\d.*|内消費税|\d+%税抜(金額|対象額?|合計)|\d+%税込(金額|対象額?|合計)|お預り|お釣り|現計)$'
+            r'^[\(（]?(小計|合計|税込合計|税抜金額|税抜対象|税抜御買上額|消費税|内税|外税|対象額|税額|税抜|'
+            r'税率\s*\d.*|内消費税|\d+%税抜(金額|対象額?|合計)|\d+%税込(金額|対象額?|合計)|'
+            r'\d+%対象(消費税|額)?|非課税対象|お預り|お釣り|釣銭額?|現計|'
+            r'外\d+%|内\d+%|税合計|読取差額調整|'
+            r'現金支払|現金預り|預り金?|つり銭|おつり)[\)）]?$'
         )
         # Payment method lines: skip only when there are other real item lines
         _PAYMENT_PATTERNS = re.compile(
-            r'^(クレジット|現金|電子マネー|PayPay|Suica|交通系IC|QR決済)$'
+            r'^(クレジット|現金|現金支払|電子マネー|PayPay|Suica|交通系IC|QR決済)$'
         )
 
-        lines = data.get('lines') or []
+        lines = data.get('lines') or data.get('line_items') or []
         if lines:
             self.line_ids.unlink()
 
@@ -833,7 +905,10 @@ class OcrDocument(models.Model):
                 name = item.get('name') or item.get('description') or ''
                 seq += 1
                 raw_rate = str(item.get('tax_rate') or '').replace('%', '').strip()
-                tax_rate = raw_rate if raw_rate in ('0', '8', '10') else default_rate
+                if _force_rate:
+                    tax_rate = default_rate
+                else:
+                    tax_rate = raw_rate if raw_rate in ('0', '8', '10') else default_rate
 
                 suggested = item.get('suggested_account') or ''
                 debit_id = account_name_to_id.get(suggested, False)
@@ -857,11 +932,15 @@ class OcrDocument(models.Model):
             # Compare line sum vs OCR total_gross to detect
             if self.line_ids:
                 self._auto_fix_net_as_gross(data)
+                # Reconcile: ensure line sum matches OCR total (add adjustment if needed)
+                self._reconcile_total(data, default_rate)
 
         # Fallback: if no lines created (OCR had no lines, or all were filtered)
         if not self.line_ids:
             totals = data.get('totals_on_doc') or {}
-            total_gross = self._safe_float(totals.get('total_gross'))
+            total_gross = self._safe_float(
+                totals.get('total_gross') or data.get('gross_amount')
+            )
             if total_gross > 0:
                 self.line_ids.unlink()
                 self.env['ocr.document.line'].create({
@@ -891,7 +970,9 @@ class OcrDocument(models.Model):
             return
 
         # --- Strategy 1: line_sum vs total_gross (simple single-rate case) ---
-        ocr_gross = self._safe_float(totals.get('total_gross'))
+        ocr_gross = self._safe_float(
+            totals.get('total_gross') or data.get('gross_amount')
+        )
         if ocr_gross > 0 and abs(line_sum - ocr_gross) > 2:
             for rate in (10, 8):
                 expected_gross = round(line_sum * (100 + rate) / 100)
@@ -952,6 +1033,53 @@ class OcrDocument(models.Model):
             if rate > 0:
                 sign = 1 if line.gross_amount >= 0 else -1
                 line.gross_amount = sign * round(abs(line.gross_amount) * (100 + rate) / 100)
+
+    def _reconcile_total(self, data, default_rate):
+        """Ensure line item sum matches OCR document total.
+
+        When there's a small discrepancy (e.g. ±1~2 JPY from rounding),
+        add a 'rounding adjustment' line so the document total matches
+        the receipt exactly.
+        """
+        import math as _math
+        totals = data.get('totals_on_doc') or {}
+        ocr_gross = self._safe_float(
+            totals.get('total_gross') or data.get('gross_amount')
+        )
+        if ocr_gross <= 0:
+            return
+
+        line_sum = sum(l.gross_amount for l in self.line_ids if l.gross_amount)
+        diff = ocr_gross - line_sum
+
+        if abs(diff) == 0:
+            return  # perfect match
+
+        line_count = len(self.line_ids)
+        # Allow adjustment up to ±(line_count) JPY (rounding tolerance)
+        # For larger diffs, OCR likely missed items — don't auto-adjust
+        max_tolerance = max(line_count, 3)
+        if abs(diff) > max_tolerance:
+            _logger.info(
+                'Total mismatch [%s]: OCR=%s, lines=%s, diff=%s (> tolerance %s, skipping)',
+                self.name, ocr_gross, line_sum, diff, max_tolerance,
+            )
+            return
+
+        # Add rounding adjustment line
+        last_seq = max((l.sequence for l in self.line_ids), default=0)
+        self.env['ocr.document.line'].create({
+            'document_id': self.id,
+            'sequence': last_seq + 10,
+            'name': '読取差額調整',
+            'quantity': 1,
+            'gross_amount': diff,
+            'tax_rate': default_rate,
+        })
+        _logger.info(
+            'Total reconciled [%s]: OCR=%s, lines=%s, adjustment=%s',
+            self.name, ocr_gross, line_sum, diff,
+        )
 
     # ------------------------------------------------------------------
     # Legacy text-based extraction (fallback)
@@ -1196,6 +1324,7 @@ class OcrDocument(models.Model):
         for doc in to_review:
             doc._detect_corrections()
             doc._learn_from_corrections()
+            doc._report_template_update()
 
         to_review.write({
             'state': 'reviewed',
@@ -1236,6 +1365,7 @@ class OcrDocument(models.Model):
 
         for doc in to_confirm:
             doc._learn_from_corrections()
+            doc._report_template_update()
 
         to_confirm.write({
             'state': 'confirmed',
@@ -1272,11 +1402,20 @@ class OcrDocument(models.Model):
         # but account changes are the primary correction type
 
     def _learn_from_corrections(self):
-        """Compare current accounts vs OCR snapshot, create/update rules."""
+        """Compare current accounts vs OCR snapshot, create/update rules.
+
+        Item rules: created for every corrected line (exact name match).
+        Seller rules: only created/updated when ALL corrected lines in the
+        document agree on the same debit account. This prevents a single
+        atypical item (e.g., fax at 7-11) from overwriting the seller rule.
+        """
         if not self.client_id:
             return
         Rule = self.env['ocr.account.rule']
         now = fields.Datetime.now()
+
+        central_corrections = []
+        corrected_debit_accounts = set()
 
         for line in self.line_ids:
             if not line.name:
@@ -1288,18 +1427,111 @@ class OcrDocument(models.Model):
             if not debit_changed and not credit_changed:
                 continue
 
-            # --- Item-level rule (exact name match) ---
+            # --- Item-level rule (exact name match) — always learn ---
             self._upsert_rule(Rule, 'item', line.name,
                               line.debit_account if debit_changed else False,
                               line.credit_account if credit_changed else False,
                               now)
 
-            # --- Seller-level rule ---
-            if self.seller_name:
-                self._upsert_rule(Rule, 'seller', self.seller_name,
-                                  line.debit_account if debit_changed else False,
-                                  line.credit_account if credit_changed else False,
-                                  now)
+            if debit_changed and line.debit_account:
+                corrected_debit_accounts.add(line.debit_account.id)
+
+            # --- Collect for central learning ---
+            if debit_changed and line.debit_account:
+                central_corrections.append({
+                    'correction_type': 'account',
+                    'match_field': 'item_name',
+                    'match_value': line.name,
+                    'corrected_value': line.debit_account.name,
+                })
+
+        # --- Seller-level rule: only when all corrections agree ---
+        if self.seller_name and len(corrected_debit_accounts) == 1:
+            agreed_debit_id = corrected_debit_accounts.pop()
+            agreed_debit = self.env['ocr.account'].browse(agreed_debit_id)
+            self._upsert_rule(Rule, 'seller', self.seller_name,
+                              agreed_debit, False, now)
+
+        # --- Report to Central OCR Service ---
+        if central_corrections and OCR_SERVICE_URL:
+            self._report_to_central(central_corrections)
+
+    def _report_to_central(self, corrections):
+        """Report learning corrections to OCR Central Service."""
+        try:
+            payload = {
+                'tenant_id': self.env.cr.dbname,
+                'vendor_name': self.seller_name or None,
+                'invoice_reg_no': self.invoice_number or None,
+                'corrections': corrections,
+            }
+            headers = {'Content-Type': 'application/json'}
+            if OCR_SERVICE_KEY:
+                headers['x-service-key'] = OCR_SERVICE_KEY
+            resp = requests.post(
+                f"{OCR_SERVICE_URL}/corrections",
+                json=payload,
+                headers=headers,
+                timeout=5,
+            )
+            if resp.status_code == 200:
+                _logger.info('Central learning: reported %d corrections for %s',
+                             len(corrections), self.seller_name)
+            else:
+                _logger.warning('Central learning failed: %s', resp.text[:200])
+        except Exception as e:
+            _logger.warning('Central learning error: %s', e)
+
+    def _report_template_update(self):
+        """Report confirmed document data to OCR Central for template learning."""
+        if not OCR_SERVICE_URL or not self.seller_name:
+            return
+        try:
+            # Build product list from confirmed line items
+            products = []
+            for line in self.line_ids:
+                if line.name and len(line.name.strip()) >= 2:
+                    prod = {'name': line.name.strip()}
+                    if line.debit_account:
+                        prod['account'] = line.debit_account.name
+                    if hasattr(line, 'tax_rate') and line.tax_rate:
+                        prod['tax_rate'] = line.tax_rate
+                    products.append(prod)
+
+            # Parse document category from OCR result
+            category = None
+            if self.ocr_result:
+                try:
+                    ocr = json.loads(self.ocr_result)
+                    if 'document' in ocr:
+                        category = ocr['document'].get('category')
+                    elif 'document_category' in ocr:
+                        category = ocr.get('document_category')
+                except (json.JSONDecodeError, TypeError):
+                    pass
+
+            payload = {
+                'tenant_id': self.env.cr.dbname,
+                'vendor_name': self.seller_name,
+                'invoice_reg_no': self.invoice_number or None,
+                'document_category': category,
+                'products': products[:50],
+            }
+            headers = {'Content-Type': 'application/json'}
+            if OCR_SERVICE_KEY:
+                headers['x-service-key'] = OCR_SERVICE_KEY
+            resp = requests.post(
+                f"{OCR_SERVICE_URL}/templates/update",
+                json=payload,
+                headers=headers,
+                timeout=5,
+            )
+            if resp.status_code == 200:
+                _logger.info('Template update: reported for %s', self.seller_name)
+            else:
+                _logger.warning('Template update failed: %s', resp.text[:200])
+        except Exception as e:
+            _logger.warning('Template update error: %s', e)
 
     def _upsert_rule(self, Rule, match_type, match_value, debit, credit, now):
         """Create or update a learning rule."""
@@ -1359,12 +1591,15 @@ class OcrDocument(models.Model):
     # ------------------------------------------------------------------
 
     @api.model
-    def _cron_recognize_queue(self, batch_size=5):
+    def _cron_recognize_queue(self, batch_size=20):
         """Process pending documents in background (called by ir.cron).
 
         Uses SELECT ... FOR UPDATE SKIP LOCKED to allow safe concurrent
         execution from multiple workers without duplicate processing.
+        OCR HTTP calls are parallelized with ThreadPoolExecutor for throughput.
         """
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+
         # Grab a batch with row-level locking (skip rows locked by other workers)
         self.env.cr.execute("""
             SELECT id FROM ocr_document
@@ -1387,16 +1622,97 @@ class OcrDocument(models.Model):
 
         docs = self.browse(ids)
         _logger.info('OCR queue: processing %d documents (IDs %s)', len(docs), ids[:3])
+
+        # --- Phase 1: Parallel OCR HTTP calls (IO-bound) ---
+        def _call_ocr(doc_id, image_b64, mime_type, tenant_id, vendor_hint, reg_no_hint):
+            """Thread-safe OCR HTTP call (no ORM access)."""
+            import time as _time
+            payload = {
+                'image_data': image_b64,
+                'mime_type': mime_type,
+                'output_level': 'accounting',
+                'tenant_id': tenant_id,
+            }
+            if vendor_hint:
+                payload['vendor_hint'] = vendor_hint
+            if reg_no_hint:
+                payload['reg_no_hint'] = reg_no_hint
+            headers = {'Content-Type': 'application/json'}
+            if OCR_SERVICE_KEY:
+                headers['x-service-key'] = OCR_SERVICE_KEY
+
+            start = _time.time()
+            try:
+                resp = requests.post(
+                    f"{OCR_SERVICE_URL}/ocr/process",
+                    json=payload, headers=headers, timeout=120,
+                )
+                elapsed = round(_time.time() - start, 2)
+                return doc_id, resp.status_code, resp.json(), elapsed, None
+            except Exception as e:
+                elapsed = round(_time.time() - start, 2)
+                return doc_id, 0, None, elapsed, str(e)
+
+        # Prepare payloads (ORM reads — main thread only)
+        tasks = []
+        tenant_id = self.env.cr.dbname
+        for doc in docs:
+            if not doc.image:
+                doc.state = 'error'
+                doc.error_message = 'No document image'
+                self.env.cr.commit()
+                continue
+            image_b64 = doc.image.decode() if isinstance(doc.image, bytes) else doc.image
+            tasks.append((
+                doc.id, image_b64, doc._guess_mime_type(),
+                tenant_id, doc.seller_name or '', doc.invoice_number or '',
+            ))
+
+        # Fire parallel OCR calls (max 10 concurrent to respect API limits)
+        max_workers = min(len(tasks), 10)
+        ocr_results = {}
+        if tasks:
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                futures = {executor.submit(_call_ocr, *t): t[0] for t in tasks}
+                for future in as_completed(futures):
+                    doc_id, status, result, elapsed, error = future.result()
+                    ocr_results[doc_id] = (status, result, elapsed, error)
+
+        _logger.info('OCR queue: %d HTTP calls completed', len(ocr_results))
+
+        # --- Phase 2: Apply results sequentially (ORM writes — main thread) ---
         done = 0
         fail = 0
-
         for doc in docs:
+            if doc.state == 'error':
+                fail += 1
+                continue
+            ocr = ocr_results.get(doc.id)
+            if not ocr:
+                continue
+
+            status, result, elapsed, error = ocr
+            doc.process_time = elapsed
+
             try:
-                doc.action_recognize()
-                if doc.state == 'done':
-                    done += 1
-                else:
+                if error:
+                    doc.state = 'error'
+                    doc.error_message = f'HTTP error: {error}'
                     fail += 1
+                elif status != 200:
+                    doc.state = 'error'
+                    doc.error_message = f'API error: {status}'
+                    fail += 1
+                elif not result.get('success'):
+                    doc.state = 'error'
+                    doc.error_message = result.get('error_code', 'Recognition failed')
+                    fail += 1
+                else:
+                    self._apply_ocr_result(doc, result)
+                    if doc.state == 'done':
+                        done += 1
+                    else:
+                        fail += 1
             except Exception as e:
                 doc.state = 'error'
                 doc.error_message = str(e)
@@ -1404,7 +1720,59 @@ class OcrDocument(models.Model):
                 _logger.exception('OCR queue error on doc %s: %s', doc.id, e)
             self.env.cr.commit()
 
-        _logger.info('OCR queue complete: %d done, %d failed', done, fail)
+        _logger.info('OCR queue complete: %d done, %d failed (batch=%d)', done, fail, len(ids))
+
+    @api.model
+    def _apply_ocr_result(self, record, result):
+        """Apply a single OCR API result to a document record.
+        Extracted from action_recognize for reuse in parallel cron.
+        """
+        raw = result.get('raw_response', '')
+        extracted = result.get('extracted')
+
+        parsed = None
+        if isinstance(raw, str) and raw.strip().startswith('{'):
+            try:
+                parsed = json.loads(raw)
+            except (ValueError, TypeError):
+                pass
+        elif isinstance(raw, dict):
+            parsed = raw
+
+        if not parsed and isinstance(extracted, dict) and extracted:
+            parsed = extracted
+
+        if parsed:
+            record.ocr_result = json.dumps(parsed, indent=2, ensure_ascii=False)
+        elif raw:
+            record.ocr_result = raw
+
+        # Multi-receipt: if OCR returned receipts array with >1 items
+        receipts = parsed.get('receipts') if parsed else None
+        if receipts and len(receipts) > 1:
+            record._split_multi_receipt(receipts)
+        elif receipts and len(receipts) == 1:
+            single = receipts[0]
+            record._apply_extracted(single)
+            record._post_ocr_audit(single)
+            record.state = 'done'
+        elif parsed and ('totals_on_doc' in parsed or 'issuer' in parsed):
+            record._apply_extracted(parsed)
+            record._post_ocr_audit(parsed)
+            record.state = 'done'
+        elif parsed and ('vendor_name' in parsed or 'gross_amount' in parsed):
+            record._apply_extracted(parsed)
+            record._post_ocr_audit(parsed)
+            record.state = 'done'
+        elif raw and isinstance(raw, str) and not raw.strip().startswith('{'):
+            texts = raw.split('\n')
+            record.doc_type = record._detect_doc_type(texts)
+            if record.doc_type == 'qualified_invoice':
+                record._extract_qualified_invoice(texts)
+            else:
+                record._extract_retail_receipt(texts)
+            record._post_ocr_audit({})
+            record.state = 'done'
 
     @api.model
     def _recover_stuck_processing(self):

@@ -1,3 +1,5 @@
+import math
+
 from odoo import models, fields, api
 
 TAX_RATES = [
@@ -12,10 +14,12 @@ KEYWORD_ACCOUNT_MAP = {
     '牛肉': 'shiire', '豚肉': 'shiire', '鶏肉': 'shiire', '肉': 'shiire',
     '魚': 'shiire', '野菜': 'shiire', '米': 'shiire', '食材': 'shiire',
     '調味料': 'shiire', '油': 'shiire', '醤油': 'shiire', '塩': 'shiire',
+    '仕入': 'shiire', '一括仕入': 'shiire',
     # 消耗品
     '割りばし': 'shoumouhin', 'はし': 'shoumouhin', '箸': 'shoumouhin',
     'ナプキン': 'shoumouhin', '紙': 'shoumouhin', 'ラップ': 'shoumouhin',
     '洗剤': 'shoumouhin', 'ゴミ袋': 'shoumouhin', '袋': 'shoumouhin',
+    'カード': 'shoumouhin', 'セット': 'shoumouhin',
     # 办公用品
     'ペン': 'jimu', 'ノート': 'jimu', 'ファイル': 'jimu',
     'コピー': 'jimu', '印刷': 'jimu', '文具': 'jimu',
@@ -24,11 +28,67 @@ KEYWORD_ACCOUNT_MAP = {
     # 会议费 (饮食类)
     '飲料': 'kaigi', 'コーヒー': 'kaigi', 'お茶': 'kaigi',
     '飲食': 'kaigi', '飲食代': 'kaigi',
-    # 交通费
+    # 旅費交通費 (交通・駐車)
     '運賃': 'ryohi', 'タクシー': 'ryohi', '交通': 'ryohi',
-    # 其他
-    'CD': 'zappi', 'DVD': 'zappi', '本': 'zappi', 'ブック': 'zappi',
-    'カード': 'shoumouhin', 'セット': 'shoumouhin',
+    '駐車料金': 'ryohi', '駐車場': 'ryohi', 'パーキング': 'ryohi',
+    'チャージ': 'ryohi', '定期券': 'ryohi', 'きっぷ': 'ryohi',
+    '乗車券': 'ryohi', '回数券': 'ryohi', '手配料金': 'ryohi',
+    '高速代': 'ryohi', 'ETC': 'ryohi', 'ガソリン': 'sharyou',
+    '軽油': 'sharyou', '給油': 'sharyou',
+    # 保険料
+    '保険料': 'hoken', '損害保険': 'hoken',
+    # 租税公課
+    '納税': 'sozei', '本税': 'sozei', '法人税': 'sozei',
+    '住民税': 'sozei', '印紙': 'sozei', '固定資産税': 'sozei',
+    # 通信費
+    'ご請求分': 'tsuushin', '通信料': 'tsuushin', '電話代': 'tsuushin',
+    # 水道光熱費
+    '電気代': 'suido', 'ガス代': 'suido', '水道代': 'suido',
+    # 荷造運賃
+    '配送料': 'nizukuri', '送料': 'nizukuri', '宅急便': 'nizukuri',
+    # 修繕費
+    '修理': 'shuuzen', '修繕': 'shuuzen',
+}
+
+
+# 発行者名キーワード -> 科目code映射 (seller name pattern matching)
+SELLER_KEYWORD_MAP = {
+    # 駐車場 -> 旅費交通費
+    'パーキング': 'ryohi', 'パーク': 'ryohi', 'リパーク': 'ryohi',
+    '駐車': 'ryohi', 'カーマックス': 'ryohi',
+    # 鉄道・交通 -> 旅費交通費
+    '鉄道': 'ryohi', 'メトロ': 'ryohi', '地下鉄': 'ryohi',
+    '交通': 'ryohi', 'タクシー': 'ryohi',
+    # 保険 -> 保険料
+    '損害保険': 'hoken', '火災保険': 'hoken', '生命保険': 'hoken',
+    # ホームセンター -> 消耗品費
+    'ホームセンター': 'shoumouhin', 'コーナン': 'shoumouhin',
+    'カインズ': 'shoumouhin', 'ビバホーム': 'shoumouhin',
+    'DEPO': 'shoumouhin', '建デポ': 'shoumouhin', 'ドイト': 'shoumouhin',
+    # 100円ショップ -> 消耗品費
+    'ダイソー': 'shoumouhin', 'DAISO': 'shoumouhin', 'セリア': 'shoumouhin',
+    # スーパー/食品 -> 仕入高
+    'スーパー': 'shiire', '業務スーパー': 'shiire', 'ベルクス': 'shiire',
+    'コモディ': 'shiire', '赤札堂': 'shiire', '肉のハナマサ': 'shiire',
+    # 電気・通信 -> 通信費
+    'NTT': 'tsuushin',
+    # 厨房用品 -> 消耗品費
+    'テンポス': 'shoumouhin', 'TENPOS': 'shoumouhin',
+    'キッチンワールド': 'shoumouhin',
+    # ガソリンスタンド -> 車両費
+    'ガソリン': 'sharyou', 'エネオス': 'sharyou', 'ENEOS': 'sharyou',
+    'コスモ石油': 'sharyou', '出光': 'sharyou', 'apollo': 'sharyou',
+    # ドラッグストア/薬局 -> 消耗品費
+    'マツモトキヨシ': 'shoumouhin', 'ウエルシア': 'shoumouhin',
+    '薬局': 'shoumouhin', 'ドラッグ': 'shoumouhin',
+    # WORKMAN/作業着 -> 消耗品費
+    'WORKMAN': 'shoumouhin', 'ワークマン': 'shoumouhin',
+    # 家電量販店 -> 消耗品費
+    'ヨドバシ': 'shoumouhin', 'ヤマダデンキ': 'shoumouhin', 'ビック': 'shoumouhin',
+    # Amazon -> 消耗品費 (default, items vary)
+    'アマゾン': 'shoumouhin', 'amazon': 'shoumouhin',
+    # ニトリ/家具 -> 消耗品費
+    'ニトリ': 'shoumouhin',
 }
 
 
@@ -91,7 +151,7 @@ class OcrDocumentLine(models.Model):
             rate = int(line.tax_rate or '0')
             gross = line.gross_amount or 0
             if rate > 0 and gross:
-                line.tax_amount = round(gross * rate / (100 + rate))
+                line.tax_amount = math.floor(gross * rate / (100 + rate))
                 line.net_amount = gross - line.tax_amount
             else:
                 line.tax_amount = 0
@@ -157,7 +217,14 @@ class OcrDocumentLine(models.Model):
                 if rule:
                     return rule.debit_account
 
-        # 2. Keyword fallback
+        # 2. Seller name keyword fallback (catches parking, transit, etc.)
+        seller = self.document_id.seller_name or ''
+        if seller:
+            for keyword, account_code in SELLER_KEYWORD_MAP.items():
+                if keyword in seller:
+                    return _resolve_account(self.env, account_code, 'debit')
+
+        # 3. Item name keyword fallback
         for keyword, account_code in KEYWORD_ACCOUNT_MAP.items():
             if keyword in self.name:
                 return _resolve_account(self.env, account_code, 'debit')
