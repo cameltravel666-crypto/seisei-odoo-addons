@@ -3,7 +3,7 @@
     <!-- Customize Web Client Title -->
     <template id="nagashiro_theme.layout" inherit_id="web.layout">
         <xpath expr="//title" position="replace">
-            <title>Nagashiro ERP</title>
+            <title>Seisei OCR</title>
         </xpath>
     </template>
 

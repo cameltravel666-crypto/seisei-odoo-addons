@@ -218,6 +218,46 @@ input[type="radio"]:checked {
     color: #2563eb !important;
 }
 
+/* ====== Debranding: Hide Odoo references ====== */
+
+/* Hide "Odoo" brand text in navbar */
+.o_menu_brand {
+    font-size: 0 !important;
+}
+.o_menu_brand::before {
+    content: "Seisei OCR";
+    font-size: 14px !important;
+    font-weight: 600;
+}
+
+/* Hide Odoo logo in navbar */
+.o_main_navbar .o_menu_toggle img[src*="odoo"],
+.o_main_navbar img[src*="logo"] {
+    display: none !important;
+}
+
+/* Hide footer copyright / "Powered by Odoo" */
+.o_footer,
+.o_footer_copyright,
+a[href*="odoo.com"],
+.o_sub_menu_footer {
+    display: none !important;
+}
+
+/* Hide "Odoo" in user menu / about dialog */
+.o_user_menu a[data-menu="documentation"],
+.o_user_menu a[data-menu="support"],
+.o_user_menu a[data-menu="odoo_account"] {
+    display: none !important;
+}
+
+/* Login page: hide Odoo logo */
+.o_login_auth img[src*="odoo"],
+.oe_login_form img[src*="odoo"],
+.o_database_list img[src*="odoo"] {
+    display: none !important;
+}
+
 /* Override any remaining purple colors */
 [style*="#875A7B"],
 [style*="rgb(135, 90, 123)"] {

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Change page title -->
+    <template id="seisei_theme.layout" inherit_id="web.layout">
+        <xpath expr="//title" position="replace">
+            <title>Seisei OCR</title>
+        </xpath>
+    </template>
+
+    <!-- Remove "Powered by Odoo" footer from login page -->
+    <template id="seisei_theme.login_layout" inherit_id="web.login_layout">
+        <xpath expr="//div[contains(@class, 'text-center') and contains(@class, 'small') and contains(@class, 'mt-4')]" position="replace">
+            <div class="text-center small mt-4 text-muted">
+                Powered by Seisei
+            </div>
+        </xpath>
+    </template>
+</odoo>
