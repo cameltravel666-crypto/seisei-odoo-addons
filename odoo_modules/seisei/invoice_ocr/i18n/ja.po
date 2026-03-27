@@ -89,7 +89,7 @@ msgstr "OCR原文"
 #. module: invoice_ocr
 #: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document__invoice_number
 msgid "Invoice Number"
-msgstr "請求書番号"
+msgstr "登録番号"
 
 #. module: invoice_ocr
 #: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document__invoice_date

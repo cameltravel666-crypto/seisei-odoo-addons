@@ -43,7 +43,7 @@
                                 <group string="基本情報">
                                     <field name="client_id" string="顧客"/>
                                     <field name="doc_type" string="書類種別"/>
-                                    <field name="invoice_number" string="請求書番号"/>
+                                    <field name="invoice_number" string="登録番号"/>
                                     <field name="invoice_date" string="発行日"/>
                                     <field name="seller_name" string="発行者"/>
                                     <field name="buyer_name" string="宛先"/>
@@ -172,7 +172,7 @@
             <search string="証憑検索">
                 <field name="name" string="名前"/>
                 <field name="summary" string="摘要"/>
-                <field name="invoice_number" string="請求書番号"/>
+                <field name="invoice_number" string="登録番号"/>
                 <field name="seller_name" string="発行者"/>
                 <field name="client_id" string="顧客"/>
                 <field name="scan_operator_id" string="スキャン担当"/>
