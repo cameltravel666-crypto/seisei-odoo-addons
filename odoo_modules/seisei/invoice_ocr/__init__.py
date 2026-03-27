@@ -6,9 +6,10 @@ def _pre_init_migrate_accounts(env):
     """Pre-init hook: migrate Selection-based account fields to integer (Many2one)
     BEFORE the ORM tries to reconcile column types.
 
-    This runs with a raw cursor (env is actually cr for pre_init_hook).
+    In Odoo 18, pre_init_hook receives env (Environment object).
+    In older versions it received cr (cursor) directly.
     """
-    cr = env
+    cr = env.cr if hasattr(env, 'cr') else env
 
     # Check if ocr_document_line table exists and debit_account is still varchar
     cr.execute("""

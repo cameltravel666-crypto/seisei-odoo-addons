@@ -142,12 +142,16 @@ class DatabaseRouter(http.Controller):
     def odoo_redirect(self, **kwargs):
         """
         Intercept /odoo and redirect to /web.
+        For logged-in users: redirect to /web (backend).
+        For anonymous users: redirect to /web/login.
         """
         try:
             db_name = get_db_from_host(request.httprequest.host)
-            if db_name:
-                return http_redirect(f"/web?db={db_name}", code=303)
-            return http_redirect("/web", code=303)
+            db_param = f"?db={db_name}" if db_name else ""
+            # Check if user is logged in
+            if request.session.uid:
+                return http_redirect(f"/web{db_param}", code=303)
+            return http_redirect(f"/web/login{db_param}", code=303)
         except Exception as e:
             _logger.exception(f"Database router /odoo error: {e}")
-            return http_redirect("/web", code=303)
+            return http_redirect("/web/login", code=303)

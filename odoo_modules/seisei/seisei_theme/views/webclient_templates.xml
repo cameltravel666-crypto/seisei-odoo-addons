@@ -1,9 +1,55 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Change page title -->
+    <!-- Change page title + inject theme CSS inline -->
     <template id="seisei_theme.layout" inherit_id="web.layout">
         <xpath expr="//title" position="replace">
             <title>Seisei OCR</title>
+        </xpath>
+        <xpath expr="//head" position="inside">
+            <style>
+                :root {
+                    --o-color-primary: #2563eb !important;
+                    --o-color-primary-dark: #1e40af !important;
+                    --o-color-primary-light: #3b82f6 !important;
+                    --o-brand-primary: #2563eb !important;
+                    --o-brand-odoo: #2563eb !important;
+                    --o-action-color: #2563eb !important;
+                    --bs-primary: #2563eb !important;
+                    --bs-primary-rgb: 37, 99, 235 !important;
+                    --bs-link-color: #2563eb !important;
+                    --bs-link-hover-color: #1e40af !important;
+                }
+                .o_main_navbar { background-color: #2563eb !important; border-bottom-color: #1e40af !important; }
+                .o_main_navbar .o_menu_brand,
+                .o_main_navbar .o_menu_sections .dropdown-toggle,
+                .o_main_navbar .o_menu_sections .dropdown-item { color: #ffffff !important; }
+                .o_main_navbar .o_menu_sections .dropdown-toggle:hover,
+                .o_main_navbar .o_menu_sections .dropdown-item:hover { background-color: rgba(255,255,255,0.1) !important; }
+                .btn-primary, .o_button_primary, .o_form_button_save, .o_form_button_edit { background-color: #2563eb !important; border-color: #1e40af !important; color: #fff !important; }
+                .btn-primary:hover, .o_button_primary:hover { background-color: #1e40af !important; }
+                .btn-outline-primary { color: #2563eb !important; border-color: #2563eb !important; }
+                .btn-outline-primary:hover { background-color: #2563eb !important; color: #fff !important; }
+                a, .o_action_manager a, .o_list_view a { color: #2563eb; }
+                a:hover { color: #1e40af; }
+                .badge-primary, .bg-primary { background-color: #2563eb !important; }
+                .text-primary { color: #2563eb !important; }
+                .border-primary { border-color: #2563eb !important; }
+                .form-control:focus, .o_input:focus { border-color: #2563eb !important; box-shadow: 0 0 0 0.2rem rgba(37,99,235,0.25) !important; }
+                .form-check-input:checked { background-color: #2563eb !important; border-color: #2563eb !important; }
+                .dropdown-item.active, .dropdown-item:active { background-color: #2563eb !important; color: #fff !important; }
+                .nav-tabs .nav-link.active { color: #2563eb !important; border-bottom-color: #2563eb !important; }
+                .progress-bar { background-color: #2563eb !important; }
+                .o_statusbar_status .o_arrow_button.o_arrow_button_current { background-color: #2563eb !important; color: #fff !important; }
+                .o_statusbar_status .btn-primary { background-color: #2563eb !important; border-color: #1e40af !important; }
+                .o_kanban_view .o_kanban_record { border-left-color: #2563eb !important; }
+                .o_notification_counter { background-color: #2563eb !important; }
+                .o_menu_brand { font-size: 0 !important; }
+                .o_menu_brand::before { content: "Seisei OCR"; font-size: 14px !important; font-weight: 600; }
+                .o_main_navbar .o_menu_toggle img[src*="odoo"], .o_main_navbar img[src*="logo"] { display: none !important; }
+                .o_footer, .o_footer_copyright, .o_sub_menu_footer { display: none !important; }
+                .o_user_menu a[data-menu="documentation"], .o_user_menu a[data-menu="support"], .o_user_menu a[data-menu="odoo_account"] { display: none !important; }
+                * { --primary: #2563eb !important; }
+            </style>
         </xpath>
     </template>
 

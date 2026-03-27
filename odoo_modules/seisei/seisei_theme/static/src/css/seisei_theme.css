@@ -273,3 +273,72 @@ a[href*="odoo.com"],
     --primary-light: #3b82f6 !important;
 }
 
+/* Odoo 18 additional color overrides */
+:root {
+    --o-action-color: #2563eb !important;
+    --o-webclient-color-scheme: light !important;
+    --bs-primary: #2563eb !important;
+    --bs-primary-rgb: 37, 99, 235 !important;
+    --bs-link-color: #2563eb !important;
+    --bs-link-hover-color: #1e40af !important;
+}
+
+/* Badge and label colors - unified blue */
+.badge,
+.o_tag,
+.o_badge,
+.badge-info,
+.badge-secondary,
+.badge-warning,
+.o_tag_color_0 {
+    --badge-bg: #2563eb;
+}
+
+.badge-primary,
+.bg-primary,
+.btn-primary {
+    background-color: #2563eb !important;
+    border-color: #1e40af !important;
+}
+
+.btn-outline-primary {
+    color: #2563eb !important;
+    border-color: #2563eb !important;
+}
+
+.btn-outline-primary:hover {
+    background-color: #2563eb !important;
+    color: #ffffff !important;
+}
+
+/* Selection highlights */
+.o_list_view .o_data_row.o_list_record_selector .o_list_record_selector_checkbox input:checked,
+.o_list_view tr.o_data_row:hover {
+    --o-list-record-bg-hover: rgba(37, 99, 235, 0.05) !important;
+}
+
+/* Switch/toggle colors */
+.form-check-input:checked {
+    background-color: #2563eb !important;
+    border-color: #2563eb !important;
+}
+
+.form-switch .form-check-input:checked {
+    background-color: #2563eb !important;
+}
+
+/* Status bar active step */
+.o_statusbar_status .o_arrow_button.o_arrow_button_current {
+    background-color: #2563eb !important;
+    color: #ffffff !important;
+}
+
+/* Text primary */
+.text-primary {
+    color: #2563eb !important;
+}
+
+.border-primary {
+    border-color: #2563eb !important;
+}
+
