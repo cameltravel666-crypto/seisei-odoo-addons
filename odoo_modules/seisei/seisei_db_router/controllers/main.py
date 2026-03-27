@@ -18,6 +18,10 @@ _logger = logging.getLogger(__name__)
 DOMAIN_DB_MAP = {
     "demo.nagashiro.top": "ten_testodoo",
     "testodoo.seisei.tokyo": "ten_testodoo",
+    "ocr.seisei.tokyo": "ten_huizhi",
+    "huizhi.seisei.tokyo": "ten_huizhi",
+    "ocr.nagashiro.top": "ten_nagashiro",
+    "odoo.seisei.tokyo": "ten_nagashiro",
 }
 
 def get_db_from_host(host):
