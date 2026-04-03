@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Extend conversation form with ticket link -->
+    <record id="seisei_messaging_conversation_view_form_bridge" model="ir.ui.view">
+        <field name="name">seisei.messaging.conversation.form.bridge</field>
+        <field name="model">seisei.messaging.conversation</field>
+        <field name="inherit_id" ref="seisei_messaging.seisei_messaging_conversation_view_form"/>
+        <field name="arch" type="xml">
+            <!-- Add create ticket button -->
+            <xpath expr="//button[@name='action_send_message']" position="after">
+                <button name="action_create_ticket"
+                        type="object"
+                        string="Create Ticket"
+                        class="btn-secondary"/>
+            </xpath>
+            <!-- Add ticket count stat -->
+            <xpath expr="//field[@name='message_count']" position="after">
+                <field name="ticket_count"/>
+            </xpath>
+            <!-- Add tickets page -->
+            <xpath expr="//notebook" position="inside">
+                <page string="Tickets" name="tickets"
+                      invisible="ticket_count == 0">
+                    <field name="ticket_ids">
+                        <list create="false">
+                            <field name="number"/>
+                            <field name="name"/>
+                            <field name="stage_id"/>
+                            <field name="user_id"/>
+                            <field name="priority" widget="priority"/>
+                        </list>
+                    </field>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>

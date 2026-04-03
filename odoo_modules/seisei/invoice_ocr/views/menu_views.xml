@@ -1,24 +1,54 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <menuitem id="menu_ocr_root" 
-              name="票据识别" 
+    <menuitem id="menu_ocr_root"
+              name="証憑OCR"
               sequence="50"/>
-    
-    <menuitem id="menu_ocr_documents" 
-              name="票据列表" 
+
+    <menuitem id="menu_ocr_documents"
+              name="証憑一覧"
               parent="menu_ocr_root"
               action="action_ocr_document"
               sequence="10"/>
-    
-    <menuitem id="menu_ocr_batch_import" 
-              name="📥 批量导入" 
+
+    <menuitem id="menu_ocr_batch_import"
+              name="一括インポート"
               parent="menu_ocr_root"
               action="action_ocr_batch_import"
               sequence="20"/>
-    
-    <menuitem id="menu_ocr_lines" 
-              name="📊 明细科目管理" 
+
+    <menuitem id="menu_ocr_lines"
+              name="明細科目"
               parent="menu_ocr_root"
               action="action_ocr_document_line"
               sequence="30"/>
+
+    <menuitem id="menu_ocr_clients"
+              name="顧客"
+              parent="menu_ocr_root"
+              action="action_ocr_client"
+              sequence="40"/>
+
+    <menuitem id="menu_ocr_bpo_kpi"
+              name="BPO実績"
+              parent="menu_ocr_root"
+              action="action_ocr_bpo_kpi"
+              sequence="45"/>
+
+    <menuitem id="menu_ocr_audit"
+              name="監査ダッシュボード"
+              parent="menu_ocr_root"
+              action="action_ocr_audit_dashboard"
+              sequence="47"/>
+
+    <menuitem id="menu_ocr_yayoi_export"
+              name="弥生エクスポート"
+              parent="menu_ocr_root"
+              action="action_yayoi_export"
+              sequence="50"/>
+
+    <menuitem id="menu_ocr_accounts"
+              name="科目マスタ"
+              parent="menu_ocr_root"
+              action="action_ocr_account"
+              sequence="55"/>
 </odoo>

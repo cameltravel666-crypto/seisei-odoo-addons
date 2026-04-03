@@ -1,0 +1,12 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_helpdesk_team_user,seisei.helpdesk.team.user,model_seisei_helpdesk_team,group_seisei_helpdesk_user,1,0,0,0
+access_helpdesk_team_manager,seisei.helpdesk.team.manager,model_seisei_helpdesk_team,group_seisei_helpdesk_manager,1,1,1,1
+access_helpdesk_stage_user,seisei.helpdesk.stage.user,model_seisei_helpdesk_stage,group_seisei_helpdesk_user,1,0,0,0
+access_helpdesk_stage_manager,seisei.helpdesk.stage.manager,model_seisei_helpdesk_stage,group_seisei_helpdesk_manager,1,1,1,1
+access_helpdesk_ticket_user,seisei.helpdesk.ticket.user,model_seisei_helpdesk_ticket,group_seisei_helpdesk_user,1,1,1,0
+access_helpdesk_ticket_manager,seisei.helpdesk.ticket.manager,model_seisei_helpdesk_ticket,group_seisei_helpdesk_manager,1,1,1,1
+access_helpdesk_ticket_portal,seisei.helpdesk.ticket.portal,model_seisei_helpdesk_ticket,base.group_portal,1,0,0,0
+access_helpdesk_tag_user,seisei.helpdesk.tag.user,model_seisei_helpdesk_tag,group_seisei_helpdesk_user,1,0,0,0
+access_helpdesk_tag_manager,seisei.helpdesk.tag.manager,model_seisei_helpdesk_tag,group_seisei_helpdesk_manager,1,1,1,1
+access_helpdesk_tag_assignment_user,seisei.helpdesk.tag.assignment.user,model_seisei_helpdesk_tag_assignment,group_seisei_helpdesk_user,1,0,0,0
+access_helpdesk_tag_assignment_manager,seisei.helpdesk.tag.assignment.manager,model_seisei_helpdesk_tag_assignment,group_seisei_helpdesk_manager,1,1,1,1

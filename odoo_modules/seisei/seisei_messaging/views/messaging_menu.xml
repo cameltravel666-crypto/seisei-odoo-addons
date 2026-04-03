@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Standalone root menu for messaging -->
+    <menuitem id="menu_seisei_messaging_root"
+              name="Messaging"
+              web_icon="seisei_messaging,static/description/icon.png"
+              sequence="26"/>
+
+    <menuitem id="menu_messaging_conversation_my"
+              name="My Conversations"
+              parent="menu_seisei_messaging_root"
+              action="action_seisei_messaging_conversation_my"
+              sequence="1"/>
+
+    <menuitem id="menu_messaging_conversation_all"
+              name="All Conversations"
+              parent="menu_seisei_messaging_root"
+              action="action_seisei_messaging_conversation"
+              sequence="2"/>
+
+    <!-- Configuration -->
+    <menuitem id="menu_messaging_configuration"
+              name="Configuration"
+              parent="menu_seisei_messaging_root"
+              groups="group_seisei_messaging_manager"
+              sequence="90"/>
+
+    <menuitem id="menu_messaging_config_channels"
+              name="Channels"
+              parent="menu_messaging_configuration"
+              action="action_seisei_messaging_channel"
+              sequence="1"/>
+</odoo>

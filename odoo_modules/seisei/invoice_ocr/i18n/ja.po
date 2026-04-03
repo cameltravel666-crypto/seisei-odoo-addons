@@ -1,0 +1,1182 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# * invoice_ocr
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 18.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-03-18 00:00+0000\n"
+"PO-Revision-Date: 2026-03-18 00:00+0000\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: ja\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#. module: invoice_ocr
+#: model:ir.model,name:invoice_ocr.model_ocr_document
+msgid "OCR Document"
+msgstr "証憑OCR"
+
+#. module: invoice_ocr
+#: model:ir.model,name:invoice_ocr.model_ocr_document_line
+msgid "OCR Document Line"
+msgstr "証憑明細行"
+
+#. module: invoice_ocr
+#: model:ir.model,name:invoice_ocr.model_ocr_client
+msgid "OCR Client"
+msgstr "顧客"
+
+#. module: invoice_ocr
+#: model:ir.model,name:invoice_ocr.model_ocr_vendor_rule
+msgid "Vendor OCR Rule"
+msgstr "仕入先OCRルール"
+
+#. module: invoice_ocr
+#: model:ir.model,name:invoice_ocr.model_ocr_account_rule
+msgid "Account Learning Rule"
+msgstr "勘定科目学習ルール"
+
+#. module: invoice_ocr
+#: model:ir.model,name:invoice_ocr.model_ocr_batch_import
+msgid "Batch Import"
+msgstr "一括インポート"
+
+#. module: invoice_ocr
+#: model:ir.model,name:invoice_ocr.model_ocr_batch_import_line
+msgid "Batch Import Line"
+msgstr "一括インポート行"
+
+#. module: invoice_ocr
+#: model:ir.model,name:invoice_ocr.model_ocr_yayoi_export
+msgid "Yayoi Export Wizard"
+msgstr "弥生エクスポート"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document__name
+msgid "Name"
+msgstr "名前"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document__image
+msgid "Document Image"
+msgstr "証憑画像"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document__image_filename
+msgid "Filename"
+msgstr "ファイル名"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document__doc_type
+msgid "Document Type"
+msgstr "証憑種類"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document__state
+msgid "Status"
+msgstr "ステータス"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document__ocr_result
+msgid "OCR Raw Result"
+msgstr "OCR原文"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document__invoice_number
+msgid "Invoice Number"
+msgstr "登録番号"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document__invoice_date
+msgid "Invoice Date"
+msgstr "発行日"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document__seller_name
+msgid "Seller"
+msgstr "発行者"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document__buyer_name
+msgid "Buyer"
+msgstr "宛先"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document__client_id
+msgid "Client"
+msgstr "顧客"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document__scan_operator_id
+msgid "Scanner"
+msgstr "スキャン担当"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document__scan_date
+msgid "Scan Time"
+msgstr "スキャン日時"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document__upload_operator_id
+msgid "Uploader"
+msgstr "アップロード担当"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document__upload_date
+msgid "Upload Time"
+msgstr "アップロード日時"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document__review_operator_id
+msgid "Reviewer"
+msgstr "レビュー担当"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document__review_date
+msgid "Review Time"
+msgstr "レビュー日時"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document__confirm_operator_id
+msgid "Approver"
+msgstr "承認担当"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document__confirm_date
+msgid "Approval Time"
+msgstr "承認日時"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document__has_correction
+msgid "Has Correction"
+msgstr "手修正あり"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document__line_ids
+msgid "Line Items"
+msgstr "明細行"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document__amount
+msgid "Total (Tax-incl.)"
+msgstr "税込合計"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document__tax_amount
+msgid "Total Tax"
+msgstr "消費税合計"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document__subtotal
+msgid "Total (Tax-excl.)"
+msgstr "税抜合計"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document__account_move_id
+msgid "Related Bill"
+msgstr "関連仕訳"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document__process_time
+msgid "Process Time (sec)"
+msgstr "処理時間(秒)"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document__error_message
+msgid "Error Message"
+msgstr "エラーメッセージ"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document__is_duplicate
+msgid "Suspected Duplicate"
+msgstr "重複の疑い"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document__duplicate_ids
+msgid "Duplicate Docs"
+msgstr "重複証憑"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document__duplicate_reason
+msgid "Duplicate Reason"
+msgstr "重複理由"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document__name
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_form
+msgid "New Document"
+msgstr "新規証憑"
+
+#. module: invoice_ocr
+#: model:ir.model.fields.selection,name:invoice_ocr.selection__ocr_document__doc_type__retail_receipt
+msgid "Retail Receipt"
+msgstr "レシート"
+
+#. module: invoice_ocr
+#: model:ir.model.fields.selection,name:invoice_ocr.selection__ocr_document__doc_type__qualified_invoice
+msgid "Qualified Invoice"
+msgstr "適格請求書"
+
+#. module: invoice_ocr
+#: model:ir.model.fields.selection,name:invoice_ocr.selection__ocr_document__doc_type__vat_invoice
+msgid "VAT Invoice"
+msgstr "増値税発票"
+
+#. module: invoice_ocr
+#: model:ir.model.fields.selection,name:invoice_ocr.selection__ocr_document__doc_type__other
+msgid "Other"
+msgstr "その他"
+
+#. module: invoice_ocr
+#: model:ir.model.fields.selection,name:invoice_ocr.selection__ocr_document__state__draft
+msgid "Pending"
+msgstr "未処理"
+
+#. module: invoice_ocr
+#: model:ir.model.fields.selection,name:invoice_ocr.selection__ocr_document__state__processing
+msgid "Processing"
+msgstr "処理中"
+
+#. module: invoice_ocr
+#: model:ir.model.fields.selection,name:invoice_ocr.selection__ocr_document__state__done
+msgid "Recognized"
+msgstr "認識済"
+
+#. module: invoice_ocr
+#: model:ir.model.fields.selection,name:invoice_ocr.selection__ocr_document__state__reviewed
+msgid "Reviewed"
+msgstr "レビュー済"
+
+#. module: invoice_ocr
+#: model:ir.model.fields.selection,name:invoice_ocr.selection__ocr_document__state__confirmed
+msgid "Confirmed"
+msgstr "確認済"
+
+#. module: invoice_ocr
+#: model:ir.model.fields.selection,name:invoice_ocr.selection__ocr_document__state__error
+msgid "Error"
+msgstr "エラー"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document_line__document_id
+msgid "Document"
+msgstr "証憑"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document_line__sequence
+msgid "Sequence"
+msgstr "順序"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document_line__name
+msgid "Item Name"
+msgstr "品名"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document_line__quantity
+msgid "Quantity"
+msgstr "数量"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document_line__unit
+msgid "Unit"
+msgstr "単位"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document_line__gross_amount
+msgid "Gross Amount"
+msgstr "税込金額"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document_line__tax_rate
+msgid "Tax Rate"
+msgstr "税率"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document_line__net_amount
+msgid "Net Amount"
+msgstr "税抜金額"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document_line__tax_amount
+msgid "Tax Amount"
+msgstr "消費税額"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document_line__debit_account
+msgid "Debit Account"
+msgstr "借方勘定"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document_line__credit_account
+msgid "Credit Account"
+msgstr "貸方勘定"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document_line__ocr_debit_account
+msgid "OCR Debit"
+msgstr "OCR借方"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document_line__ocr_credit_account
+msgid "OCR Credit"
+msgstr "OCR貸方"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document_line__memo
+msgid "Memo"
+msgstr "摘要"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_document_line__note
+msgid "Notes"
+msgstr "備考"
+
+#. module: invoice_ocr
+#: model:ir.model.fields.selection,name:invoice_ocr.selection__ocr_document_line__debit_account__shiire
+msgid "Purchases"
+msgstr "仕入高"
+
+#. module: invoice_ocr
+#: model:ir.model.fields.selection,name:invoice_ocr.selection__ocr_document_line__debit_account__shoumouhin
+msgid "Consumables"
+msgstr "消耗品費"
+
+#. module: invoice_ocr
+#: model:ir.model.fields.selection,name:invoice_ocr.selection__ocr_document_line__debit_account__jimu
+msgid "Office Supplies"
+msgstr "事務用品費"
+
+#. module: invoice_ocr
+#: model:ir.model.fields.selection,name:invoice_ocr.selection__ocr_document_line__debit_account__kousai
+msgid "Entertainment"
+msgstr "交際費"
+
+#. module: invoice_ocr
+#: model:ir.model.fields.selection,name:invoice_ocr.selection__ocr_document_line__debit_account__kaigi
+msgid "Meeting Expenses"
+msgstr "会議費"
+
+#. module: invoice_ocr
+#: model:ir.model.fields.selection,name:invoice_ocr.selection__ocr_document_line__debit_account__ryohi
+msgid "Travel & Transport"
+msgstr "旅費交通費"
+
+#. module: invoice_ocr
+#: model:ir.model.fields.selection,name:invoice_ocr.selection__ocr_document_line__debit_account__tsuushin
+msgid "Communication"
+msgstr "通信費"
+
+#. module: invoice_ocr
+#: model:ir.model.fields.selection,name:invoice_ocr.selection__ocr_document_line__debit_account__suido
+msgid "Utilities"
+msgstr "水道光熱費"
+
+#. module: invoice_ocr
+#: model:ir.model.fields.selection,name:invoice_ocr.selection__ocr_document_line__debit_account__sozei
+msgid "Taxes & Dues"
+msgstr "租税公課"
+
+#. module: invoice_ocr
+#: model:ir.model.fields.selection,name:invoice_ocr.selection__ocr_document_line__debit_account__zappi
+msgid "Miscellaneous"
+msgstr "雑費"
+
+#. module: invoice_ocr
+#: model:ir.model.fields.selection,name:invoice_ocr.selection__ocr_document_line__credit_account__genkin
+msgid "Cash"
+msgstr "現金"
+
+#. module: invoice_ocr
+#: model:ir.model.fields.selection,name:invoice_ocr.selection__ocr_document_line__credit_account__yokin
+msgid "Bank Deposit"
+msgstr "普通預金"
+
+#. module: invoice_ocr
+#: model:ir.model.fields.selection,name:invoice_ocr.selection__ocr_document_line__credit_account__kaikake
+msgid "Accounts Payable"
+msgstr "買掛金"
+
+#. module: invoice_ocr
+#: model:ir.model.fields.selection,name:invoice_ocr.selection__ocr_document_line__credit_account__miharai
+msgid "Accrued Expenses"
+msgstr "未払金"
+
+#. module: invoice_ocr
+#: model:ir.model.fields.selection,name:invoice_ocr.selection__ocr_document_line__credit_account__card
+msgid "Credit Card"
+msgstr "クレジットカード"
+
+#. module: invoice_ocr
+#: model:ir.model.fields.selection,name:invoice_ocr.selection__ocr_document_line__tax_rate__0
+msgid "Tax-exempt"
+msgstr "非課税"
+
+#. module: invoice_ocr
+#: model:ir.model.fields.selection,name:invoice_ocr.selection__ocr_document_line__tax_rate__8
+msgid "8% (Reduced)"
+msgstr "8%（軽減税率）"
+
+#. module: invoice_ocr
+#: model:ir.model.fields.selection,name:invoice_ocr.selection__ocr_document_line__tax_rate__10
+msgid "10%"
+msgstr "10%"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_client__name
+msgid "Client Name"
+msgstr "顧客名"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_client__code
+msgid "Client Code"
+msgstr "顧客コード"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_client__active
+msgid "Active"
+msgstr "有効"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_client__default_debit_account
+msgid "Default Debit Account"
+msgstr "デフォルト借方"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_client__default_credit_account
+msgid "Default Credit Account"
+msgstr "デフォルト貸方"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_client__document_ids
+msgid "Documents"
+msgstr "関連証憑"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_client__document_count
+msgid "Document Count"
+msgstr "証憑数"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_client__rule_ids
+msgid "Learning Rules"
+msgstr "学習ルール"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_client__rule_count
+msgid "Rule Count"
+msgstr "ルール数"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_client__vendor_rule_ids
+msgid "Vendor Rules"
+msgstr "仕入先ルール"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_vendor_rule__vendor_pattern
+msgid "Vendor Pattern"
+msgstr "仕入先パターン"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_vendor_rule__priority
+msgid "Priority"
+msgstr "優先度"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_vendor_rule__force_tax_rate
+msgid "Force Tax Rate"
+msgstr "税率強制"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_vendor_rule__date_era
+msgid "Date Era"
+msgstr "日付年号"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_vendor_rule__amount_field_is
+msgid "Amount Type"
+msgstr "金額タイプ"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_vendor_rule__ocr_hints
+msgid "OCR Hints"
+msgstr "OCRヒント"
+
+#. module: invoice_ocr
+#: model:ir.model.fields.selection,name:invoice_ocr.selection__ocr_vendor_rule__force_tax_rate__8
+msgid "8% (Reduced/Food)"
+msgstr "8%（軽減・食品）"
+
+#. module: invoice_ocr
+#: model:ir.model.fields.selection,name:invoice_ocr.selection__ocr_vendor_rule__force_tax_rate__10
+msgid "10% (Standard)"
+msgstr "10%（標準）"
+
+#. module: invoice_ocr
+#: model:ir.model.fields.selection,name:invoice_ocr.selection__ocr_vendor_rule__date_era__auto
+#: model:ir.model.fields.selection,name:invoice_ocr.selection__ocr_vendor_rule__amount_field_is__auto
+msgid "Auto-detect"
+msgstr "自動判定"
+
+#. module: invoice_ocr
+#: model:ir.model.fields.selection,name:invoice_ocr.selection__ocr_vendor_rule__date_era__reiwa
+msgid "Reiwa (2019~)"
+msgstr "令和（2019~）"
+
+#. module: invoice_ocr
+#: model:ir.model.fields.selection,name:invoice_ocr.selection__ocr_vendor_rule__date_era__heisei
+msgid "Heisei (1989~2019)"
+msgstr "平成（1989~2019）"
+
+#. module: invoice_ocr
+#: model:ir.model.fields.selection,name:invoice_ocr.selection__ocr_vendor_rule__amount_field_is__gross
+msgid "Gross (tax-included)"
+msgstr "税込（デフォルト）"
+
+#. module: invoice_ocr
+#: model:ir.model.fields.selection,name:invoice_ocr.selection__ocr_vendor_rule__amount_field_is__net
+msgid "Net (tax-excluded)"
+msgstr "税抜（税額加算要）"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_account_rule__match_type
+msgid "Match Type"
+msgstr "マッチ種別"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_account_rule__match_value
+msgid "Match Value"
+msgstr "マッチ値"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_account_rule__hit_count
+msgid "Hit Count"
+msgstr "ヒット数"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_account_rule__last_used
+msgid "Last Used"
+msgstr "最終使用日"
+
+#. module: invoice_ocr
+#: model:ir.model.fields.selection,name:invoice_ocr.selection__ocr_account_rule__match_type__item
+msgid "Item Exact Match"
+msgstr "品名完全一致"
+
+#. module: invoice_ocr
+#: model:ir.model.fields.selection,name:invoice_ocr.selection__ocr_account_rule__match_type__seller
+msgid "Seller Match"
+msgstr "店舗一致"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_batch_import__upload_mode
+msgid "Upload Mode"
+msgstr "アップロード方法"
+
+#. module: invoice_ocr
+#: model:ir.model.fields.selection,name:invoice_ocr.selection__ocr_batch_import__upload_mode__multi
+msgid "Multi-file"
+msgstr "複数ファイル選択"
+
+#. module: invoice_ocr
+#: model:ir.model.fields.selection,name:invoice_ocr.selection__ocr_batch_import__upload_mode__zip
+msgid "ZIP Archive"
+msgstr "ZIPアーカイブ"
+
+#. module: invoice_ocr
+#: model:ir.model.fields.selection,name:invoice_ocr.selection__ocr_batch_import__upload_mode__single
+msgid "One by One"
+msgstr "個別アップロード"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_batch_import__multi_files
+msgid "Select Files"
+msgstr "ファイル選択"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_batch_import__file_ids
+msgid "File List"
+msgstr "ファイル一覧"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_batch_import__auto_recognize
+msgid "Auto-recognize after import"
+msgstr "インポート後に自動認識"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_batch_import_line__file_data
+msgid "File"
+msgstr "ファイル"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_batch_import_line__wizard_id
+msgid "Wizard"
+msgstr "ウィザード"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_batch_import__zip_file
+msgid "ZIP Archive"
+msgstr "ZIPアーカイブ"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_batch_import__zip_filename
+msgid "ZIP Filename"
+msgstr "ZIPファイル名"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_yayoi_export__date_from
+msgid "Date From"
+msgstr "開始日"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_yayoi_export__date_to
+msgid "Date To"
+msgstr "終了日"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_yayoi_export__export_mode
+msgid "Export Mode"
+msgstr "エクスポートモード"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_yayoi_export__document_ids
+msgid "Preview Documents"
+msgstr "プレビュー"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_yayoi_export__line_count
+msgid "Line Count"
+msgstr "明細行数"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_yayoi_export__total_amount
+msgid "Total Amount"
+msgstr "合計金額"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_yayoi_export__export_data
+msgid "Export File"
+msgstr "エクスポートファイル"
+
+#. module: invoice_ocr
+#: model:ir.model.fields.selection,name:invoice_ocr.selection__ocr_yayoi_export__export_mode__summary
+msgid "Summary (one row per document)"
+msgstr "証憑単位（1証憑1行）"
+
+#. module: invoice_ocr
+#: model:ir.model.fields.selection,name:invoice_ocr.selection__ocr_yayoi_export__export_mode__detail
+msgid "Detail (one row per line item)"
+msgstr "明細単位（1品目1行）"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,field_description:invoice_ocr.field_ocr_yayoi_export__document_count
+msgid "Document Count"
+msgstr "証憑数"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_form
+msgid "OCR Document"
+msgstr "証憑OCR"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_list
+msgid "OCR Documents"
+msgstr "証憑OCR"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_client_form
+msgid "OCR Client"
+msgstr "顧客"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_client_list
+msgid "OCR Clients"
+msgstr "顧客一覧"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_line_list
+msgid "Document Lines"
+msgstr "証憑明細"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_form
+msgid "Recognize"
+msgstr "認識開始"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_form
+msgid "Review Complete"
+msgstr "レビュー完了"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_form
+msgid "Final Approve"
+msgstr "最終承認"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_form
+msgid "Re-recognize"
+msgstr "再認識"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_form
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_line_list
+msgid "Auto-classify"
+msgstr "自動分類"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_form
+msgid "Create Bill"
+msgstr "仕訳作成"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_form
+msgid "Reset"
+msgstr "リセット"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_form
+msgid "Suspected Duplicate:"
+msgstr "重複の疑い："
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_form
+msgid "Related:"
+msgstr "関連："
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_form
+msgid "Document Name"
+msgstr "証憑名"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_form
+msgid "Basic Info"
+msgstr "基本情報"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_form
+msgid "Totals (Auto-computed)"
+msgstr "合計（自動集計）"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_form
+msgid "Tax"
+msgstr "消費税"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_form
+msgid "Lines & Entries"
+msgstr "明細 & 仕訳"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_form
+msgid "Item"
+msgstr "品名"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_form
+msgid "Qty"
+msgstr "数量"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_form
+msgid "Gross"
+msgstr "税込"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_form
+msgid "Rate"
+msgstr "税率"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_form
+msgid "Net"
+msgstr "税抜"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_form
+msgid "Debit"
+msgstr "借方"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_form
+msgid "Credit"
+msgstr "貸方"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_form
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_line_list
+msgid "Total Gross"
+msgstr "税込合計"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_form
+msgid "OCR Raw"
+msgstr "OCR原文"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_form
+msgid "Audit Trail"
+msgstr "操作履歴"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_form
+msgid "Scan/Upload"
+msgstr "スキャン/アップロード"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_form
+msgid "Review/Approve"
+msgstr "レビュー/承認"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_list
+msgid "Batch Recognize"
+msgstr "一括認識"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_list
+msgid "Batch Review"
+msgstr "一括レビュー"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_list
+msgid "Batch Confirm"
+msgstr "一括確認"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_list
+msgid "Batch Classify"
+msgstr "一括分類"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_list
+msgid "Total"
+msgstr "合計"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_list
+msgid "Dup"
+msgstr "重複"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_list
+msgid "Corrected"
+msgstr "修正済"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_search
+msgid "Search Documents"
+msgstr "証憑検索"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_search
+msgid "Draft"
+msgstr "下書き"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_search
+msgid "To Review"
+msgstr "レビュー待ち"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_search
+msgid "Duplicates"
+msgstr "重複"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_search
+msgid "Retail"
+msgstr "レシート"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_search
+msgid "Qualified"
+msgstr "適格請求書"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_search
+msgid "Uploaded Today"
+msgstr "本日アップロード"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_search
+msgid "Uploaded This Week"
+msgstr "今週アップロード"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_search
+msgid "Group By"
+msgstr "グループ"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_search
+msgid "Doc Type"
+msgstr "証憑種類"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_search
+msgid "Invoice Date"
+msgstr "発行日"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_search
+msgid "Upload Date"
+msgstr "アップロード日"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.action_ocr_document
+msgid "Start using intelligent OCR recognition"
+msgstr "AI証憑認識を始めましょう"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_pivot
+msgid "BPO Performance"
+msgstr "BPO実績"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_pivot
+msgid "Doc Count"
+msgstr "証憑数"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_pivot
+msgid "Amount"
+msgstr "金額"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_graph
+msgid "BPO Chart"
+msgstr "BPOチャート"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_document_graph
+msgid "Review Count"
+msgstr "レビュー数"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_client_form
+msgid "Client Name"
+msgstr "顧客名"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_client_form
+msgid "Learning Rules"
+msgstr "学習ルール"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_client_form
+msgid "Vendor Rules"
+msgstr "仕入先ルール"
+
+#. module: invoice_ocr
+#: model:ir.actions.act_window,name:invoice_ocr.action_ocr_client
+msgid "Client Management"
+msgstr "顧客管理"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.action_ocr_client
+msgid "Add OCR client"
+msgstr "顧客を追加"
+
+#. module: invoice_ocr
+#: model:ir.actions.act_window,name:invoice_ocr.action_ocr_document_line
+msgid "Line Item Management"
+msgstr "明細科目管理"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.action_ocr_document_line
+msgid "Manage all document line items"
+msgstr "全証憑の明細科目を管理"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_batch_import_form
+msgid "Queue for recognition (background)"
+msgstr "認識キューに追加（バックグラウンド処理）"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_batch_import_form
+msgid "Select Files (multi-select)"
+msgstr "ファイル選択（複数可）"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_batch_import_form
+msgid "Supports JPG, PNG, PDF. Hold Ctrl/Cmd to select multiple files."
+msgstr "JPG、PNG、PDF対応。Ctrl/Cmdを押しながら複数ファイルを選択できます。"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_batch_import_form
+msgid "Upload a ZIP archive of document images. System will extract and import automatically."
+msgstr "証憑画像のZIPアーカイブをアップロードしてください。システムが自動的に解凍してインポートします。"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_batch_import_form
+msgid "Upload One by One"
+msgstr "個別アップロード"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_batch_import_form
+msgid "Import"
+msgstr "インポート"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_ocr_batch_import_form
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_yayoi_export_wizard_form
+msgid "Cancel"
+msgstr "キャンセル"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_yayoi_export_wizard_form
+msgid "Yayoi Export"
+msgstr "弥生エクスポート"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_yayoi_export_wizard_form
+msgid "Filter"
+msgstr "フィルター"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_yayoi_export_wizard_form
+msgid "Export Settings"
+msgstr "エクスポート設定"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_yayoi_export_wizard_form
+msgid "Memo Format"
+msgstr "摘要ルール"
+
+#. module: invoice_ocr
+#: model_terms:ir.ui.view,arch_db:invoice_ocr.view_yayoi_export_wizard_form
+msgid "Export Yayoi TXT"
+msgstr "弥生TXTエクスポート"
+
+#. module: invoice_ocr
+#: model:ir.ui.menu,name:invoice_ocr.menu_ocr_root
+msgid "OCR"
+msgstr "証憑OCR"
+
+#. module: invoice_ocr
+#: model:ir.ui.menu,name:invoice_ocr.menu_ocr_documents
+msgid "Documents"
+msgstr "証憑一覧"
+
+#. module: invoice_ocr
+#: model:ir.ui.menu,name:invoice_ocr.menu_ocr_batch_import
+#: model:ir.actions.act_window,name:invoice_ocr.action_ocr_batch_import
+msgid "Batch Import"
+msgstr "一括インポート"
+
+#. module: invoice_ocr
+#: model:ir.ui.menu,name:invoice_ocr.menu_ocr_lines
+msgid "Line Items"
+msgstr "明細科目"
+
+#. module: invoice_ocr
+#: model:ir.ui.menu,name:invoice_ocr.menu_ocr_clients
+msgid "Clients"
+msgstr "顧客"
+
+#. module: invoice_ocr
+#: model:ir.ui.menu,name:invoice_ocr.menu_ocr_bpo_kpi
+#: model:ir.actions.act_window,name:invoice_ocr.action_ocr_bpo_kpi
+msgid "BPO Performance"
+msgstr "BPO実績"
+
+#. module: invoice_ocr
+#: model:ir.ui.menu,name:invoice_ocr.menu_ocr_yayoi_export
+#: model:ir.actions.act_window,name:invoice_ocr.action_yayoi_export
+msgid "Yayoi Export"
+msgstr "弥生エクスポート"
+
+#. module: invoice_ocr
+#: model:ir.actions.server,name:invoice_ocr.action_ocr_recognize_queue
+#: model:ir.cron,cron_name:invoice_ocr.cron_ocr_recognize_queue
+msgid "OCR: Recognition Queue"
+msgstr "OCR: 認識キュー"
+
+#. module: invoice_ocr
+#: model:ir.actions.server,name:invoice_ocr.action_ocr_scan_inbox
+#: model:ir.cron,cron_name:invoice_ocr.cron_ocr_scan_inbox
+msgid "OCR: Scan Inbox Folder"
+msgstr "OCR: 受信フォルダスキャン"
+
+#. module: invoice_ocr
+#: code:addons/invoice_ocr/models/ocr_document.py:0
+msgid "No document image"
+msgstr "証憑画像がありません"
+
+#. module: invoice_ocr
+#: code:addons/invoice_ocr/wizard/yayoi_export_wizard.py:0
+msgid "No recognized documents matching criteria."
+msgstr "条件に一致する認識済み証憑がありません。"
+
+#. module: invoice_ocr
+#: code:addons/invoice_ocr/wizard/ocr_batch_import.py:0
+msgid "No importable files found! Please upload JPG/PNG/PDF files."
+msgstr "インポート可能なファイルが見つかりません。JPG/PNG/PDFファイルをアップロードしてください。"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,help:invoice_ocr.field_ocr_vendor_rule__vendor_pattern
+msgid "Match if seller name contains this text (regex supported). e.g. 川奈畜産、ガソリン|GS"
+msgstr "店舗名にこのテキストが含まれる場合にマッチ（正規表現対応）。例: 川奈畜産、ガソリン|GS"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,help:invoice_ocr.field_ocr_vendor_rule__priority
+msgid "Lower number = higher priority"
+msgstr "数字が小さいほど優先度が高い"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,help:invoice_ocr.field_ocr_vendor_rule__force_tax_rate
+msgid "Override OCR-detected tax rate (empty = no override)"
+msgstr "OCR検出税率を上書き（空=上書きなし）"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,help:invoice_ocr.field_ocr_vendor_rule__date_era
+msgid "Specify era for handwritten receipts to avoid misdetection"
+msgstr "手書き証憑の年号、Gemini誤判定を防止"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,help:invoice_ocr.field_ocr_vendor_rule__amount_field_is
+msgid "Whether the main amount on this vendor's receipt is tax-inclusive or exclusive"
+msgstr "この仕入先の証憑の主要金額が税込か税抜か"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,help:invoice_ocr.field_ocr_vendor_rule__ocr_hints
+msgid "Additional hints appended to the OCR prompt for this vendor."
+msgstr "OCRプロンプトに追加するヒントテキスト"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,help:invoice_ocr.field_ocr_document__scan_operator_id
+msgid "Operator who scanned the physical document"
+msgstr "紙の証憑をスキャンした担当者"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,help:invoice_ocr.field_ocr_document__upload_operator_id
+msgid "Operator who uploaded the file (recorded automatically)"
+msgstr "ファイルをシステムにアップロードした担当者（自動記録）"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,help:invoice_ocr.field_ocr_document__review_operator_id
+msgid "Operator who reviewed and verified the OCR result"
+msgstr "OCR結果をレビューした担当者"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,help:invoice_ocr.field_ocr_document__confirm_operator_id
+msgid "Operator who gave final approval (before export)"
+msgstr "最終確認（エクスポート前）の担当者"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,help:invoice_ocr.field_ocr_document__has_correction
+msgid "Whether the OCR result was manually corrected during review"
+msgstr "レビュー時にOCR結果が手動修正されたかどうか"
+
+#. module: invoice_ocr
+#: model:ir.model.fields,help:invoice_ocr.field_ocr_batch_import__multi_files
+msgid "Supports JPG/PNG/PDF. Select multiple files at once."
+msgstr "JPG/PNG/PDF対応。複数ファイルを一度に選択可能。"

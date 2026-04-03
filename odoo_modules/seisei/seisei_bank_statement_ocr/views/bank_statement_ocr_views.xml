@@ -82,8 +82,15 @@
                             </field>
                         </page>
                         <page string="Scan Files" name="scans">
-                            <field name="attachment_ids" widget="many2many_binary"
-                                   readonly="state not in ('draft', 'failed')"/>
+                            <div class="o_bank_ocr_dropzone_wrapper">
+                                <field name="attachment_ids" widget="many2many_binary"
+                                       string="Drop screenshots here or click to browse"
+                                       readonly="state not in ('draft', 'review', 'failed')"/>
+                                <p class="text-muted mt-2" style="text-align: center;"
+                                   invisible="state not in ('draft', 'review', 'failed')">
+                                    <i class="fa fa-cloud-upload"/> Drop additional screenshots / PDFs here, then click "Retry OCR" to re-process.
+                                </p>
+                            </div>
                         </page>
                         <page string="OCR Raw Data" name="raw"
                               invisible="not ocr_raw_data">

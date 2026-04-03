@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Audit Dashboard: Tree View -->
+    <record id="view_ocr_document_audit_list" model="ir.ui.view">
+        <field name="name">ocr.document.audit.list</field>
+        <field name="model">ocr.document</field>
+        <field name="arch" type="xml">
+            <list string="監査ダッシュボード"
+                  decoration-danger="audit_flag_count &gt;= 2"
+                  decoration-warning="audit_flag_count == 1"
+                  decoration-success="audit_flag_count == 0">
+                <header>
+                    <button name="action_batch_fix_empty_lines" type="object"
+                            string="空明細を再識別"/>
+                    <button name="action_batch_reclassify" type="object"
+                            string="科目を再分類"/>
+                    <button name="action_recognize" type="object"
+                            string="一括再識別"/>
+                    <button name="action_review" type="object"
+                            string="一括確認"/>
+                </header>
+                <field name="name" string="名前"/>
+                <field name="client_id" string="顧客"/>
+                <field name="seller_name" string="発行者"/>
+                <field name="invoice_date" string="発行日"/>
+                <field name="amount" string="税込" sum="合計"/>
+                <field name="tax_amount" string="消費税" sum="消費税合計"/>
+                <field name="audit_flag_count" string="問題数"/>
+                <field name="audit_flags" string="問題内容"/>
+                <field name="has_correction" string="修正あり" widget="boolean"/>
+                <field name="state" string="状態"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Audit Dashboard: Search View -->
+    <record id="view_ocr_document_audit_search" model="ir.ui.view">
+        <field name="name">ocr.document.audit.search</field>
+        <field name="model">ocr.document</field>
+        <field name="arch" type="xml">
+            <search string="監査検索">
+                <field name="name" string="名前"/>
+                <field name="seller_name" string="発行者"/>
+                <field name="client_id" string="顧客"/>
+                <!-- Issue filters -->
+                <filter string="問題あり" name="has_issues"
+                        domain="[('audit_flag_count', '&gt;', 0)]"/>
+                <separator/>
+                <filter string="日付なし" name="missing_date"
+                        domain="[('audit_flags', 'ilike', 'missing_date')]"/>
+                <filter string="発行者なし" name="missing_seller"
+                        domain="[('audit_flags', 'ilike', 'missing_seller')]"/>
+                <filter string="金額0" name="zero_amount"
+                        domain="[('audit_flags', 'ilike', 'zero_amount')]"/>
+                <filter string="明細なし" name="no_lines"
+                        domain="[('audit_flags', 'ilike', 'no_lines')]"/>
+                <filter string="税額不一致" name="tax_mismatch"
+                        domain="[('audit_flags', 'ilike', 'tax_mismatch')]"/>
+                <filter string="科目要確認(雑費)" name="suspicious_account"
+                        domain="[('audit_flags', 'ilike', 'suspicious_account')]"/>
+                <separator/>
+                <filter string="修正あり" name="corrected"
+                        domain="[('has_correction', '=', True)]"/>
+                <separator/>
+                <filter string="要確認" name="done"
+                        domain="[('state', '=', 'done')]"/>
+                <filter string="確認済" name="reviewed"
+                        domain="[('state', '=', 'reviewed')]"/>
+                <group expand="0" string="グループ">
+                    <filter string="顧客" name="group_client"
+                            context="{'group_by': 'client_id'}"/>
+                    <filter string="状態" name="group_state"
+                            context="{'group_by': 'state'}"/>
+                    <filter string="問題数" name="group_flags"
+                            context="{'group_by': 'audit_flag_count'}"/>
+                    <filter string="発行日" name="group_date"
+                            context="{'group_by': 'invoice_date:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Audit Dashboard: Window Action -->
+    <record id="action_ocr_audit_dashboard" model="ir.actions.act_window">
+        <field name="name">監査ダッシュボード</field>
+        <field name="res_model">ocr.document</field>
+        <field name="view_mode">list,form,pivot</field>
+        <field name="search_view_id" ref="view_ocr_document_audit_search"/>
+        <field name="context">{'search_default_has_issues': 1}</field>
+        <field name="view_ids" eval="[(5, 0, 0),
+            (0, 0, {'view_mode': 'list', 'view_id': ref('view_ocr_document_audit_list')}),
+            (0, 0, {'view_mode': 'form', 'view_id': ref('view_ocr_document_form')})]"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">問題のある証憑はありません</p>
+            <p>監査ダッシュボードでは、日付なし・金額0・科目異常等の問題を一覧できます。</p>
+        </field>
+    </record>
+</odoo>

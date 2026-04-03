@@ -5,18 +5,22 @@
         <field name="name">seisei.bank.statement.ocr.upload.form</field>
         <field name="model">seisei.bank.statement.ocr.upload</field>
         <field name="arch" type="xml">
-            <form string="Bank Statement OCR">
+            <form string="Bank Statement OCR Upload">
                 <group>
                     <field name="journal_id"/>
-                    <field name="attachment_ids" widget="many2many_binary"/>
-                    <p class="text-muted">
-                        Multi-page PDF &amp; images (JPG, PNG) supported.
-                    </p>
                 </group>
+                <div class="o_bank_ocr_dropzone_wrapper">
+                    <field name="attachment_ids" widget="many2many_binary"
+                           string="Drop files here or click to browse"/>
+                    <p class="text-muted mt-2" style="text-align: center;">
+                        <i class="fa fa-info-circle"/> PDF &amp; images (JPG, PNG) supported. Multi-page OK.
+                    </p>
+                </div>
                 <footer>
                     <button name="action_upload_and_ocr" type="object"
-                            string="Start OCR"
-                            class="btn-primary"/>
+                            string="Upload &amp; Start OCR"
+                            class="btn-primary"
+                            icon="fa-magic"/>
                     <button string="Cancel"
                             class="btn-secondary" special="cancel"/>
                 </footer>
@@ -26,7 +30,7 @@
 
     <!-- Upload Wizard Action -->
     <record id="action_bank_statement_ocr_upload" model="ir.actions.act_window">
-        <field name="name">Bank Statement OCR</field>
+        <field name="name">Bank Statement OCR Upload</field>
         <field name="res_model">seisei.bank.statement.ocr.upload</field>
         <field name="view_mode">form</field>
         <field name="view_id" ref="view_bank_statement_ocr_upload_form"/>

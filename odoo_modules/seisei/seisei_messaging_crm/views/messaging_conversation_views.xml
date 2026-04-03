@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Extend conversation form with lead link -->
+    <record id="seisei_messaging_conversation_view_form_crm" model="ir.ui.view">
+        <field name="name">seisei.messaging.conversation.form.crm</field>
+        <field name="model">seisei.messaging.conversation</field>
+        <field name="inherit_id" ref="seisei_messaging.seisei_messaging_conversation_view_form"/>
+        <field name="arch" type="xml">
+            <!-- Add create lead button -->
+            <xpath expr="//button[@name='action_send_message']" position="after">
+                <button name="action_create_lead"
+                        type="object"
+                        string="Create Lead"
+                        class="btn-secondary"/>
+            </xpath>
+            <!-- Add leads page -->
+            <xpath expr="//notebook" position="inside">
+                <page string="Leads" name="leads"
+                      invisible="lead_count == 0">
+                    <field name="lead_ids">
+                        <list create="false">
+                            <field name="name"/>
+                            <field name="stage_id"/>
+                            <field name="user_id"/>
+                            <field name="expected_revenue" widget="monetary"/>
+                            <field name="priority" widget="priority"/>
+                        </list>
+                    </field>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>

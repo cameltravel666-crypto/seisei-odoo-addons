@@ -1,0 +1,30 @@
+/* OCR Document form: left data + right image preview */
+.o_form_view .ocr_split_layout {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+}
+.o_form_view .ocr_split_layout .ocr_data_panel {
+    flex: 1 1 55%;
+    min-width: 0;
+}
+.o_form_view .ocr_split_layout .ocr_image_panel {
+    flex: 0 0 40%;
+    max-width: 40%;
+    position: sticky;
+    top: 0;
+    max-height: calc(100vh - 80px);
+    overflow-y: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 8px;
+    background: #fafafa;
+}
+.o_form_view .ocr_image_panel img {
+    max-width: 100%;
+    height: auto;
+}
+/* Ensure notebook in data panel doesn't get squished */
+.o_form_view .ocr_data_panel .o_notebook {
+    width: 100%;
+}

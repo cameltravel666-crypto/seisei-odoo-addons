@@ -1,6 +1,6 @@
 {
     'name': '銀行取引明細OCR / Bank Statement OCR',
-    'version': '18.0.1.11.0',
+    'version': '18.0.1.12.0',
     'category': 'Accounting',
     'summary': 'OCR import for scanned bank statements (PDF/Image)',
     'description': """
@@ -24,6 +24,11 @@
         'views/account_journal_views.xml',
         'views/wizard_views.xml',
     ],
+    'assets': {
+        'web.assets_backend': [
+            'seisei_bank_statement_ocr/static/src/css/dropzone.css',
+        ],
+    },
     'external_dependencies': {'python': []},
     'installable': True,
     'application': False,

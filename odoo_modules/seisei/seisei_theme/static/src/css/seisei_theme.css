@@ -218,6 +218,46 @@ input[type="radio"]:checked {
     color: #2563eb !important;
 }
 
+/* ====== Debranding: Hide Odoo references ====== */
+
+/* Hide "Odoo" brand text in navbar */
+.o_menu_brand {
+    font-size: 0 !important;
+}
+.o_menu_brand::before {
+    content: "Seisei OCR";
+    font-size: 14px !important;
+    font-weight: 600;
+}
+
+/* Hide Odoo logo in navbar */
+.o_main_navbar .o_menu_toggle img[src*="odoo"],
+.o_main_navbar img[src*="logo"] {
+    display: none !important;
+}
+
+/* Hide footer copyright / "Powered by Odoo" */
+.o_footer,
+.o_footer_copyright,
+a[href*="odoo.com"],
+.o_sub_menu_footer {
+    display: none !important;
+}
+
+/* Hide "Odoo" in user menu / about dialog */
+.o_user_menu a[data-menu="documentation"],
+.o_user_menu a[data-menu="support"],
+.o_user_menu a[data-menu="odoo_account"] {
+    display: none !important;
+}
+
+/* Login page: hide Odoo logo */
+.o_login_auth img[src*="odoo"],
+.oe_login_form img[src*="odoo"],
+.o_database_list img[src*="odoo"] {
+    display: none !important;
+}
+
 /* Override any remaining purple colors */
 [style*="#875A7B"],
 [style*="rgb(135, 90, 123)"] {
@@ -231,5 +271,74 @@ input[type="radio"]:checked {
     --primary: #2563eb !important;
     --primary-dark: #1e40af !important;
     --primary-light: #3b82f6 !important;
+}
+
+/* Odoo 18 additional color overrides */
+:root {
+    --o-action-color: #2563eb !important;
+    --o-webclient-color-scheme: light !important;
+    --bs-primary: #2563eb !important;
+    --bs-primary-rgb: 37, 99, 235 !important;
+    --bs-link-color: #2563eb !important;
+    --bs-link-hover-color: #1e40af !important;
+}
+
+/* Badge and label colors - unified blue */
+.badge,
+.o_tag,
+.o_badge,
+.badge-info,
+.badge-secondary,
+.badge-warning,
+.o_tag_color_0 {
+    --badge-bg: #2563eb;
+}
+
+.badge-primary,
+.bg-primary,
+.btn-primary {
+    background-color: #2563eb !important;
+    border-color: #1e40af !important;
+}
+
+.btn-outline-primary {
+    color: #2563eb !important;
+    border-color: #2563eb !important;
+}
+
+.btn-outline-primary:hover {
+    background-color: #2563eb !important;
+    color: #ffffff !important;
+}
+
+/* Selection highlights */
+.o_list_view .o_data_row.o_list_record_selector .o_list_record_selector_checkbox input:checked,
+.o_list_view tr.o_data_row:hover {
+    --o-list-record-bg-hover: rgba(37, 99, 235, 0.05) !important;
+}
+
+/* Switch/toggle colors */
+.form-check-input:checked {
+    background-color: #2563eb !important;
+    border-color: #2563eb !important;
+}
+
+.form-switch .form-check-input:checked {
+    background-color: #2563eb !important;
+}
+
+/* Status bar active step */
+.o_statusbar_status .o_arrow_button.o_arrow_button_current {
+    background-color: #2563eb !important;
+    color: #ffffff !important;
+}
+
+/* Text primary */
+.text-primary {
+    color: #2563eb !important;
+}
+
+.border-primary {
+    border-color: #2563eb !important;
 }
 

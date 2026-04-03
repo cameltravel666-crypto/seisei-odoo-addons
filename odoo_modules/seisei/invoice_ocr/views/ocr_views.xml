@@ -1,88 +1,330 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- 表单视图 -->
+    <!-- 表单視図 -->
     <record id="view_ocr_document_form" model="ir.ui.view">
         <field name="name">ocr.document.form</field>
         <field name="model">ocr.document</field>
         <field name="arch" type="xml">
-            <form string="票据识别">
+            <form string="証憑">
                 <header>
-                    <button name="action_recognize" type="object" 
-                            string="🔍 开始识别" class="btn-primary"
+                    <!-- draft: 識別開始 -->
+                    <button name="action_recognize" type="object"
+                            string="識別開始" class="btn-primary"
                             invisible="state != 'draft'"/>
-                    <button name="action_recognize" type="object" 
-                            string="🔄 重新识别" class="btn-secondary"
-                            invisible="state == 'draft'"/>
-                    <button name="action_auto_classify_all" type="object"
-                            string="🏷️ 自动分类科目" class="btn-info"
-                            invisible="state != 'done'"/>
-                    <button name="action_create_bill" type="object"
-                            string="📄 创建账单" class="btn-success"
-                            invisible="state != 'done'"/>
-                    <button name="action_reset" type="object"
-                            string="↩️ 重置" class="btn-warning"
-                            invisible="state == 'draft'"/>
-                    <field name="state" widget="statusbar" statusbar_visible="draft,done"/>
+                    <!-- done: 確認 (primary) + 再識別 (secondary) -->
+                    <button name="action_review" type="object"
+                            string="確認" class="btn-primary"
+                            invisible="state != 'done'"
+                            data-hotkey="v"/>
+                    <button name="action_recognize" type="object"
+                            string="再識別" class="btn-secondary"
+                            invisible="state not in ('done', 'error')"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,done,reviewed"/>
+                </header>
+                <sheet>
+                    <field name="image_filename" invisible="1"/>
+                    <div class="alert alert-info" role="alert"
+                         invisible="not source_document_id">
+                        <strong>複数レシート分割 #<field name="receipt_index"/>：</strong>
+                        <field name="source_document_id" readonly="1"/>
+                    </div>
+                    <div class="alert alert-info" role="alert"
+                         invisible="not split_document_ids">
+                        <strong>複数レシート元 → 分割先：</strong>
+                        <field name="split_document_ids" widget="many2many_tags" readonly="1"/>
+                    </div>
+                    <div class="ocr_split_layout">
+                        <!-- Left: data + line items -->
+                        <div class="ocr_data_panel">
+                            <div class="oe_title">
+                                <h1><field name="name" placeholder="ドキュメント名"/></h1>
+                            </div>
+                            <group>
+                                <group string="基本情報">
+                                    <field name="client_id" string="顧客"/>
+                                    <field name="doc_type" string="書類種別"/>
+                                    <field name="invoice_number" string="登録番号"/>
+                                    <field name="invoice_date" string="発行日"/>
+                                    <field name="seller_name" string="発行者"/>
+                                    <field name="buyer_name" string="宛先"/>
+                                    <field name="summary" string="摘要"/>
+                                </group>
+                                <group string="合計（自動計算）">
+                                    <field name="amount" string="税込合計"/>
+                                    <field name="subtotal" string="税抜合計"/>
+                                    <field name="tax_amount" string="消費税"/>
+                                </group>
+                            </group>
+                            <separator string="明細 &amp; 仕訳"/>
+                            <field name="line_ids" widget="one2many">
+                                <list editable="bottom" delete="true">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="name" string="品名"/>
+                                    <field name="quantity" string="数量" optional="hide"/>
+                                    <field name="gross_amount" string="税込" sum="税込合計"/>
+                                    <field name="tax_rate" string="税率"/>
+                                    <field name="net_amount" string="税抜"/>
+                                    <field name="tax_amount" string="消費税"/>
+                                    <field name="debit_account" string="借方"/>
+                                    <field name="credit_account" string="貸方"/>
+                                    <field name="memo" string="摘要" optional="show"/>
+                                    <field name="note" string="備考" optional="hide"/>
+                                </list>
+                            </field>
+                            <notebook>
+                                <page string="エラー" invisible="state != 'error'">
+                                    <field name="error_message" readonly="1"/>
+                                </page>
+                                <page string="監査証跡">
+                                    <group>
+                                        <group string="スキャン／アップロード">
+                                            <field name="scan_operator_id" string="スキャン担当"/>
+                                            <field name="scan_date" string="スキャン日"/>
+                                            <field name="upload_operator_id" string="アップロード担当" readonly="1"/>
+                                            <field name="upload_date" string="アップロード日"/>
+                                        </group>
+                                        <group string="確認／承認">
+                                            <field name="review_operator_id" string="確認担当" readonly="1"/>
+                                            <field name="review_date" string="確認日" readonly="1"/>
+                                            <field name="confirm_operator_id" string="承認担当" readonly="1"/>
+                                            <field name="confirm_date" string="承認日" readonly="1"/>
+                                            <field name="has_correction" string="修正あり" readonly="1"/>
+                                        </group>
+                                    </group>
+                                    <group>
+                                        <field name="account_move_id" string="仕訳伝票"/>
+                                        <field name="process_time" string="処理時間"/>
+                                    </group>
+                                </page>
+                            </notebook>
+                        </div>
+                        <!-- Right: large image preview, sticky -->
+                        <div class="ocr_image_panel">
+                            <field name="image" widget="image"/>
+                        </div>
+                    </div>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- 明細行リスト（独立） -->
+    <record id="view_ocr_document_line_list" model="ir.ui.view">
+        <field name="name">ocr.document.line.list</field>
+        <field name="model">ocr.document.line</field>
+        <field name="arch" type="xml">
+            <list string="明細行" editable="bottom" multi_edit="1">
+                <header>
+                    <button name="action_auto_classify" type="object" string="自動分類"/>
+                </header>
+                <field name="document_id" string="証憑"/>
+                <field name="name" string="品名"/>
+                <field name="gross_amount" string="税込" sum="税込合計"/>
+                <field name="tax_rate" string="税率"/>
+                <field name="net_amount" string="税抜"/>
+                <field name="tax_amount" string="消費税"/>
+                <field name="debit_account" string="借方"/>
+                <field name="credit_account" string="貸方"/>
+                <field name="memo" string="摘要"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- 証憑リスト -->
+    <record id="view_ocr_document_list" model="ir.ui.view">
+        <field name="name">ocr.document.list</field>
+        <field name="model">ocr.document</field>
+        <field name="arch" type="xml">
+            <list string="証憑一覧"
+                  decoration-success="state=='done'"
+                  decoration-danger="state=='error'"
+                  decoration-info="state=='draft'"
+                  decoration-bf="state=='reviewed'">
+                <header>
+                    <button name="action_recognize" type="object" string="一括識別"/>
+                    <button name="action_review" type="object" string="一括確認"/>
+                    <button name="action_batch_credit_account" type="object"
+                            string="貸方科目一括変更"/>
+                </header>
+                <field name="name" string="名前"/>
+                <field name="client_id" string="顧客" optional="show"/>
+                <field name="doc_type" string="種別"/>
+                <field name="seller_name" string="発行者"/>
+                <field name="summary" string="摘要" optional="show"/>
+                <field name="invoice_date" string="発行日"/>
+                <field name="amount" string="税込" sum="合計"/>
+                <field name="tax_amount" string="消費税" sum="消費税合計"/>
+                <field name="scan_operator_id" string="スキャン担当" optional="hide"/>
+                <field name="review_operator_id" string="確認担当" optional="show"/>
+                <field name="has_correction" string="修正あり" widget="boolean" optional="hide"/>
+                <field name="audit_flag_count" string="問題数" optional="hide"/>
+                <field name="audit_flags" string="問題内容" optional="hide"/>
+                <field name="state" string="状態"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- 検索ビュー -->
+    <record id="view_ocr_document_search" model="ir.ui.view">
+        <field name="name">ocr.document.search</field>
+        <field name="model">ocr.document</field>
+        <field name="arch" type="xml">
+            <search string="証憑検索">
+                <field name="name" string="名前"/>
+                <field name="summary" string="摘要"/>
+                <field name="invoice_number" string="登録番号"/>
+                <field name="seller_name" string="発行者"/>
+                <field name="client_id" string="顧客"/>
+                <field name="scan_operator_id" string="スキャン担当"/>
+                <field name="review_operator_id" string="確認担当"/>
+                <filter string="未処理" name="pending" domain="[('state','in',['draft','done'])]"/>
+                <filter string="下書き" name="draft" domain="[('state','=','draft')]"/>
+                <filter string="要確認" name="done" domain="[('state','=','done')]"/>
+                <filter string="確認済" name="reviewed" domain="[('state','=','reviewed')]"/>
+                <filter string="エラー" name="error" domain="[('state','=','error')]"/>
+                <filter string="修正あり" name="corrected" domain="[('has_correction','=',True)]"/>
+                <filter string="監査問題あり" name="has_issues" domain="[('audit_flag_count','&gt;',0)]"/>
+                <separator/>
+                <filter string="日付なし" name="missing_date" domain="[('audit_flags','ilike','missing_date')]"/>
+                <filter string="金額0" name="zero_amount" domain="[('audit_flags','ilike','zero_amount')]"/>
+                <filter string="明細なし" name="no_lines" domain="[('audit_flags','ilike','no_lines')]"/>
+                <filter string="科目要確認" name="suspicious_account" domain="[('audit_flags','ilike','suspicious_account')]"/>
+                <separator/>
+                <filter string="レシート" name="retail" domain="[('doc_type','=','retail_receipt')]"/>
+                <filter string="適格請求書" name="qualified" domain="[('doc_type','=','qualified_invoice')]"/>
+                <separator/>
+                <filter string="今日アップロード" name="today_upload" domain="[('upload_date','&gt;=', (context_today()).strftime('%Y-%m-%d'))]"/>
+                <filter string="今週アップロード" name="week_upload" domain="[('upload_date','&gt;=', (context_today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d'))]"/>
+                <group expand="0" string="グループ">
+                    <filter string="状態" name="group_state" context="{'group_by':'state'}"/>
+                    <filter string="種別" name="group_type" context="{'group_by':'doc_type'}"/>
+                    <filter string="発行日" name="group_date" context="{'group_by':'invoice_date'}"/>
+                    <filter string="顧客" name="group_client" context="{'group_by':'client_id'}"/>
+                    <filter string="スキャン担当" name="group_scanner" context="{'group_by':'scan_operator_id'}"/>
+                    <filter string="アップロード担当" name="group_uploader" context="{'group_by':'upload_operator_id'}"/>
+                    <filter string="確認担当" name="group_reviewer" context="{'group_by':'review_operator_id'}"/>
+                    <filter string="アップロード日" name="group_upload_date" context="{'group_by':'upload_date:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_ocr_document" model="ir.actions.act_window">
+        <field name="name">証憑一覧</field>
+        <field name="res_model">ocr.document</field>
+        <field name="view_mode">list,form,pivot,graph</field>
+        <field name="context">{'search_default_done': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">証憑をアップロードしてOCR識別を開始しましょう</p>
+        </field>
+    </record>
+
+    <!-- BPO実績 Pivot -->
+    <record id="view_ocr_document_pivot" model="ir.ui.view">
+        <field name="name">ocr.document.pivot</field>
+        <field name="model">ocr.document</field>
+        <field name="arch" type="xml">
+            <pivot string="BPO実績">
+                <field name="upload_date" type="row" interval="month"/>
+                <field name="scan_operator_id" type="row"/>
+                <field name="state" type="col"/>
+                <field name="amount" type="measure" string="金額"/>
+            </pivot>
+        </field>
+    </record>
+
+    <!-- BPO実績 Graph -->
+    <record id="view_ocr_document_graph" model="ir.ui.view">
+        <field name="name">ocr.document.graph</field>
+        <field name="model">ocr.document</field>
+        <field name="arch" type="xml">
+            <graph string="BPO実績" type="bar">
+                <field name="review_operator_id"/>
+            </graph>
+        </field>
+    </record>
+
+    <!-- BPO実績アクション -->
+    <record id="action_ocr_bpo_kpi" model="ir.actions.act_window">
+        <field name="name">BPO実績</field>
+        <field name="res_model">ocr.document</field>
+        <field name="view_mode">pivot,graph,list</field>
+        <field name="context">{
+            'search_default_group_scanner': 1,
+            'search_default_group_upload_date': 1,
+        }</field>
+    </record>
+
+    <!-- 顧客フォーム -->
+    <record id="view_ocr_client_form" model="ir.ui.view">
+        <field name="name">ocr.client.form</field>
+        <field name="model">ocr.client</field>
+        <field name="arch" type="xml">
+            <form string="顧客">
+                <header>
+                    <button name="action_assign_summaries" type="object"
+                            string="摘要番号を付与" class="btn-primary"
+                            confirm="この顧客の全証憑に摘要番号を再付与します。続行しますか？"/>
+                    <button name="action_run_audit" type="object"
+                            string="監査実行" class="btn-secondary"/>
+                    <button name="action_generate_vendor_rules" type="object"
+                            string="仕入先ルール自動生成" class="btn-secondary"
+                            confirm="取引データから仕入先ルールを自動生成します。続行しますか？"/>
                 </header>
                 <sheet>
                     <div class="oe_title">
-                        <h1><field name="name" placeholder="票据名称"/></h1>
+                        <h1><field name="name" placeholder="顧客名"/></h1>
                     </div>
                     <group>
-                        <group string="票据信息">
-                            <field name="doc_type"/>
-                            <field name="image" widget="image" class="oe_avatar"/>
-                            <field name="image_filename" invisible="1"/>
+                        <group>
+                            <field name="code" string="コード"/>
+                            <field name="active" string="有効"/>
                         </group>
-                        <group string="基本信息">
-                            <field name="invoice_number"/>
-                            <field name="invoice_date"/>
-                            <field name="seller_name"/>
-                            <field name="buyer_name"/>
+                        <group>
+                            <field name="default_debit_account" string="デフォルト借方科目"/>
+                            <field name="default_credit_account" string="デフォルト貸方科目"/>
                         </group>
                     </group>
-                    <group string="金额信息">
-                        <group>
-                            <field name="subtotal"/>
-                            <field name="amount"/>
-                        </group>
-                        <group>
-                            <field name="tax_amount"/>
-                            <field name="tax_amount_10" string="10%税额"/>
-                            <field name="tax_amount_8" string="8%税额"/>
-                        </group>
+                    <group>
+                        <field name="note" placeholder="備考"/>
                     </group>
                     <notebook>
-                        <page string="商品明细 &amp; 会计科目">
-                            <field name="line_ids">
-                                <list editable="bottom">
-                                    <field name="sequence" widget="handle"/>
-                                    <field name="name"/>
-                                    <field name="quantity"/>
-                                    <field name="unit"/>
-                                    <field name="amount" sum="合计"/>
-                                    <field name="debit_account" string="借方科目"/>
-                                    <field name="credit_account" string="贷方科目"/>
-                                    <field name="note"/>
+                        <page string="証憑" badge="document_count">
+                            <field name="document_ids" readonly="1">
+                                <list>
+                                    <field name="name" string="名前"/>
+                                    <field name="seller_name" string="発行者"/>
+                                    <field name="invoice_date" string="発行日"/>
+                                    <field name="amount" string="金額" sum="合計"/>
+                                    <field name="state" string="状態"/>
                                 </list>
                             </field>
-                            <group>
-                                <p class="text-muted">
-                                    💡 提示：可以在列表中直接编辑科目，或勾选多行后使用批量操作
-                                </p>
-                            </group>
                         </page>
-                        <page string="识别原文">
-                            <field name="ocr_result" readonly="1"/>
+                        <page string="学習ルール" badge="rule_count">
+                            <field name="rule_ids">
+                                <list editable="bottom">
+                                    <field name="match_type" string="マッチ種別"/>
+                                    <field name="match_value" string="マッチ値"/>
+                                    <field name="debit_account" string="借方"/>
+                                    <field name="credit_account" string="貸方"/>
+                                    <field name="hit_count" string="使用回数"/>
+                                    <field name="last_used" string="最終使用"/>
+                                    <field name="active" string="有効"/>
+                                </list>
+                            </field>
                         </page>
-                        <page string="错误信息" invisible="state != 'error'">
-                            <field name="error_message" readonly="1"/>
-                        </page>
-                        <page string="关联信息">
-                            <group>
-                                <field name="account_move_id"/>
-                                <field name="process_time"/>
-                            </group>
+                        <page string="仕入先ルール">
+                            <field name="vendor_rule_ids">
+                                <list editable="bottom">
+                                    <field name="vendor_pattern" string="仕入先パターン"/>
+                                    <field name="priority" string="優先度"/>
+                                    <field name="force_tax_rate" string="税率固定"/>
+                                    <field name="date_era" string="日付元号"/>
+                                    <field name="amount_field_is" string="金額種別"/>
+                                    <field name="ocr_hints" string="OCRヒント"/>
+                                    <field name="active" string="有効"/>
+                                </list>
+                            </field>
                         </page>
                     </notebook>
                 </sheet>
@@ -90,91 +332,104 @@
         </field>
     </record>
 
-    <!-- 明细行列表视图（独立） -->
-    <record id="view_ocr_document_line_list" model="ir.ui.view">
-        <field name="name">ocr.document.line.list</field>
-        <field name="model">ocr.document.line</field>
+    <!-- 顧客リスト -->
+    <record id="view_ocr_client_list" model="ir.ui.view">
+        <field name="name">ocr.client.list</field>
+        <field name="model">ocr.client</field>
         <field name="arch" type="xml">
-            <list string="票据明细" editable="bottom" multi_edit="1">
-                <header>
-                    <button name="action_auto_classify" type="object" string="🏷️ 自动分类"/>
-                </header>
-                <field name="document_id"/>
-                <field name="name"/>
-                <field name="quantity"/>
-                <field name="amount" sum="总金额"/>
-                <field name="debit_account"/>
-                <field name="credit_account"/>
+            <list string="顧客一覧">
+                <field name="name" string="顧客名"/>
+                <field name="code" string="コード"/>
+                <field name="default_debit_account" string="デフォルト借方"/>
+                <field name="default_credit_account" string="デフォルト貸方"/>
+                <field name="document_count" string="証憑数"/>
+                <field name="rule_count" string="ルール数"/>
             </list>
         </field>
     </record>
 
-    <!-- 票据列表视图 -->
-    <record id="view_ocr_document_list" model="ir.ui.view">
-        <field name="name">ocr.document.list</field>
-        <field name="model">ocr.document</field>
-        <field name="arch" type="xml">
-            <list string="票据识别" 
-                  decoration-success="state=='done'" 
-                  decoration-danger="state=='error'"
-                  decoration-info="state=='draft'">
-                <header>
-                    <button name="action_recognize" type="object" string="🔍 批量识别"/>
-                    <button name="action_auto_classify_all" type="object" string="🏷️ 批量分类科目"/>
-                </header>
-                <field name="name"/>
-                <field name="doc_type"/>
-                <field name="invoice_number"/>
-                <field name="seller_name"/>
-                <field name="amount" sum="总金额"/>
-                <field name="tax_amount" sum="总税额"/>
-                <field name="invoice_date"/>
-                <field name="state"/>
-            </list>
-        </field>
-    </record>
-
-    <!-- 搜索视图 -->
-    <record id="view_ocr_document_search" model="ir.ui.view">
-        <field name="name">ocr.document.search</field>
-        <field name="model">ocr.document</field>
-        <field name="arch" type="xml">
-            <search string="搜索票据">
-                <field name="name"/>
-                <field name="invoice_number"/>
-                <field name="seller_name"/>
-                <filter string="待识别" name="draft" domain="[('state','=','draft')]"/>
-                <filter string="已识别" name="done" domain="[('state','=','done')]"/>
-                <filter string="识别失败" name="error" domain="[('state','=','error')]"/>
-                <separator/>
-                <filter string="零售小票" name="retail" domain="[('doc_type','=','retail_receipt')]"/>
-                <filter string="适格请求书" name="qualified" domain="[('doc_type','=','qualified_invoice')]"/>
-                <group expand="0" string="分组">
-                    <filter string="状态" name="group_state" context="{'group_by':'state'}"/>
-                    <filter string="票据类型" name="group_type" context="{'group_by':'doc_type'}"/>
-                    <filter string="开票日期" name="group_date" context="{'group_by':'invoice_date'}"/>
-                </group>
-            </search>
-        </field>
-    </record>
-
-    <record id="action_ocr_document" model="ir.actions.act_window">
-        <field name="name">票据识别</field>
-        <field name="res_model">ocr.document</field>
+    <!-- 顧客アクション -->
+    <record id="action_ocr_client" model="ir.actions.act_window">
+        <field name="name">顧客管理</field>
+        <field name="res_model">ocr.client</field>
         <field name="view_mode">list,form</field>
         <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">开始使用智能票据识别</p>
+            <p class="o_view_nocontent_smiling_face">顧客を追加してください</p>
         </field>
     </record>
 
-    <!-- 明细行管理动作 -->
+    <!-- 明細行アクション -->
     <record id="action_ocr_document_line" model="ir.actions.act_window">
-        <field name="name">明细科目管理</field>
+        <field name="name">明細科目</field>
         <field name="res_model">ocr.document.line</field>
         <field name="view_mode">list</field>
         <field name="view_id" ref="view_ocr_document_line_list"/>
         <field name="help" type="html">
-            <p>批量管理所有票据的明细科目</p>
+            <p>全証憑の明細行を管理します</p>
+        </field>
+    </record>
+
+    <!-- ========== 科目マスタ ========== -->
+    <record id="view_ocr_account_form" model="ir.ui.view">
+        <field name="name">ocr.account.form</field>
+        <field name="model">ocr.account</field>
+        <field name="arch" type="xml">
+            <form string="科目">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name" string="科目名"/>
+                            <field name="code" string="コード"/>
+                            <field name="account_type" string="区分"/>
+                        </group>
+                        <group>
+                            <field name="yayoi_name" string="弥生エクスポート名"/>
+                            <field name="sequence" string="表示順"/>
+                            <field name="active" string="有効"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_ocr_account_list" model="ir.ui.view">
+        <field name="name">ocr.account.list</field>
+        <field name="model">ocr.account</field>
+        <field name="arch" type="xml">
+            <list string="科目一覧" editable="bottom">
+                <field name="sequence" widget="handle"/>
+                <field name="name" string="科目名"/>
+                <field name="code" string="コード"/>
+                <field name="account_type" string="区分"/>
+                <field name="yayoi_name" string="弥生名"/>
+                <field name="active" string="有効"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_ocr_account_search" model="ir.ui.view">
+        <field name="name">ocr.account.search</field>
+        <field name="model">ocr.account</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name" string="科目名"/>
+                <field name="code" string="コード"/>
+                <filter name="debit" string="借方"
+                        domain="[('account_type', '=', 'debit')]"/>
+                <filter name="credit" string="貸方"
+                        domain="[('account_type', '=', 'credit')]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_ocr_account" model="ir.actions.act_window">
+        <field name="name">科目マスタ</field>
+        <field name="res_model">ocr.account</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">新しい科目を追加してください</p>
+            <p>借方・貸方科目を管理します。</p>
         </field>
     </record>
 </odoo>
