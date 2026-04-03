@@ -976,7 +976,9 @@ class OcrDocument(models.Model):
         if ocr_gross > 0 and abs(line_sum - ocr_gross) > 2:
             for rate in (10, 8):
                 expected_gross = round(line_sum * (100 + rate) / 100)
-                if abs(expected_gross - ocr_gross) <= 2:
+                # Tolerance: max(5, 0.1% of total) to handle mixed-rate rounding
+                tol = max(5, ocr_gross * 0.001)
+                if abs(expected_gross - ocr_gross) <= tol:
                     self._convert_lines_net_to_gross()
                     _logger.info('net→gross fix [%s] strategy=1: line_sum=%s, total_gross=%s',
                                  self.name, line_sum, ocr_gross)
@@ -1004,7 +1006,9 @@ class OcrDocument(models.Model):
                     return
 
         # --- Strategy 3: tax math comparison (fallback) ---
-        ocr_tax = self._safe_float(totals.get('total_tax'))
+        ocr_tax = self._safe_float(
+            totals.get('total_tax') or data.get('tax_amount')
+        )
         if ocr_tax > 0:
             # Compute tax assuming lines are net vs gross
             tax_if_net = 0

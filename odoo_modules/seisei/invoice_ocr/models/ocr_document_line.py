@@ -15,6 +15,15 @@ KEYWORD_ACCOUNT_MAP = {
     '魚': 'shiire', '野菜': 'shiire', '米': 'shiire', '食材': 'shiire',
     '調味料': 'shiire', '油': 'shiire', '醤油': 'shiire', '塩': 'shiire',
     '仕入': 'shiire', '一括仕入': 'shiire',
+    # 食材 (追加)
+    '餃子': 'shiire', '味噌': 'shiire', '豆板醤': 'shiire', 'ラー油': 'shiire',
+    'だし': 'shiire', '醤': 'shiire', '麺': 'shiire', 'スープ': 'shiire',
+    'たれ': 'shiire', 'つゆ': 'shiire', '酢': 'shiire', '味醂': 'shiire',
+    'みりん': 'shiire', '砂糖': 'shiire', '小麦粉': 'shiire', '片栗粉': 'shiire',
+    'マヨネーズ': 'shiire', 'ケチャップ': 'shiire', 'ソース': 'shiire',
+    '海苔': 'shiire', 'わかめ': 'shiire', '豆腐': 'shiire', '納豆': 'shiire',
+    '卵': 'shiire', 'たまご': 'shiire', '牛乳': 'shiire', 'バター': 'shiire',
+    'チーズ': 'shiire', '生クリーム': 'shiire',
     # 消耗品
     '割りばし': 'shoumouhin', 'はし': 'shoumouhin', '箸': 'shoumouhin',
     'ナプキン': 'shoumouhin', '紙': 'shoumouhin', 'ラップ': 'shoumouhin',
@@ -46,6 +55,7 @@ KEYWORD_ACCOUNT_MAP = {
     '電気代': 'suido', 'ガス代': 'suido', '水道代': 'suido',
     # 荷造運賃
     '配送料': 'nizukuri', '送料': 'nizukuri', '宅急便': 'nizukuri',
+    'ゆうパック': 'nizukuri', '郵便': 'nizukuri', '宅配便': 'nizukuri',
     # 修繕費
     '修理': 'shuuzen', '修繕': 'shuuzen',
 }
@@ -70,6 +80,14 @@ SELLER_KEYWORD_MAP = {
     # スーパー/食品 -> 仕入高
     'スーパー': 'shiire', '業務スーパー': 'shiire', 'ベルクス': 'shiire',
     'コモディ': 'shiire', '赤札堂': 'shiire', '肉のハナマサ': 'shiire',
+    # 食品卸/米穀 -> 仕入高
+    '米穀': 'shiire', '食品': 'shiire', '青果': 'shiire', '水産': 'shiire',
+    '精肉': 'shiire', '鮮魚': 'shiire', '製麺': 'shiire',
+    '日栄商事': 'shiire',
+    # 郵便/宅配 -> 荷造運賃
+    '郵便': 'nizukuri', 'ゆうパック': 'nizukuri',
+    'ヤマト': 'nizukuri', '佐川': 'nizukuri', 'クロネコ': 'nizukuri',
+    'SAGAWA': 'nizukuri',
     # 電気・通信 -> 通信費
     'NTT': 'tsuushin',
     # 厨房用品 -> 消耗品費
